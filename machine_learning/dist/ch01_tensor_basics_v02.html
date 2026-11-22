@@ -618,6 +618,23 @@ pre code {
   overflow-wrap: anywhere;
 }
 
+/* (추가) 수식(MathML): 블록 수식은 가운데 정렬, 넓으면 가로 스크롤 */
+.math-block {
+  margin: 14px 0;
+  padding: 10px 12px;
+  overflow-x: auto;
+  background: #fbfbf9;
+  border: 1px solid var(--line);
+  font-size: 1.08rem;
+}
+.math-block math {
+  display: block;
+  margin: 0 auto;
+}
+math {
+  font-family: "Latin Modern Math", "STIX Two Math", "Cambria Math", math;
+}
+
 /* (추가) 과정 INDEX: 숫자 요약·테크트리·장별 카드 (기준 디자인 ai-agent-engineering 첫 화면 구성) */
 .stats {
   display: grid;
@@ -745,7 +762,7 @@ pre code {
 <button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button><div class="shade" id="shade"></div>
 <header class="hero"><div class="hero-inner"><p class="kicker">MACHINE LEARNING · CHAPTER 01</p><h1>제01장 · Tensor 기초</h1><p>NumPy 배열 → PyTorch Tensor → 연산 → 자동 미분</p><div class="chips"><span class="chip">NumPy</span><span class="chip">Tensor</span><span class="chip">Autograd</span></div></div></header>
 <div class="wrap"><nav class="toc" id="course-nav" aria-label="장과 절 탐색"></nav><main class="content" id="main-content"><section class="section" id="s00"><h2><span class="num">00</span>배경 개념</h2><p>머신러닝 모델은 입력·가중치·출력을 모두 <strong>다차원 배열</strong>로 다룹니다. NumPy(넘파이, 수치 계산 라이브러리)의 <code>ndarray</code>와 PyTorch(파이토치, 딥러닝 프레임워크)의 <code>Tensor</code>(텐서, 다차원 배열)는 모양(<code>shape</code>)·자료형(<code>dtype</code>)·인덱싱 규칙이 거의 같아서, 먼저 두 도구를 같은 예제로 비교합니다.</p>
-<p>Tensor는 NumPy 배열과 달리 <strong>장치(<code>device</code>, CPU/GPU) 이동</strong>과 **Autograd(오토그래드, 자동 미분)**를 지원합니다. 이 두 기능이 다음 장의 경사하강법 학습을 가능하게 합니다.</p>
+<p>Tensor는 NumPy 배열과 달리 <strong>장치(<code>device</code>, CPU/GPU) 이동</strong>과 <strong>Autograd(오토그래드, 자동 미분)</strong>를 지원합니다. 이 두 기능이 다음 장의 경사하강법 학습을 가능하게 합니다.</p>
 </section><section class="section" id="s01"><h2><span class="num">01</span>전체 실습 흐름</h2><p>개념 흐름도 — 이 장 노트북의 공통 학습 절차 (개념도, 이름은 실제 코드 기준):</p>
 <div class="flow" role="list" aria-label="개념 흐름도"><div class="step"><code>np.array()</code> NumPy 배열 생성</div><div class="down" aria-hidden="true">↓</div><div class="step"><code>torch.from_numpy()</code> · <code>torch.tensor()</code> Tensor 변환</div><div class="down" aria-hidden="true">↓</div><div class="step"><code>reshape</code> · <code>torch.cat()</code> · <code>torch.stack()</code> 모양 바꾸기·합치기</div><div class="down" aria-hidden="true">↓</div><div class="step"><code>requires_grad=True</code> → <code>backward()</code> 자동 미분</div><div class="down" aria-hidden="true">↓</div><div class="step"><code>.to(device)</code> CPU/GPU 장치 이동</div></div>
 <p>노트북별 실습 순서:</p>
@@ -929,11 +946,9 @@ print(&quot;다시 NumPy :&quot;, back_to_numpy)
 </code></pre></div>
 <h3>7. PyTorch의 자동 미분</h3>
 <p>함수는 다음과 같습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>y = x^2 + 2x
-</code></pre></div>
+<div class="math-block" role="math" aria-label="y = x^2 + 2x"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>y</mi><mo>&#x0003D;</mo><msup><mi>x</mi><mn>2</mn></msup><mo>&#x0002B;</mo><mn>2</mn><mi>x</mi></mrow></math></div>
 <p>미분 결과는 다음과 같습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\frac{dy}{dx} = 2x + 2
-</code></pre></div>
+<div class="math-block" role="math" aria-label="\frac{dy}{dx} = 2x + 2"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mfrac><mrow><mi>d</mi><mi>y</mi></mrow><mrow><mi>d</mi><mi>x</mi></mrow></mfrac><mo>&#x0003D;</mo><mn>2</mn><mi>x</mi><mo>&#x0002B;</mo><mn>2</mn></mrow></math></div>
 <p><code>x = 3</code>을 대입하면 기울기는 <code>8</code>입니다. PyTorch는 <code>backward()</code>를 실행하여 이 값을 자동으로 계산합니다.</p>
 <blockquote>
 <p><strong>자동 미분은 신경망 학습에 필요한 기울기를 자동으로 계산합니다.</strong></p>
@@ -1055,13 +1070,12 @@ print(&quot;Matrix → ndim:&quot;, matrix.ndim, &quot;, shape:&quot;, matrix.sh
 </code></pre></div>
 <h3>4. 2차원 배열 읽기</h3>
 <p>다음 배열은 3행 2열 구조입니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>X =
+<div class="math-block" role="math" aria-label="X =
 \begin{bmatrix}
 22.5 &amp; 0.10 \\
 31.0 &amp; 0.45 \\
 36.0 &amp; 0.90
-\end{bmatrix}
-</code></pre></div>
+\end{bmatrix}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>X</mi><mo>&#x0003D;</mo><mo>&#x0005B;</mo><mtable><mtr><mtd><mn>22.5</mn></mtd><mtd><mn>0.10</mn></mtd></mtr><mtr><mtd><mn>31.0</mn></mtd><mtd><mn>0.45</mn></mtd></mtr><mtr><mtd><mn>36.0</mn></mtd><mtd><mn>0.90</mn></mtd></mtr></mtable><mo>&#x0005D;</mo></mrow></math></div>
 <p>각 행은 하나의 측정 데이터이고, 각 열은 측정 항목입니다.</p>
 <ul>
 <li>첫 번째 열: 온도</li>
@@ -1315,8 +1329,7 @@ print(&quot;Tensor의 장치:&quot;, data_on_device.device)
 </code></pre></div>
 <h3>5. Tensor 모양 바꾸기</h3>
 <p><code>reshape()</code>는 원소의 총개수를 유지하면서 Tensor의 모양을 바꿉니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>2 \times 3 = 3 \times 2 = 6
-</code></pre></div>
+<div class="math-block" role="math" aria-label="2 \times 3 = 3 \times 2 = 6"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mn>2</mn><mo>&#x000D7;</mo><mn>3</mn><mo>&#x0003D;</mo><mn>3</mn><mo>&#x000D7;</mo><mn>2</mn><mo>&#x0003D;</mo><mn>6</mn></mrow></math></div>
 <p>따라서 원소가 6개인 Tensor는 <code>(2, 3)</code>, <code>(3, 2)</code>, <code>(1, 6)</code> 등의 모양으로 변경할 수 있습니다.</p>
 <p><code>flatten()</code>은 여러 차원의 Tensor를 1차원으로 펼칩니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch01_3_tensor_operations.ipynb · 코드 셀 5 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>tensor_a = torch.arange(1, 7).reshape(2, 3)

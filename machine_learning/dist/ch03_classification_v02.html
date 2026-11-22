@@ -618,6 +618,23 @@ pre code {
   overflow-wrap: anywhere;
 }
 
+/* (추가) 수식(MathML): 블록 수식은 가운데 정렬, 넓으면 가로 스크롤 */
+.math-block {
+  margin: 14px 0;
+  padding: 10px 12px;
+  overflow-x: auto;
+  background: #fbfbf9;
+  border: 1px solid var(--line);
+  font-size: 1.08rem;
+}
+.math-block math {
+  display: block;
+  margin: 0 auto;
+}
+math {
+  font-family: "Latin Modern Math", "STIX Two Math", "Cambria Math", math;
+}
+
 /* (추가) 과정 INDEX: 숫자 요약·테크트리·장별 카드 (기준 디자인 ai-agent-engineering 첫 화면 구성) */
 .stats {
   display: grid;
@@ -786,8 +803,8 @@ python -m pip install torch torchvision numpy pandas scikit-learn matplotlib
 <thead>
 <tr>
   <th style="text-align:right">데이터</th>
-  <th style="text-align:right"><code>x_1</code></th>
-  <th style="text-align:right"><code>x_2</code></th>
+  <th style="text-align:right"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>x</mi><mn>1</mn></msub></mrow></math></th>
+  <th style="text-align:right"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>x</mi><mn>2</mn></msub></mrow></math></th>
   <th style="text-align:right">클래스</th>
 </tr>
 </thead>
@@ -887,21 +904,18 @@ tensor([[0.],
 </pre></div>
 <h3>2. 로짓과 확률</h3>
 <p>선형 계층은 먼저 하나의 로짓을 계산합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>z=w_1x_1+w_2x_2+b
-</code></pre></div>
+<div class="math-block" role="math" aria-label="z=w_1x_1+w_2x_2+b"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>z</mi><mo>&#x0003D;</mo><msub><mi>w</mi><mn>1</mn></msub><msub><mi>x</mi><mn>1</mn></msub><mo>&#x0002B;</mo><msub><mi>w</mi><mn>2</mn></msub><msub><mi>x</mi><mn>2</mn></msub><mo>&#x0002B;</mo><mi>b</mi></mrow></math></div>
 <ul>
-<li><p><strong><code>(z)</code></strong>: Logit(로짓, 확률로 바꾸기 전 점수)</p>
+<li><p><strong><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mo stretchy="false">&#x00028;</mo><mi>z</mi><mo stretchy="false">&#x00029;</mo></mrow></math></strong>: Logit(로짓, 확률로 바꾸기 전 점수)</p>
 </li>
-<li><p>로짓의 범위: <code>(-\infty)</code>부터 <code>(+\infty)</code></p>
+<li><p>로짓의 범위: <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mo stretchy="false">&#x00028;</mo><mo>&#x02212;</mo><mo>&#x0221E;</mo><mo stretchy="false">&#x00029;</mo></mrow></math>부터 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mo stretchy="false">&#x00028;</mo><mo>&#x0002B;</mo><mo>&#x0221E;</mo><mo stretchy="false">&#x00029;</mo></mrow></math></p>
 </li>
 <li><p>로짓은 아직 확률이 아닙니다.</p>
 </li>
 </ul>
 <p>로짓을 시그모이드 함수에 넣으면 0과 1 사이의 값이 됩니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\sigma(z)=\frac{1}{1+e^{-z}}
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>P(y=1|x)=\sigma(z)
-</code></pre></div>
+<div class="math-block" role="math" aria-label="\sigma(z)=\frac{1}{1+e^{-z}}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>&#x003C3;</mi><mo stretchy="false">&#x00028;</mo><mi>z</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0003D;</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>1</mn><mo>&#x0002B;</mo><msup><mi>e</mi><mrow><mo>&#x02212;</mo><mi>z</mi></mrow></msup></mrow></mfrac></mrow></math></div>
+<div class="math-block" role="math" aria-label="P(y=1|x)=\sigma(z)"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>P</mi><mo stretchy="false">&#x00028;</mo><mi>y</mi><mo>&#x0003D;</mo><mn>1</mn><mo stretchy="false">&#x0007C;</mo><mi>x</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0003D;</mo><mi>&#x003C3;</mi><mo stretchy="false">&#x00028;</mo><mi>z</mi><mo stretchy="false">&#x00029;</mo></mrow></math></div>
 <p><img src="img/ch03_1_md3_image.png" alt="ch03_1 설명 그림" /></p>
 <blockquote>
 <p><strong>시그모이드 함수는 로짓을 확률로 변환합니다.</strong></p>
@@ -948,12 +962,11 @@ plt.show()
 <p><img src="img/ch03_1_c03_0.png" alt="ch03_1 로지스틱 분류 — 코드 셀 3 출력 그림" /></p>
 <h3>4. 확률을 클래스로 바꾸기</h3>
 <p>기본 임계값은 0.5입니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\hat{y}=
+<div class="math-block" role="math" aria-label="\hat{y}=
 \begin{cases}
 1, &amp; \sigma(z)\ge0.5\\
 0, &amp; \sigma(z)&lt;0.5
-\end{cases}
-</code></pre></div>
+\end{cases}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mo>&#x0003D;</mo><mrow><mo stretchy="true" fence="true" form="prefix">&#x0007B;</mo><mtable><mtr><mtd columnalign="left"><mn>1</mn><mo>&#x0002C;</mo></mtd><mtd columnalign="left"><mi>&#x003C3;</mi><mo stretchy="false">&#x00028;</mo><mi>z</mi><mo stretchy="false">&#x00029;</mo><mo>&#x02265;</mo><mn>0.5</mn></mtd></mtr><mtr><mtd columnalign="left"><mn>0</mn><mo>&#x0002C;</mo></mtd><mtd columnalign="left"><mi>&#x003C3;</mi><mo stretchy="false">&#x00028;</mo><mi>z</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0003C;</mo><mn>0.5</mn></mtd></mtr></mtable></mrow></mrow></math></div>
 <ul>
 <li>확률 0.5 이상 → 클래스 1</li>
 <li>확률 0.5 미만 → 클래스 0</li>
@@ -980,7 +993,7 @@ for probability, predicted_class in zip(
 </pre></div>
 <h3>5. BCE 손실의 의미</h3>
 <p>Binary Cross Entropy(이진 교차엔트로피)는 이진분류에서 사용하는 손실함수입니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathrm{BCE}
+<div class="math-block" role="math" aria-label="\mathrm{BCE}
 =
 -\frac{1}{n}
 \sum_{i=1}^{n}
@@ -988,8 +1001,7 @@ for probability, predicted_class in zip(
 y_i\log(p_i)
 +
 (1-y_i)\log(1-p_i)
-\right]
-</code></pre></div>
+\right]"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mrow><mi mathvariant="normal">B</mi><mi mathvariant="normal">C</mi><mi mathvariant="normal">E</mi></mrow><mo>&#x0003D;</mo><mo>&#x02212;</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>n</mi></mrow></mfrac><munderover><mo>&#x02211;</mo><mrow><mi>i</mi><mo>&#x0003D;</mo><mn>1</mn></mrow><mrow><mi>n</mi></mrow></munderover><mrow><mo stretchy="true" fence="true" form="prefix">[</mo><msub><mi>y</mi><mi>i</mi></msub><mi>log</mi><mo stretchy="false">&#x00028;</mo><msub><mi>p</mi><mi>i</mi></msub><mo stretchy="false">&#x00029;</mo><mo>&#x0002B;</mo><mo stretchy="false">&#x00028;</mo><mn>1</mn><mo>&#x02212;</mo><msub><mi>y</mi><mi>i</mi></msub><mo stretchy="false">&#x00029;</mo><mi>log</mi><mo stretchy="false">&#x00028;</mo><mn>1</mn><mo>&#x02212;</mo><msub><mi>p</mi><mi>i</mi></msub><mo stretchy="false">&#x00029;</mo><mo stretchy="true" fence="true" form="postfix">]</mo></mrow></mrow></math></div>
 <ul>
 <li>정답에 가까운 확률 → 손실이 작음</li>
 <li>틀린 클래스를 높은 확률로 예측 → 손실이 큼</li>
@@ -1042,14 +1054,13 @@ print(&quot;편향 shape:&quot;, model.bias.shape)
 </pre></div>
 <h3>7. 모델 학습</h3>
 <p>학습 흐름은 와 같습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\text{순전파}
+<div class="math-block" role="math" aria-label="\text{순전파}
 \rightarrow
 \text{손실}
 \rightarrow
 \text{역전파}
 \rightarrow
-\text{갱신}
-</code></pre></div>
+\text{갱신}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>순전파</mtext><mo>&#x02192;</mo><mtext>손실</mtext><mo>&#x02192;</mo><mtext>역전파</mtext><mo>&#x02192;</mo><mtext>갱신</mtext></mrow></math></div>
 <p>MSE 대신 <code>BCEWithLogitsLoss()</code>를 사용합니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch03_1_logistic_classification.ipynb · 코드 셀 7 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>loss_function = nn.BCEWithLogitsLoss()
 
@@ -1104,21 +1115,19 @@ plt.show()
 <p><img src="img/ch03_1_c08_0.png" alt="ch03_1 로지스틱 분류 — 코드 셀 8 출력 그림" /></p>
 <h3>9. 확률·클래스·정확도 계산</h3>
 <p>학습이 끝난 뒤 다음 순서로 결과를 만듭니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\text{Logit}
+<div class="math-block" role="math" aria-label="\text{Logit}
 \rightarrow
 \text{Sigmoid}
 \rightarrow
 \text{Probability}
 \rightarrow
-\text{Class}
-</code></pre></div>
+\text{Class}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>Logit</mtext><mo>&#x02192;</mo><mtext>Sigmoid</mtext><mo>&#x02192;</mo><mtext>Probability</mtext><mo>&#x02192;</mo><mtext>Class</mtext></mrow></math></div>
 <p>Accuracy(애큐러시, 정확도)는 전체 데이터 중 정답을 맞힌 비율입니다.</p>
 <p><img src="img/ch03_1_md17_image.png" alt="ch03_1 설명 그림" /></p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathrm{Accuracy}
+<div class="math-block" role="math" aria-label="\mathrm{Accuracy}
 =
 \frac{\text{정답 수}}
-{\text{전체 데이터 수}}
-</code></pre></div>
+{\text{전체 데이터 수}}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mrow><mi mathvariant="normal">A</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">y</mi></mrow><mo>&#x0003D;</mo><mfrac><mrow><mtext>정답&#x000A0;수</mtext></mrow><mrow><mtext>전체&#x000A0;데이터&#x000A0;수</mtext></mrow></mfrac></mrow></math></div>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch03_1_logistic_classification.ipynb · 코드 셀 9 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>model.eval()
 
 with torch.no_grad():
@@ -1224,8 +1233,7 @@ FN: 0
 </pre></div>
 <h3>11. 분류 경계 확인</h3>
 <p>확률 0.5에 해당하는 로짓은 0입니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>w_1x_1+w_2x_2+b=0
-</code></pre></div>
+<div class="math-block" role="math" aria-label="w_1x_1+w_2x_2+b=0"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>w</mi><mn>1</mn></msub><msub><mi>x</mi><mn>1</mn></msub><mo>&#x0002B;</mo><msub><mi>w</mi><mn>2</mn></msub><msub><mi>x</mi><mn>2</mn></msub><mo>&#x0002B;</mo><mi>b</mi><mo>&#x0003D;</mo><mn>0</mn></mrow></math></div>
 <p>이 직선이 클래스 0과 클래스 1을 나누는 Decision Boundary(디시전 바운더리, 분류 경계)입니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch03_1_logistic_classification.ipynb · 코드 셀 11 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>weight_1 = model.weight.detach()[0, 0]
 weight_2 = model.weight.detach()[0, 1]
@@ -1501,8 +1509,8 @@ Name: count, dtype: int64
 <p><code>cp</code>, <code>restecg</code>, <code>slope</code>, <code>ca</code>, <code>thal</code>은 숫자로 저장되어 있지만 연속적인 측정값이 아니라 범주 코드입니다.</p>
 <h3>4. 입력과 목표값 분리</h3>
 <ul>
-<li>입력 <code>X</code>: <code>target</code>을 제외한 13개 특성</li>
-<li>목표값 <code>y</code>: <code>target</code></li>
+<li>입력 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>X</mi></mrow></math>: <code>target</code>을 제외한 13개 특성</li>
+<li>목표값 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>y</mi></mrow></math>: <code>target</code></li>
 </ul>
 <p>모델이 정답을 미리 보지 않도록 <code>target</code>은 입력에 포함하지 않습니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch03_2_heart_disease_classification.ipynb · 코드 셀 3 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>X = heart_data.drop(
@@ -1606,11 +1614,10 @@ print(
 </pre></div>
 <h3>7. 연속형 특성 표준화</h3>
 <p>연속형 특성은 숫자의 범위가 서로 다릅니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>x_{\mathrm{scaled}}
+<div class="math-block" role="math" aria-label="x_{\mathrm{scaled}}
 =
 \frac{x-\mu_{\mathrm{train}}}
-{\sigma_{\mathrm{train}}}
-</code></pre></div>
+{\sigma_{\mathrm{train}}}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>x</mi><mrow><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow></mrow></msub><mo>&#x0003D;</mo><mfrac><mrow><mi>x</mi><mo>&#x02212;</mo><msub><mi>&#x003BC;</mi><mrow><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi></mrow></mrow></msub></mrow><mrow><msub><mi>&#x003C3;</mi><mrow><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi></mrow></mrow></msub></mrow></mfrac></mrow></math></div>
 <ul>
 <li>평균과 표준편차는 훈련 데이터에서만 계산</li>
 <li>테스트 데이터에는 훈련 데이터의 평균과 표준편차 적용</li>
@@ -1715,8 +1722,7 @@ print(
 </pre></div>
 <h3>9. 로지스틱 분류 모델</h3>
 <p>입력 특성 전체를 받아 로짓 하나를 계산합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>z=XW^T+b
-</code></pre></div>
+<div class="math-block" role="math" aria-label="z=XW^T+b"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>z</mi><mo>&#x0003D;</mo><mi>X</mi><msup><mi>W</mi><mi>T</mi></msup><mo>&#x0002B;</mo><mi>b</mi></mrow></math></div>
 <ul>
 <li>모델 출력: Logit(로짓, 확률로 변환하기 전 점수)</li>
 <li>손실함수: <code>BCEWithLogitsLoss()</code></li>
@@ -1747,14 +1753,13 @@ print(&quot;편향 shape:&quot;, model.bias.shape)
 </pre></div>
 <h3>10. 모델 학습</h3>
 <p>학습 순서는 와 같습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\text{로짓 계산}
+<div class="math-block" role="math" aria-label="\text{로짓 계산}
 \rightarrow
 \text{손실 계산}
 \rightarrow
 \text{역전파}
 \rightarrow
-\text{가중치 갱신}
-</code></pre></div>
+\text{가중치 갱신}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>로짓&#x000A0;계산</mtext><mo>&#x02192;</mo><mtext>손실&#x000A0;계산</mtext><mo>&#x02192;</mo><mtext>역전파</mtext><mo>&#x02192;</mo><mtext>가중치&#x000A0;갱신</mtext></mrow></math></div>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch03_2_heart_disease_classification.ipynb · 코드 셀 9 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>epochs = 2000
 loss_history = []
 
@@ -1803,14 +1808,13 @@ plt.show()
 <p><img src="img/ch03_2_c10_0.png" alt="ch03_2 심장질환 이진분류 — 코드 셀 10 출력 그림" /></p>
 <h3>11. 확률과 클래스 예측</h3>
 <p>예측 과정은 다음 순서입니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\text{Logit}
+<div class="math-block" role="math" aria-label="\text{Logit}
 \rightarrow
 \text{Sigmoid}
 \rightarrow
 \text{Probability}
 \rightarrow
-\text{Class}
-</code></pre></div>
+\text{Class}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>Logit</mtext><mo>&#x02192;</mo><mtext>Sigmoid</mtext><mo>&#x02192;</mo><mtext>Probability</mtext><mo>&#x02192;</mo><mtext>Class</mtext></mrow></math></div>
 <p>기본 임계값은 0.5입니다.</p>
 <ul>
 <li>확률 0.5 이상 → 클래스 1</li>
@@ -1897,22 +1901,19 @@ for actual, probability, predicted in zip(
 </tr>
 </tbody>
 </table>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathrm{Accuracy}
+<div class="math-block" role="math" aria-label="\mathrm{Accuracy}
 =
 \frac{TP+TN}
-{TP+TN+FP+FN}
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathrm{Precision}
+{TP+TN+FP+FN}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mrow><mi mathvariant="normal">A</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">y</mi></mrow><mo>&#x0003D;</mo><mfrac><mrow><mi>T</mi><mi>P</mi><mo>&#x0002B;</mo><mi>T</mi><mi>N</mi></mrow><mrow><mi>T</mi><mi>P</mi><mo>&#x0002B;</mo><mi>T</mi><mi>N</mi><mo>&#x0002B;</mo><mi>F</mi><mi>P</mi><mo>&#x0002B;</mo><mi>F</mi><mi>N</mi></mrow></mfrac></mrow></math></div>
+<div class="math-block" role="math" aria-label="\mathrm{Precision}
 =
 \frac{TP}
-{TP+FP}
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathrm{Recall}
+{TP+FP}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mrow><mi mathvariant="normal">P</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">n</mi></mrow><mo>&#x0003D;</mo><mfrac><mrow><mi>T</mi><mi>P</mi></mrow><mrow><mi>T</mi><mi>P</mi><mo>&#x0002B;</mo><mi>F</mi><mi>P</mi></mrow></mfrac></mrow></math></div>
+<div class="math-block" role="math" aria-label="\mathrm{Recall}
 =
 \frac{TP}
-{TP+FN}
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>F1
+{TP+FN}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mrow><mi mathvariant="normal">R</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">l</mi></mrow><mo>&#x0003D;</mo><mfrac><mrow><mi>T</mi><mi>P</mi></mrow><mrow><mi>T</mi><mi>P</mi><mo>&#x0002B;</mo><mi>F</mi><mi>N</mi></mrow></mfrac></mrow></math></div>
+<div class="math-block" role="math" aria-label="F1
 =
 2
 \times
@@ -1924,8 +1925,7 @@ for actual, probability, predicted in zip(
 \mathrm{Precision}
 +
 \mathrm{Recall}
-}
-</code></pre></div>
+}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>F</mi><mn>1</mn><mo>&#x0003D;</mo><mn>2</mn><mo>&#x000D7;</mo><mfrac><mrow><mrow><mi mathvariant="normal">P</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">n</mi></mrow><mo>&#x000D7;</mo><mrow><mi mathvariant="normal">R</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">l</mi></mrow></mrow><mrow><mrow><mi mathvariant="normal">P</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">n</mi></mrow><mo>&#x0002B;</mo><mrow><mi mathvariant="normal">R</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">l</mi></mrow></mrow></mfrac></mrow></math></div>
 <p>의료 선별 문제에서는 실제 환자를 놓치는 FN을 줄이는 것이 중요하므로 Recall도 함께 확인합니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch03_2_heart_disease_classification.ipynb · 코드 셀 12 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def calculate_metrics(
     targets,
@@ -2271,26 +2271,23 @@ tensor([[0, 0, 1],
 </pre></div>
 <h3>4. 클래스별 로짓</h3>
 <p>다중분류 모델은 데이터마다 클래스 수만큼 로짓을 계산합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Z=XW^T+b
-</code></pre></div>
+<div class="math-block" role="math" aria-label="Z=XW^T+b"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>Z</mi><mo>&#x0003D;</mo><mi>X</mi><msup><mi>W</mi><mi>T</mi></msup><mo>&#x0002B;</mo><mi>b</mi></mrow></math></div>
 <p>입력 특성이 4개이고 클래스가 3개이면 다음 구조가 됩니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>[x_1,x_2,x_3,x_4]
+<div class="math-block" role="math" aria-label="[x_1,x_2,x_3,x_4]
 \rightarrow
-[z_A,z_B,z_C]
-</code></pre></div>
+[z_A,z_B,z_C]"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mo stretchy="false">[</mo><msub><mi>x</mi><mn>1</mn></msub><mo>&#x0002C;</mo><msub><mi>x</mi><mn>2</mn></msub><mo>&#x0002C;</mo><msub><mi>x</mi><mn>3</mn></msub><mo>&#x0002C;</mo><msub><mi>x</mi><mn>4</mn></msub><mo stretchy="false">]</mo><mo>&#x02192;</mo><mo stretchy="false">[</mo><msub><mi>z</mi><mi>A</mi></msub><mo>&#x0002C;</mo><msub><mi>z</mi><mi>B</mi></msub><mo>&#x0002C;</mo><msub><mi>z</mi><mi>C</mi></msub><mo stretchy="false">]</mo></mrow></math></div>
 <ul>
-<li><code>z_A</code>: A 클래스의 로짓</li>
-<li><code>z_B</code>: B 클래스의 로짓</li>
-<li><code>z_C</code>: C 클래스의 로짓</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>z</mi><mi>A</mi></msub></mrow></math>: A 클래스의 로짓</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>z</mi><mi>B</mi></msub></mrow></math>: B 클래스의 로짓</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>z</mi><mi>C</mi></msub></mrow></math>: C 클래스의 로짓</li>
 </ul>
 <p>로짓은 아직 확률이 아닙니다.</p>
 <h3>5. Softmax로 확률 계산</h3>
 <p>Softmax는 클래스별 로짓을 0과 1 사이의 확률로 변환합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>P(y=k|x)
+<div class="math-block" role="math" aria-label="P(y=k|x)
 =
 \frac{e^{z_k}}
-{\sum_{j=1}^{K}e^{z_j}}
-</code></pre></div>
+{\sum_{j=1}^{K}e^{z_j}}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>P</mi><mo stretchy="false">&#x00028;</mo><mi>y</mi><mo>&#x0003D;</mo><mi>k</mi><mo stretchy="false">&#x0007C;</mo><mi>x</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0003D;</mo><mfrac><mrow><msup><mi>e</mi><mrow><msub><mi>z</mi><mi>k</mi></msub></mrow></msup></mrow><mrow><msubsup><mo>&#x02211;</mo><mrow><mi>j</mi><mo>&#x0003D;</mo><mn>1</mn></mrow><mrow><mi>K</mi></mrow></msubsup><msup><mi>e</mi><mrow><msub><mi>z</mi><mi>j</mi></msub></mrow></msup></mrow></mfrac></mrow></math></div>
 <p>한 데이터의 모든 클래스 확률을 더하면 1이 됩니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch03_3_softmax_classification.ipynb · 코드 셀 3 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>example_logits = torch.tensor(
     [
@@ -2346,11 +2343,10 @@ tensor([0, 2])
 </code></pre></div>
 <p><code>dim=1</code>을 적용하면 각 행의 확률 합이 1이 됩니다.</p>
 <h3>7. 교차엔트로피 손실</h3>
-<p>정답 클래스의 예측 확률을 <code>p_{\mathrm{correct}}</code>라고 하면 데이터 하나의 손실은 다음과 같습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathrm{Loss}
+<p>정답 클래스의 예측 확률을 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>p</mi><mrow><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">t</mi></mrow></mrow></msub></mrow></math>라고 하면 데이터 하나의 손실은 다음과 같습니다.</p>
+<div class="math-block" role="math" aria-label="\mathrm{Loss}
 =
--\log(p_{\mathrm{correct}})
-</code></pre></div>
+-\log(p_{\mathrm{correct}})"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mrow><mi mathvariant="normal">L</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">s</mi></mrow><mo>&#x0003D;</mo><mo>&#x02212;</mo><mi>log</mi><mo stretchy="false">&#x00028;</mo><msub><mi>p</mi><mrow><mrow><mi mathvariant="normal">c</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">t</mi></mrow></mrow></msub><mo stretchy="false">&#x00029;</mo></mrow></math></div>
 <ul>
 <li>정답 클래스 확률이 높음 → 손실이 작음</li>
 <li>정답 클래스 확률이 낮음 → 손실이 큼</li>
@@ -2419,14 +2415,13 @@ print(&quot;모델 출력 shape:&quot;, initial_logits.shape)
 </pre></div>
 <h3>10. 모델 학습</h3>
 <p>학습 흐름은 와 같습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\text{로짓 계산}
+<div class="math-block" role="math" aria-label="\text{로짓 계산}
 \rightarrow
 \text{손실 계산}
 \rightarrow
 \text{역전파}
 \rightarrow
-\text{가중치 갱신}
-</code></pre></div>
+\text{가중치 갱신}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>로짓&#x000A0;계산</mtext><mo>&#x02192;</mo><mtext>손실&#x000A0;계산</mtext><mo>&#x02192;</mo><mtext>역전파</mtext><mo>&#x02192;</mo><mtext>가중치&#x000A0;갱신</mtext></mrow></math></div>
 <p><code>CrossEntropyLoss()</code>를 사용하고, 정답은 클래스 인덱스로 전달합니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch03_3_softmax_classification.ipynb · 코드 셀 6 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>loss_function = nn.CrossEntropyLoss()
 
@@ -2481,14 +2476,13 @@ plt.show()
 <p><img src="img/ch03_3_c07_0.png" alt="ch03_3 Softmax 다중분류 — 코드 셀 7 출력 그림" /></p>
 <h3>12. 확률·예측 클래스·정확도 확인</h3>
 <p>학습이 끝난 뒤 결과를 다음 순서로 해석합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\text{Logit}
+<div class="math-block" role="math" aria-label="\text{Logit}
 \rightarrow
 \text{Softmax Probability}
 \rightarrow
 \text{argmax}
 \rightarrow
-\text{Predicted Class}
-</code></pre></div>
+\text{Predicted Class}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>Logit</mtext><mo>&#x02192;</mo><mtext>Softmax&#x000A0;Probability</mtext><mo>&#x02192;</mo><mtext>argmax</mtext><mo>&#x02192;</mo><mtext>Predicted&#x000A0;Class</mtext></mrow></math></div>
 <p><code>argmax(dim=1)</code>은 각 데이터에서 가장 큰 로짓의 클래스 번호를 반환합니다.</p>
 <p>Softmax는 로짓의 순서를 바꾸지 않으므로 클래스 예측에는 로짓에 바로 <code>argmax()</code>를 적용할 수 있습니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch03_3_softmax_classification.ipynb · 코드 셀 8 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>model.eval()
@@ -2868,7 +2862,7 @@ plt.show()
 <p>출력 그림 — 원본 노트북 기록 · 코드 셀 3:</p>
 <p><img src="img/ch03_4_c03_0.png" alt="ch03_4 Iris 다중분류 — 코드 셀 3 출력 그림" /></p>
 <h3>4. 입력과 정답 분리</h3>
-<p>입력 <code>X</code>는 네 개의 측정값이고, 정답 <code>y</code>는 붓꽃 품종입니다.</p>
+<p>입력 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>X</mi></mrow></math>는 네 개의 측정값이고, 정답 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>y</mi></mrow></math>는 붓꽃 품종입니다.</p>
 <p>문자열 품종은 <code>CrossEntropyLoss()</code>에 바로 넣을 수 없으므로 클래스 번호로 변환합니다.</p>
 <table>
 <thead>
@@ -2967,11 +2961,10 @@ Name: count, dtype: int64
 </pre></div>
 <h3>6. 훈련 데이터 기준 표준화</h3>
 <p>네 특성의 평균과 표준편차는 훈련 데이터에서만 계산합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>x_{\mathrm{scaled}}
+<div class="math-block" role="math" aria-label="x_{\mathrm{scaled}}
 =
 \frac{x-\mu_{\mathrm{train}}}
-{\sigma_{\mathrm{train}}}
-</code></pre></div>
+{\sigma_{\mathrm{train}}}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>x</mi><mrow><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow></mrow></msub><mo>&#x0003D;</mo><mfrac><mrow><mi>x</mi><mo>&#x02212;</mo><msub><mi>&#x003BC;</mi><mrow><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi></mrow></mrow></msub></mrow><mrow><msub><mi>&#x003C3;</mi><mrow><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi></mrow></mrow></msub></mrow></mfrac></mrow></math></div>
 <p>테스트 데이터에도 훈련 데이터의 평균과 표준편차를 그대로 사용합니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch03_4_iris_multiclass_classification.ipynb · 코드 셀 6 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>train_mean = X_train.mean()
 train_std = X_train.std()
@@ -3051,8 +3044,7 @@ print(
 <div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>nn.Linear(4, 3)
 </code></pre></div>
 <p>모델 출력 shape:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>[\text{데이터 수},\ 3]
-</code></pre></div>
+<div class="math-block" role="math" aria-label="[\text{데이터 수},\ 3]"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mo stretchy="false">[</mo><mtext>데이터&#x000A0;수</mtext><mo>&#x0002C;</mo><mtext>&#x000A0;</mtext><mn>3</mn><mo stretchy="false">]</mo></mrow></math></div>
 <p>같은 선형 계층이므로 별도의 모델 클래스를 만들지 않습니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch03_4_iris_multiclass_classification.ipynb · 코드 셀 8 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>torch.manual_seed(42)
 
@@ -3075,14 +3067,13 @@ print(&quot;편향 shape:&quot;, model.bias.shape)
 </pre></div>
 <h3>9. 모델 학습</h3>
 <p>학습 순서는 와 같습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\text{로짓 계산}
+<div class="math-block" role="math" aria-label="\text{로짓 계산}
 \rightarrow
 \text{손실 계산}
 \rightarrow
 \text{역전파}
 \rightarrow
-\text{가중치 갱신}
-</code></pre></div>
+\text{가중치 갱신}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>로짓&#x000A0;계산</mtext><mo>&#x02192;</mo><mtext>손실&#x000A0;계산</mtext><mo>&#x02192;</mo><mtext>역전파</mtext><mo>&#x02192;</mo><mtext>가중치&#x000A0;갱신</mtext></mrow></math></div>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch03_4_iris_multiclass_classification.ipynb · 코드 셀 9 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>epochs = 1500
 loss_history = []
 
@@ -3635,11 +3626,10 @@ print(&quot;테스트:&quot;, round(y_test[&quot;target&quot;].mean(), 4))
 </code></pre></div>
 <h3>5. 표준화 데이터와 원본 데이터 준비</h3>
 <p>연속형 특성만 훈련 데이터의 평균과 표준편차로 표준화합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>x_{\mathrm{scaled}}
+<div class="math-block" role="math" aria-label="x_{\mathrm{scaled}}
 =
 \frac{x-\mu_{\mathrm{train}}}
-{\sigma_{\mathrm{train}}}
-</code></pre></div>
+{\sigma_{\mathrm{train}}}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>x</mi><mrow><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow></mrow></msub><mo>&#x0003D;</mo><mfrac><mrow><mi>x</mi><mo>&#x02212;</mo><msub><mi>&#x003BC;</mi><mrow><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi></mrow></mrow></msub></mrow><mrow><msub><mi>&#x003C3;</mi><mrow><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi></mrow></mrow></msub></mrow></mfrac></mrow></math></div>
 <p>표준화 효과를 비교하기 위해 다음 두 입력을 모두 준비합니다.</p>
 <ul>
 <li><code>standardized</code>: 연속형 특성을 표준화한 데이터</li>
@@ -4223,13 +4213,12 @@ plt.show()
 </code></pre></div>
 <h3>12. 실험 5: L2 규제</h3>
 <p>L2 규제는 가중치가 지나치게 커지는 것을 억제합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathrm{Total\ Loss}
+<div class="math-block" role="math" aria-label="\mathrm{Total\ Loss}
 =
 \mathrm{Data\ Loss}
 +
 \lambda
-\sum_i w_i^2
-</code></pre></div>
+\sum_i w_i^2"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mrow><mi mathvariant="normal">T</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mtext>&#x000A0;</mtext><mi mathvariant="normal">L</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">s</mi></mrow><mo>&#x0003D;</mo><mrow><mi mathvariant="normal">D</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">a</mi><mtext>&#x000A0;</mtext><mi mathvariant="normal">L</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">s</mi></mrow><mo>&#x0002B;</mo><mi>&#x003BB;</mi><munder><mo>&#x02211;</mo><mi>i</mi></munder><msubsup><mi>w</mi><mi>i</mi><mn>2</mn></msubsup></mrow></math></div>
 <p>PyTorch에서는 Adam의 <code>weight_decay</code>로 간단히 적용할 수 있습니다.</p>
 <p>차이를 쉽게 관찰하기 위해 <code>weight_decay=0.01</code>을 사용합니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch03_5_heart_training_optimization.ipynb · 코드 셀 15 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>torch.manual_seed(RANDOM_SEED)

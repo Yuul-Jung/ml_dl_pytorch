@@ -618,6 +618,23 @@ pre code {
   overflow-wrap: anywhere;
 }
 
+/* (추가) 수식(MathML): 블록 수식은 가운데 정렬, 넓으면 가로 스크롤 */
+.math-block {
+  margin: 14px 0;
+  padding: 10px 12px;
+  overflow-x: auto;
+  background: #fbfbf9;
+  border: 1px solid var(--line);
+  font-size: 1.08rem;
+}
+.math-block math {
+  display: block;
+  margin: 0 auto;
+}
+math {
+  font-family: "Latin Modern Math", "STIX Two Math", "Cambria Math", math;
+}
+
 /* (추가) 과정 INDEX: 숫자 요약·테크트리·장별 카드 (기준 디자인 ai-agent-engineering 첫 화면 구성) */
 .stats {
   display: grid;
@@ -787,8 +804,8 @@ python -m pip install torch torchvision numpy pandas scikit-learn matplotlib
 <table>
 <thead>
 <tr>
-  <th style="text-align:right">입   력 <code>x</code></th>
-  <th style="text-align:right">실 제 값 <code>y</code></th>
+  <th style="text-align:right">입   력 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>x</mi></mrow></math></th>
+  <th style="text-align:right">실 제 값 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>y</mi></mrow></math></th>
 </tr>
 </thead>
 <tbody>
@@ -806,7 +823,7 @@ python -m pip install torch torchvision numpy pandas scikit-learn matplotlib
 </tr>
 </tbody>
 </table>
-<p>데이터의 관계는 <code>y=x</code>이므로, 가장 잘 맞는 직선은 기울기 1, 절편 0입니다.</p>
+<p>데이터의 관계는 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>y</mi><mo>&#x0003D;</mo><mi>x</mi></mrow></math>이므로, 가장 잘 맞는 직선은 기울기 1, 절편 0입니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_1_linear_forward_and_loss.ipynb · 코드 셀 1 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>#01_데이터 준비
 import torch
 
@@ -837,15 +854,14 @@ plt.show()
 <p><img src="img/ch02_1_c02_0.png" alt="ch02_1 선형회귀의 순전파와 손실 — 코드 셀 2 출력 그림" /></p>
 <h3>2. 순전파로 예측값 계산하기</h3>
 <p>선형회귀는 입력과 출력의 관계를 다음 직선으로 표현합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\hat{y}=Wx+b
-</code></pre></div>
+<div class="math-block" role="math" aria-label="\hat{y}=Wx+b"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mo>&#x0003D;</mo><mi>W</mi><mi>x</mi><mo>&#x0002B;</mo><mi>b</mi></mrow></math></div>
 <ul>
-<li><code>\hat{y}</code>: Prediction(프리딕션, 예측값)</li>
-<li><code>W</code>: Weight(웨이트, 가중치 또는 직선의 기울기)</li>
-<li><code>b</code>: Bias(바이어스, 편향 또는 직선의 절편)</li>
-<li><code>x</code>: Input(인풋, 입력값)</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover></mrow></math>: Prediction(프리딕션, 예측값)</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math>: Weight(웨이트, 가중치 또는 직선의 기울기)</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>b</mi></mrow></math>: Bias(바이어스, 편향 또는 직선의 절편)</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>x</mi></mrow></math>: Input(인풋, 입력값)</li>
 </ul>
-<p>Forward(포워드, 순전파)는 현재 <code>W</code>와 <code>b</code>를 사용하여 예측값을 계산하는 과정입니다.</p>
+<p>Forward(포워드, 순전파)는 현재 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math>와 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>b</mi></mrow></math>를 사용하여 예측값을 계산하는 과정입니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_1_linear_forward_and_loss.ipynb · 코드 셀 3 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>#02_순전파로 예측 : 가설(H)
 # 예시 직선: y = 0.5x + 2
 
@@ -884,12 +900,11 @@ plt.show()
 <h3>3. MSE로 Loss(손실) 계산하기</h3>
 <p>Loss(로스, 손실)는 예측값이 실제값과 얼마나 다른지를 나타내는 숫자입니다.</p>
 <p>MSE(엠에스이, Mean Squared Error: 평균제곱오차)는 각 오차를 제곱한 뒤 평균을 계산합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathrm{MSE}
+<div class="math-block" role="math" aria-label="\mathrm{MSE}
 =
 \frac{1}{m}
 \sum_{i=1}^{m}
-(\hat{y}_i-y_i)^2
-</code></pre></div>
+(\hat{y}_i-y_i)^2"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mrow><mi mathvariant="normal">M</mi><mi mathvariant="normal">S</mi><mi mathvariant="normal">E</mi></mrow><mo>&#x0003D;</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>m</mi></mrow></mfrac><munderover><mo>&#x02211;</mo><mrow><mi>i</mi><mo>&#x0003D;</mo><mn>1</mn></mrow><mrow><mi>m</mi></mrow></munderover><mo stretchy="false">&#x00028;</mo><msub><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mi>i</mi></msub><mo>&#x02212;</mo><msub><mi>y</mi><mi>i</mi></msub><msup><mo stretchy="false">&#x00029;</mo><mn>2</mn></msup></mrow></math></div>
 <p>계산 순서:</p>
 <ol>
 <li>예측값과 실제값의 차이를 구합니다.</li>
@@ -972,24 +987,23 @@ plt.show()
 <tr>
   <td>Backward</td>
   <td><code>loss.backward()</code></td>
-  <td><code>W</code>, <code>b</code>의 기울기 계산</td>
+  <td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>b</mi></mrow></math>의 기울기 계산</td>
 </tr>
 <tr>
   <td>Update</td>
   <td><code>optimizer.step()</code></td>
-  <td><code>W</code>, <code>b</code> 갱신</td>
+  <td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>b</mi></mrow></math> 갱신</td>
 </tr>
 </tbody>
 </table>
 <p>SGD(Stochastic Gradient Descent, 확률적 경사하강법)는 기울기의 반대 방향으로 매개변수를 조금씩 이동합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\text{새 매개변수}
+<div class="math-block" role="math" aria-label="\text{새 매개변수}
 =
 \text{현재 매개변수}
 -
 \text{학습률}
 \times
-\text{기울기}
-</code></pre></div>
+\text{기울기}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>새&#x000A0;매개변수</mtext><mo>&#x0003D;</mo><mtext>현재&#x000A0;매개변수</mtext><mo>&#x02212;</mo><mtext>학습률</mtext><mo>&#x000D7;</mo><mtext>기울기</mtext></mrow></math></div>
 <p>아래 함수는 같은 학습 코드를 여러 데이터에 재사용하기 위한 간단한 함수입니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_1_linear_forward_and_loss.ipynb · 코드 셀 8 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>#05.선형회귀 함수
 def train_line(x, y, learning_rate=0.01, epochs=2000):
@@ -1027,8 +1041,8 @@ def train_line(x, y, learning_rate=0.01, epochs=2000):
 <h3>6. 기본 데이터 학습하기</h3>
 <p>학습이 잘 진행되면 다음과 같이 변합니다.</p>
 <ul>
-<li><code>W</code>는 1에 가까워집니다.</li>
-<li><code>b</code>는 0에 가까워집니다.</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math>는 1에 가까워집니다.</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>b</mi></mrow></math>는 0에 가까워집니다.</li>
 <li>Loss는 처음보다 매우 작아집니다.</li>
 </ul>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_1_linear_forward_and_loss.ipynb · 코드 셀 9 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>#06.기본데이터 학습
@@ -1124,8 +1138,7 @@ print(&quot;예측값:&quot;, y_new)
 </tbody>
 </table>
 <p>이 데이터는 대략 다음 관계를 가집니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>y=20x+1
-</code></pre></div>
+<div class="math-block" role="math" aria-label="y=20x+1"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>y</mi><mo>&#x0003D;</mo><mn>20</mn><mi>x</mi><mo>&#x0002B;</mo><mn>1</mn></mrow></math></div>
 <p>앞에서 만든 <code>train_line()</code> 함수를 그대로 재사용합니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_1_linear_forward_and_loss.ipynb · 코드 셀 11 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>#08. 예제-센서입력 전압 보정
 voltage_data = torch.tensor([0.5, 1.0, 1.5, 2.0])
@@ -1190,14 +1203,14 @@ print(&quot;1.25 V 예측값:&quot;, corrected_value.item())
 </pre></div>
 <h3>10. 핵심 정리</h3>
 <ul>
-<li>선형회귀는 <code>\hat{y}=Wx+b</code> 형태의 직선을 학습합니다.</li>
+<li>선형회귀는 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mo>&#x0003D;</mo><mi>W</mi><mi>x</mi><mo>&#x0002B;</mo><mi>b</mi></mrow></math> 형태의 직선을 학습합니다.</li>
 <li><code>backward()</code>는 Loss를 줄이기 위한 기울기를 계산합니다.</li>
 <li>학습된 모델은 새로운 입력값을 예측하는 데 사용합니다.</li>
 </ul>
 </section><section class="section" id="s04"><h2><span class="num">04</span>ch02_2 신경망 형식의 선형회귀</h2><p>노트북: <code>notebooks/ch02_2_linear_regression_neural_network.ipynb</code> · 원본 파일: <code>ch02_2_linear_regression_neural_network.ipynb</code> · 상태: 원본 · 실행 기록 있음 · 재실행 미검증</p>
 <h3>개요</h3>
 <ul>
-<li>직접 만든 가중치 <code>W</code>와 편향 <code>b</code>를 <code>nn.Linear</code> 구조로 바꿉니다.</li>
+<li>직접 만든 가중치 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math>와 편향 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>b</mi></mrow></math>를 <code>nn.Linear</code> 구조로 바꿉니다.</li>
 </ul>
 <p><img src="img/ch02_2_md0_image.png" alt="ch02_2 설명 그림" /></p>
 <ul>
@@ -1206,8 +1219,7 @@ print(&quot;1.25 V 예측값:&quot;, corrected_value.item())
 <h3>1. 학습 데이터 준비</h3>
 <p><code>nn.Linear(1, 1)</code>은 데이터 하나당 입력 특성 1개를 받습니다.</p>
 <p>따라서 데이터 모양은 다음과 같이 구성합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>[\text{데이터 수},\ \text{입력 특성 수}]
-</code></pre></div>
+<div class="math-block" role="math" aria-label="[\text{데이터 수},\ \text{입력 특성 수}]"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mo stretchy="false">[</mo><mtext>데이터&#x000A0;수</mtext><mo>&#x0002C;</mo><mtext>&#x000A0;</mtext><mtext>입력&#x000A0;특성&#x000A0;수</mtext><mo stretchy="false">]</mo></mrow></math></div>
 <p>이번 데이터는 3개이며, 각 데이터의 입력 특성은 1개입니다.</p>
 <ul>
 <li>입력 shape: <code>(3, 1)</code></li>
@@ -1244,10 +1256,9 @@ tensor([[1.],
 shape: torch.Size([3, 1])
 </pre></div>
 <h3>2. 직접 계산에서 신경망 구조로 바꾸기</h3>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\hat{y}=Wx+b
-</code></pre></div>
+<div class="math-block" role="math" aria-label="\hat{y}=Wx+b"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mo>&#x0003D;</mo><mi>W</mi><mi>x</mi><mo>&#x0002B;</mo><mi>b</mi></mrow></math></div>
 <ul>
-<li><code>nn.Linear(1, 1)</code>이 <code>W</code>와 <code>b</code>를 내부에서 생성하고 관리합니다.</li>
+<li><code>nn.Linear(1, 1)</code>이 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math>와 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>b</mi></mrow></math>를 내부에서 생성하고 관리합니다.</li>
 <li>ReLU(렐루, 음수를 0으로 바꾸는 활성화 함수)는 사용하지 않습니다.</li>
 <li>같은 선형회귀를 신경망 형식으로 표현합니다.</li>
 </ul>
@@ -1280,8 +1291,8 @@ print(model)
 <h3>4. 모델 안의 가중치와 편향 확인</h3>
 <p><code>nn.Linear</code> 내부에는 학습 대상인 가중치와 편향이 들어 있습니다.</p>
 <ul>
-<li><code>weight</code>: 직선의 기울기 <code>W</code></li>
-<li><code>bias</code>: 직선의 절편 <code>b</code></li>
+<li><code>weight</code>: 직선의 기울기 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math></li>
+<li><code>bias</code>: 직선의 절편 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>b</mi></mrow></math></li>
 </ul>
 <p>처음에는 임의의 값으로 시작하고, 학습하면서 데이터에 맞게 변경됩니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_2_linear_regression_neural_network.ipynb · 코드 셀 3 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>#04. 모델 안의 가중치와 편향 확인
@@ -1299,14 +1310,13 @@ for name, parameter in model.named_parameters():
 <li><code>model.parameters()</code>는 모델 내부의 모든 학습 대상을 가져옵니다.</li>
 </ul>
 <p>학습 순서는 와 같습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\text{Forward}
+<div class="math-block" role="math" aria-label="\text{Forward}
 \rightarrow
 \text{Loss}
 \rightarrow
 \text{Backward}
 \rightarrow
-\text{Update}
-</code></pre></div>
+\text{Update}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>Forward</mtext><mo>&#x02192;</mo><mtext>Loss</mtext><mo>&#x02192;</mo><mtext>Backward</mtext><mo>&#x02192;</mo><mtext>Update</mtext></mrow></math></div>
 <h3>6. 재사용 가능한 학습 함수</h3>
 <p>학습 코드를 한 번만 작성한 뒤 여러 데이터에 재사용합니다.</p>
 <p>함수 내부에서 다음 작업을 반복합니다.</p>
@@ -1346,10 +1356,9 @@ def train_model(model, x, y, learning_rate=0.01, epochs=2000):
     return first_loss, loss.item()
 </code></pre></div>
 <h3>7. 기본 선형회귀 모델 학습</h3>
-<p>학습 데이터는 <code>y=x</code> 관계입니다.</p>
+<p>학습 데이터는 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>y</mi><mo>&#x0003D;</mo><mi>x</mi></mrow></math> 관계입니다.</p>
 <p>따라서 학습이 끝나면 다음 값에 가까워집니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>W \approx 1,\qquad b \approx 0
-</code></pre></div>
+<div class="math-block" role="math" aria-label="W \approx 1,\qquad b \approx 0"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>W</mi><mo>&#x02248;</mo><mn>1</mn><mo>&#x0002C;</mo><mspace width="2em" /><mi>b</mi><mo>&#x02248;</mo><mn>0</mn></mrow></math></div>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_2_linear_regression_neural_network.ipynb · 코드 셀 5 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>#07. 모델 학습
 torch.manual_seed(42)
 
@@ -1411,8 +1420,7 @@ print(y_new[:, 0])
 </tbody>
 </table>
 <p>데이터 관계는 대략 다음과 같습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>y=20x+1
-</code></pre></div>
+<div class="math-block" role="math" aria-label="y=20x+1"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>y</mi><mo>&#x0003D;</mo><mn>20</mn><mi>x</mi><mo>&#x0002B;</mo><mn>1</mn></mrow></math></div>
 <p>앞에서 만든 모델 클래스와 학습 함수를 그대로 재사용합니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_2_linear_regression_neural_network.ipynb · 코드 셀 7 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>voltage_data = torch.tensor(
     [[0.5], [1.0], [1.5], [2.0]]
@@ -1455,17 +1463,15 @@ print(&quot;1.25 V 보정값:&quot;, corrected_value.item())
 </section><section class="section" id="s05"><h2><span class="num">05</span>ch02_3 비용함수 최소화</h2><p>노트북: <code>notebooks/ch02_3_minimizing_cost.ipynb</code> · 원본 파일: <code>ch02_3_minimizing_cost.ipynb</code> · 상태: 원본 · 실행 기록 있음 · 재실행 미검증</p>
 <h3>개요</h3>
 <ul>
-<li>가중치 <code>W</code>에 따라 Cost(코스트, 비용)가 어떻게 변하는지 확인합니다.</li>
+<li>가중치 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math>에 따라 Cost(코스트, 비용)가 어떻게 변하는지 확인합니다.</li>
 <li>같은 함수를 센서 데이터에 재사용합니다.</li>
 </ul>
 <h3>1. 데이터와 단순화된 선형식</h3>
 <p>다음 세 점을 사용합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>(1,1),\quad(2,2),\quad(3,3)
-</code></pre></div>
-<p>데이터의 관계는 <code>y=x</code>이므로 가장 적절한 가중치는 <code>W=1</code>입니다.</p>
-<p>비용곡선을 쉽게 보기 위해 편향 <code>b</code>를 잠시 제외합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\hat{y}=Wx
-</code></pre></div>
+<div class="math-block" role="math" aria-label="(1,1),\quad(2,2),\quad(3,3)"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mo stretchy="false">&#x00028;</mo><mn>1</mn><mo>&#x0002C;</mo><mn>1</mn><mo stretchy="false">&#x00029;</mo><mo>&#x0002C;</mo><mspace width="1em" /><mo stretchy="false">&#x00028;</mo><mn>2</mn><mo>&#x0002C;</mo><mn>2</mn><mo stretchy="false">&#x00029;</mo><mo>&#x0002C;</mo><mspace width="1em" /><mo stretchy="false">&#x00028;</mo><mn>3</mn><mo>&#x0002C;</mo><mn>3</mn><mo stretchy="false">&#x00029;</mo></mrow></math></div>
+<p>데이터의 관계는 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>y</mi><mo>&#x0003D;</mo><mi>x</mi></mrow></math>이므로 가장 적절한 가중치는 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi><mo>&#x0003D;</mo><mn>1</mn></mrow></math>입니다.</p>
+<p>비용곡선을 쉽게 보기 위해 편향 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>b</mi></mrow></math>를 잠시 제외합니다.</p>
+<div class="math-block" role="math" aria-label="\hat{y}=Wx"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mo>&#x0003D;</mo><mi>W</mi><mi>x</mi></mrow></math></div>
 <p>편향이 필요 없다는 뜻이 아니라, <strong>가중치 하나의 이동만 관찰하기 위한 단순화</strong>입니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_3_minimizing_cost.ipynb · 코드 셀 1 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>import torch
 import matplotlib.pyplot as plt
@@ -1481,15 +1487,14 @@ print(&quot;실제값:&quot;, y_train)
 </pre></div>
 <h3>2. 가중치에 따른 비용 계산</h3>
 <p>MSE(엠에스이, 평균제곱오차)는 예측값과 실제값의 차이를 제곱한 뒤 평균합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathrm{Cost}(W)
+<div class="math-block" role="math" aria-label="\mathrm{Cost}(W)
 =
 \frac{1}{m}
 \sum_{i=1}^{m}
-(Wx_i-y_i)^2
-</code></pre></div>
+(Wx_i-y_i)^2"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">t</mi></mrow><mo stretchy="false">&#x00028;</mo><mi>W</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0003D;</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>m</mi></mrow></mfrac><munderover><mo>&#x02211;</mo><mrow><mi>i</mi><mo>&#x0003D;</mo><mn>1</mn></mrow><mrow><mi>m</mi></mrow></munderover><mo stretchy="false">&#x00028;</mo><mi>W</mi><msub><mi>x</mi><mi>i</mi></msub><mo>&#x02212;</mo><msub><mi>y</mi><mi>i</mi></msub><msup><mo stretchy="false">&#x00029;</mo><mn>2</mn></msup></mrow></math></div>
 <ul>
-<li><code>W=1</code>: 예측값과 실제값이 같으므로 비용은 0</li>
-<li><code>W\neq1</code>: 예측 오차가 생기므로 비용은 0보다 큼</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi><mo>&#x0003D;</mo><mn>1</mn></mrow></math>: 예측값과 실제값이 같으므로 비용은 0</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi><mo>&#x02260;</mo><mn>1</mn></mrow></math>: 예측 오차가 생기므로 비용은 0보다 큼</li>
 </ul>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_3_minimizing_cost.ipynb · 코드 셀 2 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def calculate_cost(weight, x=x_train, y=y_train):
     prediction = weight * x
@@ -1505,10 +1510,10 @@ W=1.0 → Cost=0.0000
 W=2.0 → Cost=4.6667
 </pre></div>
 <h3>3. 비용함수 그래프</h3>
-<p>여러 가중치에서 비용을 계산하면 <code>W=1</code>이 최저점인 포물선이 나타납니다.</p>
+<p>여러 가중치에서 비용을 계산하면 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi><mo>&#x0003D;</mo><mn>1</mn></mrow></math>이 최저점인 포물선이 나타납니다.</p>
 <p>이 그래프에서:</p>
 <ul>
-<li>가로축: 가중치 <code>W</code></li>
+<li>가로축: 가중치 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math></li>
 <li>세로축: Cost</li>
 <li>가장 낮은 점: 가장 좋은 가중치</li>
 </ul>
@@ -1536,17 +1541,16 @@ plt.show()
 <h3>4. 기울기의 의미</h3>
 <p>Gradient(기울기)는 현재 위치에서 비용이 어느 방향으로 증가하는지 알려줍니다.</p>
 <ul>
-<li>기울기 <code>&gt;0</code>: 오른쪽으로 갈수록 비용 증가 → <code>W</code>를 줄여야 함</li>
-<li>기울기 <code>&lt;0</code>: 오른쪽으로 갈수록 비용 감소 → <code>W</code>를 늘려야 함</li>
-<li>기울기 <code>\approx0</code>: 비용곡선의 최저점에 가까움</li>
+<li>기울기 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mo>&#x0003E;</mo><mn>0</mn></mrow></math>: 오른쪽으로 갈수록 비용 증가 → <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math>를 줄여야 함</li>
+<li>기울기 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mo>&#x0003C;</mo><mn>0</mn></mrow></math>: 오른쪽으로 갈수록 비용 감소 → <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math>를 늘려야 함</li>
+<li>기울기 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mo>&#x02248;</mo><mn>0</mn></mrow></math>: 비용곡선의 최저점에 가까움</li>
 </ul>
 <p>현재 데이터의 기울기는 다음 식으로 계산할 수 있습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\frac{\partial \mathrm{Cost}}{\partial W}
+<div class="math-block" role="math" aria-label="\frac{\partial \mathrm{Cost}}{\partial W}
 =
 \frac{2}{m}
 \sum_{i=1}^{m}
-(Wx_i-y_i)x_i
-</code></pre></div>
+(Wx_i-y_i)x_i"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mfrac><mrow><mo>&#x02202;</mo><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">t</mi></mrow></mrow><mrow><mo>&#x02202;</mo><mi>W</mi></mrow></mfrac><mo>&#x0003D;</mo><mfrac><mrow><mn>2</mn></mrow><mrow><mi>m</mi></mrow></mfrac><munderover><mo>&#x02211;</mo><mrow><mi>i</mi><mo>&#x0003D;</mo><mn>1</mn></mrow><mrow><mi>m</mi></mrow></munderover><mo stretchy="false">&#x00028;</mo><mi>W</mi><msub><mi>x</mi><mi>i</mi></msub><mo>&#x02212;</mo><msub><mi>y</mi><mi>i</mi></msub><mo stretchy="false">&#x00029;</mo><msub><mi>x</mi><mi>i</mi></msub></mrow></math></div>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_3_minimizing_cost.ipynb · 코드 셀 4 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code># W=5에서 기울기를 계산합니다.
 weight = torch.tensor(5.0)
 
@@ -1581,15 +1585,13 @@ print(&quot;자동미분:&quot;, weight_auto.grad.item())
 </pre></div>
 <h3>6. 경사하강법으로 한 번 이동하기</h3>
 <p>경사하강법은 기울기의 반대 방향으로 가중치를 이동합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>W_{\mathrm{new}}
+<div class="math-block" role="math" aria-label="W_{\mathrm{new}}
 =
 W_{\mathrm{old}}
 -
 \alpha
-\frac{\partial \mathrm{Cost}}{\partial W}
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>여기서 (\alpha)는 Learning Rate(학습률)입니다.
-</code></pre></div>
+\frac{\partial \mathrm{Cost}}{\partial W}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>W</mi><mrow><mrow><mi mathvariant="normal">n</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">w</mi></mrow></mrow></msub><mo>&#x0003D;</mo><msub><mi>W</mi><mrow><mrow><mi mathvariant="normal">o</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">d</mi></mrow></mrow></msub><mo>&#x02212;</mo><mi>&#x003B1;</mi><mfrac><mrow><mo>&#x02202;</mo><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">t</mi></mrow></mrow><mrow><mo>&#x02202;</mo><mi>W</mi></mrow></mfrac></mrow></math></div>
+<div class="math-block" role="math" aria-label="여기서 (\alpha)는 Learning Rate(학습률)입니다."><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>여</mi><mi>기</mi><mi>서</mi><mo stretchy="false">&#x00028;</mo><mi>&#x003B1;</mi><mo stretchy="false">&#x00029;</mo><mi>는</mi><mi>L</mi><mi>e</mi><mi>a</mi><mi>r</mi><mi>n</mi><mi>i</mi><mi>n</mi><mi>g</mi><mi>R</mi><mi>a</mi><mi>t</mi><mi>e</mi><mo stretchy="false">&#x00028;</mo><mi>학</mi><mi>습</mi><mi>률</mi><mo stretchy="false">&#x00029;</mo><mi>입</mi><mi>니</mi><mi>다</mi><mo>&#x0002E;</mo></mrow></math></div>
 <ul>
 <li>학습률이 작으면 조금 이동</li>
 <li>학습률이 크면 많이 이동</li>
@@ -1608,15 +1610,14 @@ print(&quot;이동 후 Cost:&quot;, calculate_cost(new_weight.item()))
 </pre></div>
 <h3>7. 재사용 가능한 비용 최소화 함수</h3>
 <p>학습 흐름과 같습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\text{Forward}
+<div class="math-block" role="math" aria-label="\text{Forward}
 \rightarrow
 \text{Cost}
 \rightarrow
 \text{Backward}
 \rightarrow
-\text{Update}
-</code></pre></div>
-<p>모델 전체가 아니라 가중치 <code>W</code> 하나만 학습합니다.</p>
+\text{Update}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>Forward</mtext><mo>&#x02192;</mo><mtext>Cost</mtext><mo>&#x02192;</mo><mtext>Backward</mtext><mo>&#x02192;</mo><mtext>Update</mtext></mrow></math></div>
+<p>모델 전체가 아니라 가중치 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math> 하나만 학습합니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_3_minimizing_cost.ipynb · 코드 셀 7 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def minimize_cost(
     x,
     y,
@@ -1666,10 +1667,10 @@ print(&quot;이동 후 Cost:&quot;, calculate_cost(new_weight.item()))
     return W.detach(), weight_history, cost_history
 </code></pre></div>
 <h3>8. 가중치가 최저점으로 이동하는 과정</h3>
-<p>시작 가중치를 <code>W=5</code>로 설정합니다.</p>
+<p>시작 가중치를 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi><mo>&#x0003D;</mo><mn>5</mn></mrow></math>로 설정합니다.</p>
 <p>학습이 진행되면:</p>
 <ul>
-<li><code>W</code>는 1에 가까워짐</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math>는 1에 가까워짐</li>
 <li>Cost는 0에 가까워짐</li>
 </ul>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_3_minimizing_cost.ipynb · 코드 셀 8 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>final_weight, weight_history, cost_history = minimize_cost(
@@ -1752,9 +1753,8 @@ plt.show()
 </pre></div>
 <h3>10. 실무 예제: 센서 출력 비율 학습</h3>
 <p>입력과 출력의 관계가 다음과 같은 센서 데이터를 사용합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>y=2x
-</code></pre></div>
-<p>따라서 목표 가중치는 <code>W=2</code>입니다.</p>
+<div class="math-block" role="math" aria-label="y=2x"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>y</mi><mo>&#x0003D;</mo><mn>2</mn><mi>x</mi></mrow></math></div>
+<p>따라서 목표 가중치는 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi><mo>&#x0003D;</mo><mn>2</mn></mrow></math>입니다.</p>
 <p>앞에서 만든 <code>minimize_cost()</code> 함수를 그대로 재사용합니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_3_minimizing_cost.ipynb · 코드 셀 11 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>sensor_x = torch.tensor([1.0, 2.0, 3.0])
 sensor_y = torch.tensor([2.0, 4.0, 6.0])
@@ -1795,8 +1795,8 @@ print(&quot;입력 4의 예측값:&quot;, new_output.item())
 </ul>
 <h3>1. 라이브러리와 참돔 데이터 준비</h3>
 <ul>
-<li>입력 <code>x</code>: 참돔 길이, 단위는 cm</li>
-<li>목표값 <code>y</code>: 참돔 무게, 단위는 g</li>
+<li>입력 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>x</mi></mrow></math>: 참돔 길이, 단위는 cm</li>
+<li>목표값 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>y</mi></mrow></math>: 참돔 무게, 단위는 g</li>
 <li>데이터 수: 56개</li>
 </ul>
 <p>한 행이 참돔 한 마리를 의미하도록 입력과 목표값의 shape를 <code>(56, 1)</code>로 만듭니다.</p>
@@ -1883,13 +1883,12 @@ print(&quot;테스트 데이터:&quot;, x_test.shape, y_test.shape)
 </pre></div>
 <h3>4. 입력값 표준화</h3>
 <p>참돔 길이를 평균 0, 표준편차 1에 가까운 값으로 바꿉니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>x_{\mathrm{scaled}}
+<div class="math-block" role="math" aria-label="x_{\mathrm{scaled}}
 =
-\frac{x-\mu}{\sigma}
-</code></pre></div>
+\frac{x-\mu}{\sigma}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>x</mi><mrow><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow></mrow></msub><mo>&#x0003D;</mo><mfrac><mrow><mi>x</mi><mo>&#x02212;</mo><mi>&#x003BC;</mi></mrow><mrow><mi>&#x003C3;</mi></mrow></mfrac></mrow></math></div>
 <ul>
-<li><code>\mu</code>: 훈련 데이터 길이의 평균</li>
-<li><code>\sigma</code>: 훈련 데이터 길이의 표준편차</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x003BC;</mi></mrow></math>: 훈련 데이터 길이의 평균</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x003C3;</mi></mrow></math>: 훈련 데이터 길이의 표준편차</li>
 <li>테스트 데이터에도 <strong>훈련 데이터에서 계산한 평균과 표준편차</strong>를 사용</li>
 </ul>
 <p>테스트 데이터로 평균과 표준편차를 다시 계산하면 평가 정보가 학습 과정에 섞일 수 있습니다.</p>
@@ -1909,17 +1908,15 @@ print(&quot;표준화 후 표준편차:&quot;, x_train_scaled.std().item())
 </pre></div>
 <h3>5. 선형회귀 모델 학습</h3>
 <p>이번 모델은 선형 계층 하나뿐이므로 별도의 모델 클래스를 다시 만들지 않고 <code>nn.Linear(1, 1)</code>을 바로 사용합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\hat{y}=Wx+b
-</code></pre></div>
+<div class="math-block" role="math" aria-label="\hat{y}=Wx+b"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mo>&#x0003D;</mo><mi>W</mi><mi>x</mi><mo>&#x0002B;</mo><mi>b</mi></mrow></math></div>
 <p>학습 흐름은 와 같습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\text{순전파}
+<div class="math-block" role="math" aria-label="\text{순전파}
 \rightarrow
 \text{손실}
 \rightarrow
 \text{역전파}
 \rightarrow
-\text{갱신}
-</code></pre></div>
+\text{갱신}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>순전파</mtext><mo>&#x02192;</mo><mtext>손실</mtext><mo>&#x02192;</mo><mtext>역전파</mtext><mo>&#x02192;</mo><mtext>갱신</mtext></mrow></math></div>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_4_linear_regression.ipynb · 코드 셀 5 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>torch.manual_seed(42)
 
 model = nn.Linear(1, 1)
@@ -1968,20 +1965,18 @@ plt.show()
 <p><img src="img/ch02_4_c06_0.png" alt="ch02_4 실제 데이터로 선형회귀하기 — 코드 셀 6 출력 그림" /></p>
 <h3>7. 실제 단위의 회귀식 확인</h3>
 <p>모델은 표준화된 길이를 입력받습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\hat{y}
+<div class="math-block" role="math" aria-label="\hat{y}
 =
 W_{\mathrm{scaled}}
 \left(
 \frac{x-\mu}{\sigma}
 \right)
 +
-b_{\mathrm{scaled}}
-</code></pre></div>
+b_{\mathrm{scaled}}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mo>&#x0003D;</mo><msub><mi>W</mi><mrow><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow></mrow></msub><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><mfrac><mrow><mi>x</mi><mo>&#x02212;</mo><mi>&#x003BC;</mi></mrow><mrow><mi>&#x003C3;</mi></mrow></mfrac><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow><mo>&#x0002B;</mo><msub><mi>b</mi><mrow><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow></mrow></msub></mrow></math></div>
 <p>이를 cm와 g 단위의 직선으로 바꾸면 다음과 같습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\hat{y}
+<div class="math-block" role="math" aria-label="\hat{y}
 =
-W_{\mathrm{real}}x+b_{\mathrm{real}}
-</code></pre></div>
+W_{\mathrm{real}}x+b_{\mathrm{real}}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mo>&#x0003D;</mo><msub><mi>W</mi><mrow><mrow><mi mathvariant="normal">r</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi></mrow></mrow></msub><mi>x</mi><mo>&#x0002B;</mo><msub><mi>b</mi><mrow><mrow><mi mathvariant="normal">r</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi></mrow></mrow></msub></mrow></math></div>
 <p>이 변환은 결과를 실제 단위로 해석하기 위한 과정입니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_4_linear_regression.ipynb · 코드 셀 7 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>scaled_weight = model.weight.item()
 scaled_bias = model.bias.item()
@@ -2004,7 +1999,7 @@ print(f&quot;절편: {real_bias:.2f} g&quot;)
 <li>MSE : 실제 단위의 제곱매우 높음모델 학습(손실함수)에 최적화</li>
 <li>RMSE : 실제 데이터와 동일높음큰 오차에 민감하게 반응하며 직관적 단위 확인</li>
 <li>MAE : 실제 데이터와 동일낮음이상치가 많은 데이터에서 강건한 오차 측정</li>
-<li><code>R^2</code> : 없음 (0~1)-모델의 전체적인 데이터 설명력(상대적 성능) 평가</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msup><mi>R</mi><mn>2</mn></msup></mrow></math> : 없음 (0~1)-모델의 전체적인 데이터 설명력(상대적 성능) 평가</li>
 </ul>
 <table>
 <thead>
@@ -2026,18 +2021,15 @@ print(f&quot;절편: {real_bias:.2f} g&quot;)
   <td>큰 오차에 더 민감</td>
 </tr>
 <tr>
-  <td><code>R^2</code></td>
+  <td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msup><mi>R</mi><mn>2</mn></msup></mrow></math></td>
   <td>실제값 변화의 설명 정도</td>
   <td>1에 가까울수록 좋음</td>
 </tr>
 </tbody>
 </table>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathrm{MAE} = \frac{1}{n} \sum_{i=1}^{n} |y_i-\hat{y}_i|
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathrm{RMSE} = \sqrt{ \frac{1}{n} \sum_{i=1}^{n} (y_i-\hat{y}_i)^2 }
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>R^2 = 1- \frac{ \sum (y_i-\hat{y}_i)^2 }{ \sum (y_i-\bar{y})^2 }
-</code></pre></div>
+<div class="math-block" role="math" aria-label="\mathrm{MAE} = \frac{1}{n} \sum_{i=1}^{n} |y_i-\hat{y}_i|"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mrow><mi mathvariant="normal">M</mi><mi mathvariant="normal">A</mi><mi mathvariant="normal">E</mi></mrow><mo>&#x0003D;</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>n</mi></mrow></mfrac><munderover><mo>&#x02211;</mo><mrow><mi>i</mi><mo>&#x0003D;</mo><mn>1</mn></mrow><mrow><mi>n</mi></mrow></munderover><mo stretchy="false">&#x0007C;</mo><msub><mi>y</mi><mi>i</mi></msub><mo>&#x02212;</mo><msub><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mi>i</mi></msub><mo stretchy="false">&#x0007C;</mo></mrow></math></div>
+<div class="math-block" role="math" aria-label="\mathrm{RMSE} = \sqrt{ \frac{1}{n} \sum_{i=1}^{n} (y_i-\hat{y}_i)^2 }"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mrow><mi mathvariant="normal">R</mi><mi mathvariant="normal">M</mi><mi mathvariant="normal">S</mi><mi mathvariant="normal">E</mi></mrow><mo>&#x0003D;</mo><msqrt><mrow><mfrac><mrow><mn>1</mn></mrow><mrow><mi>n</mi></mrow></mfrac><msubsup><mo>&#x02211;</mo><mrow><mi>i</mi><mo>&#x0003D;</mo><mn>1</mn></mrow><mrow><mi>n</mi></mrow></msubsup><mo stretchy="false">&#x00028;</mo><msub><mi>y</mi><mi>i</mi></msub><mo>&#x02212;</mo><msub><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mi>i</mi></msub><msup><mo stretchy="false">&#x00029;</mo><mn>2</mn></msup></mrow></msqrt></mrow></math></div>
+<div class="math-block" role="math" aria-label="R^2 = 1- \frac{ \sum (y_i-\hat{y}_i)^2 }{ \sum (y_i-\bar{y})^2 }"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msup><mi>R</mi><mn>2</mn></msup><mo>&#x0003D;</mo><mn>1</mn><mo>&#x02212;</mo><mfrac><mrow><mo>&#x02211;</mo><mo stretchy="false">&#x00028;</mo><msub><mi>y</mi><mi>i</mi></msub><mo>&#x02212;</mo><msub><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mi>i</mi></msub><msup><mo stretchy="false">&#x00029;</mo><mn>2</mn></msup></mrow><mrow><mo>&#x02211;</mo><mo stretchy="false">&#x00028;</mo><msub><mi>y</mi><mi>i</mi></msub><mo>&#x02212;</mo><mover><mrow><mi>y</mi></mrow><mo stretchy="true">&#x000AF;</mo></mover><msup><mo stretchy="false">&#x00029;</mo><mn>2</mn></msup></mrow></mfrac></mrow></math></div>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_4_linear_regression.ipynb · 코드 셀 8 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def regression_metrics(y_true, y_pred):
     error = y_pred - y_true
 
@@ -2153,10 +2145,10 @@ plt.show()
 <h3>1. 시험 점수 데이터 준비</h3>
 <p>입력 특성은 세 개입니다.</p>
 <ul>
-<li><code>x_1</code>: Quiz 1(퀴즈 원, 첫 번째 퀴즈)</li>
-<li><code>x_2</code>: Quiz 2(퀴즈 투, 두 번째 퀴즈)</li>
-<li><code>x_3</code>: Midterm(미드텀, 중간시험)</li>
-<li><code>y</code>: Final Score(파이널 스코어, 최종 점수)</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>x</mi><mn>1</mn></msub></mrow></math>: Quiz 1(퀴즈 원, 첫 번째 퀴즈)</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>x</mi><mn>2</mn></msub></mrow></math>: Quiz 2(퀴즈 투, 두 번째 퀴즈)</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>x</mi><mn>3</mn></msub></mrow></math>: Midterm(미드텀, 중간시험)</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>y</mi></mrow></math>: Final Score(파이널 스코어, 최종 점수)</li>
 </ul>
 <p>각 행은 학생 한 명의 데이터입니다.</p>
 <table>
@@ -2234,15 +2226,14 @@ print(&quot;목표값 shape:&quot;, y_train.shape)
 </pre></div>
 <h3>2. 다중 선형회귀식</h3>
 <p>입력 특성이 세 개이면 가중치도 세 개입니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\hat{y}
+<div class="math-block" role="math" aria-label="\hat{y}
 =
-w_1x_1+w_2x_2+w_3x_3+b
-</code></pre></div>
+w_1x_1+w_2x_2+w_3x_3+b"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mo>&#x0003D;</mo><msub><mi>w</mi><mn>1</mn></msub><msub><mi>x</mi><mn>1</mn></msub><mo>&#x0002B;</mo><msub><mi>w</mi><mn>2</mn></msub><msub><mi>x</mi><mn>2</mn></msub><mo>&#x0002B;</mo><msub><mi>w</mi><mn>3</mn></msub><msub><mi>x</mi><mn>3</mn></msub><mo>&#x0002B;</mo><mi>b</mi></mrow></math></div>
 <p>계산 순서:</p>
 <ol>
 <li>각 입력과 가중치를 곱합니다.</li>
 <li>곱한 값을 모두 더합니다.</li>
-<li>편향 <code>b</code>를 더합니다.</li>
+<li>편향 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>b</mi></mrow></math>를 더합니다.</li>
 </ol>
 <p>입력이 여러 개로 늘어났을 뿐, 단일 선형회귀와 계산 원리는 같습니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_5_multi_variable_linear_regression.ipynb · 코드 셀 2 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>#02. 첫 번째 학생을 예로 직접 계산합니다.
@@ -2261,16 +2252,15 @@ print(&quot;예시 예측값:&quot;, sample_prediction.item())
 </pre></div>
 <h3>3. 특성별 표준화</h3>
 <p>세 시험의 점수 분포가 다를 수 있으므로 각 열을 따로 표준화합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>x_{\mathrm{scaled}}
+<div class="math-block" role="math" aria-label="x_{\mathrm{scaled}}
 =
-\frac{x-\mu}{\sigma}
-</code></pre></div>
+\frac{x-\mu}{\sigma}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>x</mi><mrow><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow></mrow></msub><mo>&#x0003D;</mo><mfrac><mrow><mi>x</mi><mo>&#x02212;</mo><mi>&#x003BC;</mi></mrow><mrow><mi>&#x003C3;</mi></mrow></mfrac></mrow></math></div>
 <ul>
 <li>Quiz 1은 Quiz 1의 평균과 표준편차 사용</li>
 <li>Quiz 2는 Quiz 2의 평균과 표준편차 사용</li>
 <li>Midterm은 Midterm의 평균과 표준편차 사용</li>
 </ul>
-<p>목표값 <code>y</code>는 실제 점수 단위를 유지합니다.</p>
+<p>목표값 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>y</mi></mrow></math>는 실제 점수 단위를 유지합니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_5_multi_variable_linear_regression.ipynb · 코드 셀 3 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>#03. 각 열의 평균과 표준편차
 x_mean = x_train.mean(dim=0)
 x_std = x_train.std(dim=0)
@@ -2369,14 +2359,13 @@ print(&quot;편향 shape:&quot;, model.bias.shape)
 </pre></div>
 <h3>5. 모델 학습</h3>
 <p>학습 순서는 와 같습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\text{순전파}
+<div class="math-block" role="math" aria-label="\text{순전파}
 \rightarrow
 \text{손실}
 \rightarrow
 \text{역전파}
 \rightarrow
-\text{갱신}
-</code></pre></div>
+\text{갱신}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>순전파</mtext><mo>&#x02192;</mo><mtext>손실</mtext><mo>&#x02192;</mo><mtext>역전파</mtext><mo>&#x02192;</mo><mtext>갱신</mtext></mrow></math></div>
 <p>입력 특성이 세 개이므로 세 개의 가중치가 함께 학습됩니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_5_multi_variable_linear_regression.ipynb · 코드 셀 6 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>#05. 모델 학습
 loss_function = nn.MSELoss()
@@ -2489,10 +2478,9 @@ for actual, predicted in zip(y_train, predicted_score,):
 </pre></div>
 <h3>8. 실제 점수 단위의 예측식</h3>
 <p>모델은 표준화된 입력을 사용하므로, 학습된 가중치를 원래 점수 단위로 바꾸어 해석합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\hat{y}
+<div class="math-block" role="math" aria-label="\hat{y}
 =
-w_1x_1+w_2x_2+w_3x_3+b
-</code></pre></div>
+w_1x_1+w_2x_2+w_3x_3+b"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mo>&#x0003D;</mo><msub><mi>w</mi><mn>1</mn></msub><msub><mi>x</mi><mn>1</mn></msub><mo>&#x0002B;</mo><msub><mi>w</mi><mn>2</mn></msub><msub><mi>x</mi><mn>2</mn></msub><mo>&#x0002B;</mo><msub><mi>w</mi><mn>3</mn></msub><msub><mi>x</mi><mn>3</mn></msub><mo>&#x0002B;</mo><mi>b</mi></mrow></math></div>
 <p>각 가중치는 <strong>다른 시험 점수가 같을 때</strong>, 해당 시험 점수가 1점 증가하면 최종 예측값이 얼마나 변하는지를 나타냅니다. 데이터가 5개뿐이므로 가중치를 확정적인 영향도로 해석해서는 안 됩니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_5_multi_variable_linear_regression.ipynb · 코드 셀 9 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>#08_실제점수 단위의 예측 식
 
@@ -2520,7 +2508,7 @@ y = 0.867x1 +0.441x2 +0.662x3 +3.437
 <ul>
 <li>MAE(엠에이이, 평균절대오차): 평균적으로 몇 점 틀리는지 확인</li>
 <li>RMSE(알엠에스이, 평균제곱근오차): 큰 오차에 더 민감</li>
-<li><code>R^2</code>(알 스퀘어, 결정계수): 1에 가까울수록 현재 데이터를 잘 설명</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msup><mi>R</mi><mn>2</mn></msup></mrow></math>(알 스퀘어, 결정계수): 1에 가까울수록 현재 데이터를 잘 설명</li>
 </ul>
 <p>이 결과는 훈련 데이터 적합도이며 일반화 성능이 아닙니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_5_multi_variable_linear_regression.ipynb · 코드 셀 10 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>#09_ 학습데이터 적합도 확인
@@ -2798,11 +2786,10 @@ print(&quot;테스트 데이터:&quot;, x_test.shape, y_test.shape)
 <li><code>CRIM</code>: 작은 소수부터 큰 값까지 분포</li>
 </ul>
 <p>각 열을 평균 0, 표준편차 1에 가까운 값으로 바꿉니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>x_{\mathrm{scaled}}
+<div class="math-block" role="math" aria-label="x_{\mathrm{scaled}}
 =
 \frac{x-\mu_{\mathrm{train}}}
-{\sigma_{\mathrm{train}}}
-</code></pre></div>
+{\sigma_{\mathrm{train}}}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>x</mi><mrow><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow></mrow></msub><mo>&#x0003D;</mo><mfrac><mrow><mi>x</mi><mo>&#x02212;</mo><msub><mi>&#x003BC;</mi><mrow><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi></mrow></mrow></msub></mrow><mrow><msub><mi>&#x003C3;</mi><mrow><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi></mrow></mrow></msub></mrow></mfrac></mrow></math></div>
 <p>테스트 데이터에도 훈련 데이터에서 계산한 평균과 표준편차를 사용합니다.
 테스트 통계량을 미리 사용하면 Data Leakage(데이터 리키지, 데이터 누출)가 발생합니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_6_housing_price_prediction.ipynb · 코드 셀 5 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code># 각 입력 특성의 평균과 표준편차
@@ -2824,10 +2811,9 @@ print(&quot;표준화 후 표준편차:&quot;,torch.round(x_train_scaled.std(dim
 <p>입력 특성 12개로 가격 1개를 예측하므로 다음 계층을 사용합니다.</p>
 <div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>nn.Linear(12, 1)
 </code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\hat{y}
+<div class="math-block" role="math" aria-label="\hat{y}
 =
-w_1x_1+w_2x_2+\cdots+w_{12}x_{12}+b
-</code></pre></div>
+w_1x_1+w_2x_2+\cdots+w_{12}x_{12}+b"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mo>&#x0003D;</mo><msub><mi>w</mi><mn>1</mn></msub><msub><mi>x</mi><mn>1</mn></msub><mo>&#x0002B;</mo><msub><mi>w</mi><mn>2</mn></msub><msub><mi>x</mi><mn>2</mn></msub><mo>&#x0002B;</mo><mo>&#x022EF;</mo><mo>&#x0002B;</mo><msub><mi>w</mi><mrow><mn>12</mn></mrow></msub><msub><mi>x</mi><mrow><mn>12</mn></mrow></msub><mo>&#x0002B;</mo><mi>b</mi></mrow></math></div>
 <p>같은 선형 계층이므로 별도의 모델 클래스를 다시 만들지 않습니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_6_housing_price_prediction.ipynb · 코드 셀 6 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>#06_주택가격 예측 모델
 
@@ -2845,14 +2831,13 @@ print(&quot;편향 shape:&quot;, model.bias.shape)
 </pre></div>
 <h3>7. 모델 학습</h3>
 <p>학습 흐름은 와 같습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\text{순전파}
+<div class="math-block" role="math" aria-label="\text{순전파}
 \rightarrow
 \text{손실}
 \rightarrow
 \text{역전파}
 \rightarrow
-\text{갱신}
-</code></pre></div>
+\text{갱신}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>순전파</mtext><mo>&#x02192;</mo><mtext>손실</mtext><mo>&#x02192;</mo><mtext>역전파</mtext><mo>&#x02192;</mo><mtext>갱신</mtext></mrow></math></div>
 <p>목표값은 실제 천 달러 단위를 유지합니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch02_6_housing_price_prediction.ipynb · 코드 셀 7 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>#07_모델 학습
 loss_function = nn.MSELoss()
@@ -2949,7 +2934,7 @@ tensor([16.7300, 16.3000, 27.2200, 16.3400, 22.1100])
   <td>작을수록 좋음</td>
 </tr>
 <tr>
-  <td><code>R^2</code></td>
+  <td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msup><mi>R</mi><mn>2</mn></msup></mrow></math></td>
   <td>주택가격 변화의 설명 정도</td>
   <td>1에 가까울수록 좋음</td>
 </tr>
@@ -3049,10 +3034,9 @@ plt.show()
 <p><img src="img/ch02_6_c12_0.png" alt="ch02_6 주택가격 예측 — 코드 셀 12 출력 그림" /></p>
 <h3>13. 잔차 확인</h3>
 <p>Residual(리주얼, 잔차)은 실제값에서 예측값을 뺀 값입니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\text{Residual}
+<div class="math-block" role="math" aria-label="\text{Residual}
 =
-y-\hat{y}
-</code></pre></div>
+y-\hat{y}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>Residual</mtext><mo>&#x0003D;</mo><mi>y</mi><mo>&#x02212;</mo><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover></mrow></math></div>
 <ul>
 <li>잔차가 0에 가까움 → 예측이 정확함</li>
 <li>잔차가 양수 → 실제 가격보다 낮게 예측</li>
