@@ -1,6 +1,6 @@
 # 딥러닝 실습 (deep_learning)
 
-은닉층과 ReLU를 쌓은 심층 신경망(MLP)에서 출발해 MNIST·Fashion-MNIST, CNN, ResNet18 전이학습, 모델 저장·ONNX 배포, 단일 객체 위치 추정(YOLO 연결 1단계)까지 다루는 과정입니다. 학습 설정(출력층·Loss·Optimizer) 선택 원리는 [머신러닝 4장](../machine_learning/dist/ch04_training_setup_guide_v02.html)을 먼저 보면 좋습니다.
+은닉층과 ReLU를 쌓은 심층 신경망(MLP)에서 출발해 MNIST·Fashion-MNIST, CNN, ResNet18 전이학습, 모델 저장·ONNX 배포, 단일 객체 위치 추정(YOLO 연결 1단계)까지 다루는 과정입니다. 학습 설정(출력층·Loss·Optimizer) 선택 원리는 [머신러닝 4장](../machine_learning/dist/ch04_training_setup_guide_v03.html)을 먼저 보면 좋습니다.
 
 - 학습 안내서: [`dist/index.html`](dist/index.html)
 - 이전 과정: [머신러닝 기초](../machine_learning/)
@@ -9,13 +9,13 @@
 
 | 장 | 제목 | 내용 | 안내서 |
 |---|---|---|---|
-| 01 | 심층 신경망 이진분류 | 단일 선형층 로지스틱 분류 → 은닉층·ReLU MLP | [`ch01_dnn_binary_classification_v02.html`](dist/ch01_dnn_binary_classification_v02.html) |
-| 02 | MNIST MLP | 숫자 분류 → Optimizer 비교 → 과적합·Dropout → 오류 분석 | [`ch02_mnist_mlp_v02.html`](dist/ch02_mnist_mlp_v02.html) |
-| 03 | Fashion-MNIST MLP | 의류 이미지 학습·평가 → 단일 이미지 예측 | [`ch03_fashion_mnist_mlp_v02.html`](dist/ch03_fashion_mnist_mlp_v02.html) |
-| 04 | CNN | Fashion-MNIST CNN → 필터·특징맵 → CIFAR-10 기본·심층 CNN | [`ch04_cnn_v02.html`](dist/ch04_cnn_v02.html) |
-| 05 | ResNet18·전이학습 | CIFAR-10 ResNet18 → 사전학습 가중치 전이학습 | [`ch05_resnet_transfer_learning_v02.html`](dist/ch05_resnet_transfer_learning_v02.html) |
-| 06 | 모델 저장·ONNX | state_dict 저장·복원 → ONNX 내보내기·Runtime 추론 | [`ch06_model_deployment_v02.html`](dist/ch06_model_deployment_v02.html) |
-| 07 | CNN→YOLO 위치 추정 | Bounding Box 회귀 → IoU → 함수·main() 구조 | [`ch07_single_object_localization_v02.html`](dist/ch07_single_object_localization_v02.html) |
+| 01 | 심층 신경망 이진분류 | 단일 선형층 로지스틱 분류 → 은닉층·ReLU MLP | [`ch01_dnn_binary_classification_v03.html`](dist/ch01_dnn_binary_classification_v03.html) |
+| 02 | MNIST MLP | 숫자 분류 → Optimizer 비교 → 과적합·Dropout → 오류 분석 | [`ch02_mnist_mlp_v03.html`](dist/ch02_mnist_mlp_v03.html) |
+| 03 | Fashion-MNIST MLP | 의류 이미지 학습·평가 → 단일 이미지 예측 | [`ch03_fashion_mnist_mlp_v03.html`](dist/ch03_fashion_mnist_mlp_v03.html) |
+| 04 | CNN | Fashion-MNIST CNN → 필터·특징맵 → CIFAR-10 기본·심층 CNN | [`ch04_cnn_v03.html`](dist/ch04_cnn_v03.html) |
+| 05 | ResNet18·전이학습 | CIFAR-10 ResNet18 → 사전학습 가중치 전이학습 | [`ch05_resnet_transfer_learning_v03.html`](dist/ch05_resnet_transfer_learning_v03.html) |
+| 06 | 모델 저장·ONNX | state_dict 저장·복원 → ONNX 내보내기·Runtime 추론 | [`ch06_model_deployment_v03.html`](dist/ch06_model_deployment_v03.html) |
+| 07 | CNN→YOLO 위치 추정 | Bounding Box 회귀 → IoU → 함수·main() 구조 | [`ch07_single_object_localization_v03.html`](dist/ch07_single_object_localization_v03.html) |
 
 ## 노트북 순번 대응표
 

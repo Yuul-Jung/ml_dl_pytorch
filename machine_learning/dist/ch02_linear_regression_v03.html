@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Target 형태 → 출력층 → Loss → Optimizer → Metric"><title>제04장 · 학습 설정 선택 기준 · PyTorch 머신러닝 기초</title>
+<meta name="description" content="순전파·손실 → 비용 최소화 → 실제 데이터 → 주택가격 예측"><title>제02장 · 선형회귀 · PyTorch 머신러닝 기초</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>/*
@@ -618,6 +618,41 @@ pre code {
   overflow-wrap: anywhere;
 }
 
+/* (추가) 코드 풀이 상자: 코드·실행 결과 바로 아래에서 무엇을 하는 코드인지 풀어 씁니다. */
+.explain {
+  margin: -6px 0 22px;
+  padding: 12px 16px 4px;
+  background: #fbfbf9;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  font-size: 0.93rem;
+}
+.explain p,
+.explain ul {
+  margin: 0 0 9px;
+}
+.explain ul {
+  padding-left: 1.2em;
+}
+.explain li {
+  margin: 3px 0;
+}
+.box-title {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin: 0 0 6px !important;
+}
+.note.insight p:last-child,
+.note.insight ul:last-child {
+  margin-bottom: 0;
+}
+.note.insight ul {
+  margin: 0;
+  padding-left: 1.2em;
+}
+
 /* (추가) 수식(MathML): 블록 수식은 가운데 정렬, 넓으면 가로 스크롤 */
 .math-block {
   margin: 14px 0;
@@ -758,1289 +793,2819 @@ math {
     grid-template-columns: 1fr;
   }
 }
-</style></head><body data-chapter="ch04">
+</style></head><body data-chapter="ch02">
 <button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button><div class="shade" id="shade"></div>
-<header class="hero"><div class="hero-inner"><p class="kicker">MACHINE LEARNING · CHAPTER 04</p><h1>제04장 · 학습 설정 선택 기준</h1><p>Target 형태 → 출력층 → Loss → Optimizer → Metric</p><div class="chips"><span class="chip">Loss</span><span class="chip">Optimizer</span><span class="chip">Metric</span><span class="chip">Validation</span></div></div></header>
-<div class="wrap"><nav class="toc" id="course-nav" aria-label="장과 절 탐색"></nav><main class="content" id="main-content"><section class="section" id="s00"><h2><span class="num">00</span>이 장의 자료</h2><p>원본 문서 <code>PyTorch 머신러닝·딥러닝 학습 설정 선택 기준.md</code>와 발표 자료(PPTX)를 장 원고로 옮겼습니다. 내용과 순서는 원본 그대로이며, 좌측 목차에 맞도록 제목 계층만 정리했습니다.</p>
+<header class="hero"><div class="hero-inner"><p class="kicker">MACHINE LEARNING · CHAPTER 02</p><h1>제02장 · 선형회귀</h1><p>순전파·손실 → 비용 최소화 → 실제 데이터 → 주택가격 예측</p><div class="chips"><span class="chip">Linear Regression</span><span class="chip">MSE</span><span class="chip">Gradient Descent</span></div></div></header>
+<div class="wrap"><nav class="toc" id="course-nav" aria-label="장과 절 탐색"></nav><main class="content" id="main-content"><section class="section" id="s00"><h2><span class="num">00</span>배경 개념</h2><p>선형회귀(Linear Regression)는 입력 <code>x</code>로 연속적인 값 <code>y</code>를 예측하는 가장 기본적인 모델입니다. 모델은 직선 <code>ŷ = Wx + b</code> 하나이고, 학습이란 예측과 정답의 차이(손실, 여기서는 평균제곱오차 MSE)가 가장 작아지는 <code>W</code>와 <code>b</code>를 찾는 일입니다.</p>
+<p>손실을 줄이는 방향은 기울기(Gradient)가 알려 줍니다. 경사하강법(Gradient Descent)은 학습률만큼 기울기의 반대 방향으로 가중치를 조금씩 옮깁니다. 이 장은 직접 계산 → <code>nn.Linear</code>·<code>nn.Module</code> 신경망 형식 → 실제 데이터(참돔, 시험 점수, 주택가격) 순서로 같은 원리를 넓혀 갑니다.</p>
+<div class="note insight"><p class="box-title">쉽게 이해하기</p>
+<p>선형회귀 학습은 안개 낀 산에서 눈을 가리고 골짜기를 찾아 내려가는 일과 같습니다. 발밑의 경사(기울기)만 느끼고, 내리막 방향으로 한 걸음(학습률)씩 옮깁니다. 걸음이 너무 작으면 오래 걸리고, 너무 크면 골짜기를 지나쳐 반대편 비탈로 튀어 오릅니다.</p>
+</div>
+<div class="note insight"><p class="box-title">꼭 기억할 점</p>
 <ul>
-<li>원본 문서: <code>guide/ml_dl_training_setup_guide.md</code></li>
-<li>발표 자료: <code>guide/slides/</code> (테크트리 원본·수정본·도식화본)</li>
+<li>학습 한 번은 항상 <strong>기울기 초기화 → 순전파 → 손실 → 역전파 → 갱신</strong> 순서입니다.</li>
+<li>표준화 기준(평균·표준편차)은 훈련 데이터에서만 구하고, 테스트와 새 데이터에도 같은 값을 씁니다.</li>
+<li>회귀는 MAE·RMSE(오차 크기)와 R²(설명력)로 평가하고, 훈련과 테스트 결과를 함께 비교합니다.</li>
 </ul>
-<p>개념 흐름도 — 원본 문서 0절의 결정 순서 (개념도):</p>
-<div class="flow" role="list" aria-label="개념 흐름도"><div class="step">정답 Target 형태 확인</div><div class="down" aria-hidden="true">↓</div><div class="step">문제 유형 판단 (회귀·이진·다중·다중레이블)</div><div class="down" aria-hidden="true">↓</div><div class="step">출력층 노드 수·Logit 형태</div><div class="down" aria-hidden="true">↓</div><div class="step">Loss Function(손실함수)</div><div class="down" aria-hidden="true">↓</div><div class="step">Optimizer(최적화 알고리즘)</div><div class="down" aria-hidden="true">↓</div><div class="step">Learning Rate · Batch Size · Epoch</div><div class="down" aria-hidden="true">↓</div><div class="step">Validation(검증)으로 학습 상태 판단</div><div class="down" aria-hidden="true">↓</div><div class="step">Metric(평가 지표)</div></div>
-</section><section class="section" id="s01"><h2><span class="num">01</span>0. 가장 중요한 원칙</h2><p>머신러닝·딥러닝에서 설정을 결정하는 순서는 다음과 같다.</p>
-<blockquote>
-<p><strong>모델 종류보다 먼저 정답 Target(타깃)의 형태를 본다.</strong></p>
-</blockquote>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>문제 정의
-   ↓
-정답 Target 형태
-   ↓
-모델의 최종 출력 형태
-   ↓
-출력층
-   ↓
-Loss Function(손실함수)
-   ↓
-Optimizer(옵티마이저, 최적화 알고리즘)
-   ↓
-Learning Rate / Batch Size / Epoch
-   ↓
-Validation
-   ↓
-Metric(평가 지표)
-</code></pre></div>
-<p>즉,</p>
+</div>
+</section><section class="section" id="s01"><h2><span class="num">01</span>전체 실습 흐름</h2><p>개념 흐름도 — 이 장 노트북의 공통 학습 절차 (개념도, 이름은 실제 코드 기준):</p>
+<div class="flow" role="list" aria-label="개념 흐름도"><div class="step">학습 데이터 <code>x_train</code>, <code>y_train</code> 준비</div><div class="down" aria-hidden="true">↓</div><div class="step">순전파 <code>ŷ = Wx + b</code> 예측</div><div class="down" aria-hidden="true">↓</div><div class="step">손실 <code>nn.MSELoss()</code> 평균제곱오차</div><div class="down" aria-hidden="true">↓</div><div class="step">기울기 <code>loss.backward()</code></div><div class="down" aria-hidden="true">↓</div><div class="step">갱신 <code>optimizer.step()</code> (<code>optim.SGD</code>) — Epoch만큼 반복</div><div class="down" aria-hidden="true">↓</div><div class="step">평가 MAE·RMSE, 새 입력 예측</div></div>
+<p>노트북별 실습 순서:</p>
+<ol>
+<li><strong>ch02_1</strong> 선형회귀의 순전파와 손실 — 순전파와 MSE 손실 계산, 직접 만든 학습 함수</li>
+<li><strong>ch02_2</strong> 신경망 형식의 선형회귀 — 같은 선형회귀를 <code>nn.Module</code>·<code>nn.MSELoss</code>·Optimizer 구조로 변환</li>
+<li><strong>ch02_3</strong> 비용함수 최소화 — 가중치에 따른 비용 그래프와 경사하강법·학습률 비교</li>
+<li><strong>ch02_4</strong> 실제 데이터로 선형회귀하기 — 참돔 길이 → 무게: 훈련/테스트 분리, 표준화, MAE·RMSE 평가</li>
+<li><strong>ch02_5</strong> 다중 선형회귀 — 세 시험 점수 → 최종 점수: 다중 선형회귀와 특성별 표준화</li>
+<li><strong>ch02_6</strong> 주택가격 예측 — <code>housing.csv</code> 주택가격 예측: 일반화 성능, 가중치·잔차 해석</li>
+</ol>
+<p>노트북 파일(<code>notebooks/</code> 폴더):</p>
 <ul>
-<li>MLP냐 CNN이냐가 먼저가 아니다.</li>
-<li><strong>회귀인지, 이진분류인지, 다중분류인지가 먼저다.</strong></li>
-<li>같은 다중분류라면 MLP와 CNN 모두 마지막 부분은 거의 동일하다.</li>
+<li><code>ch02_1_linear_forward_and_loss.ipynb</code></li>
+<li><code>ch02_2_linear_regression_neural_network.ipynb</code></li>
+<li><code>ch02_3_minimizing_cost.ipynb</code></li>
+<li><code>ch02_4_linear_regression.ipynb</code></li>
+<li><code>ch02_5_multi_variable_linear_regression.ipynb</code></li>
+<li><code>ch02_6_housing_price_prediction.ipynb</code></li>
 </ul>
-<p>예:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>MNIST + MLP
-MNIST + CNN
-       ↓
-둘 다 10개 중 하나를 맞히는 다중분류
-       ↓
-출력 10개 Logit
-       ↓
-CrossEntropyLoss
+</section><section class="section" id="s02"><h2><span class="num">02</span>환경 확인</h2><ul>
+<li>필요 환경: Python 3, <code>numpy</code>, <code>torch</code>, <code>matplotlib</code> · 데이터 <code>housing.csv</code>(노트북과 같은 폴더)</li>
+<li>Google Colab 또는 로컬 Jupyter에서 <code>notebooks/</code> 폴더를 작업 폴더로 열고 순서대로 실행합니다.</li>
+<li>각 코드 아래의 <strong>코드 풀이</strong> 상자는 그 코드가 무엇을 하는지, 처음 보는 함수와 인자가 어떤 뜻인지 설명합니다.</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>BASH · Ubuntu 터미널 · 예시 명령 · 미검증</span></div><pre class="src"><code># 필요한 패키지 설치 (로컬 실행 시)
+python -m pip install torch torchvision numpy pandas scikit-learn matplotlib
 </code></pre></div>
-</section><section class="section" id="s02"><h2><span class="num">02</span>1. 문제 유형부터 판별</h2><h3>1.1 Regression(리그레션, 회귀)</h3>
-<p>정답이 연속적인 실수이다.</p>
-<p>예:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력
-집 크기, 방 개수, 위치
-        ↓
-모델
-        ↓
-예측값
-35000.5
-        ↓
-실제값
-36000.0
-</code></pre></div>
-<p>대표 손실함수:</p>
+</section><section class="section" id="s03"><h2><span class="num">03</span>ch02_1 선형회귀의 순전파와 손실</h2><p>실습 노트북 <code>notebooks/ch02_1_linear_forward_and_loss.ipynb</code></p>
+<h3>개요</h3>
 <ul>
-<li><code>nn.MSELoss()</code></li>
-<li><code>nn.L1Loss()</code></li>
+<li>Linear Regression(리니어 리그레션, 선형회귀)의 역할을 이해합니다.</li>
 </ul>
-<p>구조:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력 → 모델 → 실수 출력 → 실제 실수값 → MSE/L1
-</code></pre></div>
-<h3>1.2 Binary Classification(바이너리 클래시피케이션, 이진분류)</h3>
-<p>정답이 두 가지 중 하나이다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>0 : 정상
-1 : 이상
-</code></pre></div>
-<p>일반적인 PyTorch 구조:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력
- ↓
-모델
- ↓
-Logit 1개
- ↓
-BCEWithLogitsLoss
- ↓
-학습
-</code></pre></div>
-<p>추론할 때:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Logit
- ↓
-Sigmoid
- ↓
-확률
- ↓
-0.5 기준
- ↓
-0 또는 1
-</code></pre></div>
-<h3>1.3 Multi-class Classification(멀티 클래스 클래시피케이션, 다중분류)</h3>
-<p>여러 클래스 중 <strong>정확히 하나</strong>를 선택한다.</p>
-<p>MNIST라면:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>0 1 2 3 4 5 6 7 8 9
-          ↑
-      하나만 정답
-</code></pre></div>
-<p>10개 클래스라면:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력
- ↓
-모델
- ↓
-10개 Logit
- ↓
-CrossEntropyLoss
- ↓
-정답 클래스 번호
-</code></pre></div>
-<p>Target 예:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>y = torch.tensor([3, 7, 1], dtype=torch.long)
-</code></pre></div>
-<h3>1.4 Multi-label Classification(멀티 레이블 클래시피케이션, 다중레이블 분류)</h3>
-<p>한 데이터가 여러 클래스를 동시에 가질 수 있다.</p>
-<p>예:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>사진 1장
-
-사람       1
-자동차     1
-강아지     0
-신호등     1
-</code></pre></div>
-<p>각 클래스가 서로 독립적인 이진분류라고 생각하면 쉽다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>출력 C개 Logit
- ↓
-각 Logit에 독립적인 Sigmoid
- ↓
-BCEWithLogitsLoss
-</code></pre></div>
-<h3>1.5 Image Classification(이미지 분류)</h3>
-<p>중요한 점:</p>
-<blockquote>
-<p><strong>이미지 분류는 손실함수 자체를 결정하는 문제 유형이 아니다.</strong></p>
-</blockquote>
-<p>이미지는 <strong>입력 데이터의 종류</strong>이다.</p>
-<p>예:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>이미지 → CNN → 고양이/강아지
-</code></pre></div>
-<p>이면 이진분류이고,</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>이미지 → CNN → 숫자 0~9
-</code></pre></div>
-<p>이면 다중분류이다.</p>
-<p>따라서:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>이미지라는 사실
-      ↓
-CNN 등의 모델 구조 선택에 영향
-
-정답이 몇 종류인가
-      ↓
-Loss 선택에 영향
-</code></pre></div>
-<h3>1.6 Sequence Prediction(시퀀스 프리딕션, 순차 데이터 예측)</h3>
-<p>RNN/LSTM/Transformer에서 사용한다.</p>
-<p>하지만 Loss는 역시 <strong>예측 대상</strong>에 따라 달라진다.</p>
-<p>예:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>주가 예측
-→ 실수 예측
-→ MSELoss
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>문장 감정 긍정/부정
-→ 이진분류
-→ BCEWithLogitsLoss
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>다음 단어 예측
-→ 수만 개 단어 중 하나
-→ CrossEntropyLoss
-</code></pre></div>
-<p>따라서:</p>
-<blockquote>
-<p>RNN/LSTM/Transformer라고 특정 Loss를 사용하는 것이 아니다.</p>
-</blockquote>
-<h3>1.7 Reconstruction(리컨스트럭션, 입력 복원)</h3>
-<p>Autoencoder(오토인코더, 입력 복원 신경망)의 대표 문제이다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>원본 x
- ↓
-Encoder
- ↓
-압축 표현
- ↓
-Decoder
- ↓
-복원 x̂
-</code></pre></div>
-<p>목표:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>x̂ ≈ x
-</code></pre></div>
-<p>연속적인 픽셀값을 복원한다면:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>nn.MSELoss()
-</code></pre></div>
-<p>또는</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>nn.L1Loss()
-</code></pre></div>
-<p>를 사용할 수 있다.</p>
-<p>0~1 이진적인 값을 확률적으로 복원하는 문제라면 BCE 계열도 사용할 수 있다.</p>
-<p>즉 Autoencoder 역시 Loss가 하나로 고정되는 것은 아니다.</p>
-</section><section class="section" id="s03"><h2><span class="num">03</span>2. 출력층 결정</h2><p>핵심 표는 다음과 같다.</p>
+<p><img src="img/ch02_1_md0_image.png" alt="ch02_1 설명 그림" /></p>
+<ul>
+<li>같은 학습 함수를 센서 보정 데이터에 재사용합니다.</li>
+</ul>
+<h3>1. 라이브러리와 학습 데이터 준비</h3>
+<p>다음 세 점을 사용합니다.</p>
 <table>
 <thead>
 <tr>
-  <th>문제</th>
-  <th style="text-align:right">출력 노드</th>
-  <th>최종 출력</th>
-  <th>모델 내부 Activation</th>
-  <th>대표 Loss</th>
+  <th style="text-align:right">입   력 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>x</mi></mrow></math></th>
+  <th style="text-align:right">실 제 값 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>y</mi></mrow></math></th>
 </tr>
 </thead>
 <tbody>
 <tr>
-  <td>회귀</td>
-  <td style="text-align:right">예측값 개수</td>
-  <td>실수</td>
-  <td>보통 없음</td>
-  <td>MSELoss</td>
-</tr>
-<tr>
-  <td>이진분류</td>
   <td style="text-align:right">1</td>
-  <td>Logit</td>
-  <td>없음</td>
-  <td>BCEWithLogitsLoss</td>
+  <td style="text-align:right">1</td>
 </tr>
 <tr>
-  <td>다중분류</td>
-  <td style="text-align:right">클래스 수 C</td>
-  <td>C개 Logit</td>
-  <td>없음</td>
-  <td>CrossEntropyLoss</td>
+  <td style="text-align:right">2</td>
+  <td style="text-align:right">2</td>
 </tr>
 <tr>
-  <td>다중레이블</td>
-  <td style="text-align:right">클래스 수 C</td>
-  <td>C개 Logit</td>
-  <td>없음</td>
-  <td>BCEWithLogitsLoss</td>
+  <td style="text-align:right">3</td>
+  <td style="text-align:right">3</td>
 </tr>
 </tbody>
 </table>
-<p>여기서 매우 중요한 점이 있다.</p>
-<h3>은닉층과 출력층의 활성화 함수는 다른 문제다</h3>
-<p>MLP 예:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력
- ↓
-Linear
- ↓
-ReLU
- ↓
-Linear
- ↓
-ReLU
- ↓
-Linear
- ↓
-Logits
-</code></pre></div>
-<p>ReLU(렐루, 음수는 0으로 만들고 양수는 그대로 전달하는 활성화 함수)는 <strong>은닉층</strong>에 사용한다.</p>
-<p>반면 마지막 출력층은 Loss와 맞춰 설계한다.</p>
-</section><section class="section" id="s04"><h2><span class="num">04</span>3. PyTorch 주요 Loss Function</h2><h3>3.1 <code>nn.MSELoss()</code></h3>
-<p>MSE(Mean Squared Error, 평균제곱오차)</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>예측값과 실제값의 차이
-        ↓
-제곱
-        ↓
-평균
-</code></pre></div>
-<p>대표 용도:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Regression
-</code></pre></div>
-<p>예:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>prediction = model(x)
+<p>데이터의 관계는 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>y</mi><mo>&#x0003D;</mo><mi>x</mi></mrow></math>이므로, 가장 잘 맞는 직선은 기울기 1, 절편 0입니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_1_linear_forward_and_loss.ipynb · 셀 1 · 미검증</span></div><pre class="src"><code>#01_데이터 준비
+import torch
 
-loss_function = nn.MSELoss()
-loss = loss_function(prediction, y)
-</code></pre></div>
-<p>Target:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>dtype=torch.float32
-</code></pre></div>
-<p>특징:</p>
-<ul>
-<li>큰 오차에 강한 벌점을 줌</li>
-<li>이상치가 있으면 Loss가 크게 영향을 받음</li>
-</ul>
-<h3>3.2 <code>nn.L1Loss()</code></h3>
-<p>MAE(Mean Absolute Error, 평균절대오차)에 해당한다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>|예측 - 실제|
-       ↓
-평균
-</code></pre></div>
-<p>장점:</p>
-<ul>
-<li>MSE보다 이상치의 영향을 덜 받는다.</li>
-</ul>
-<p>따라서:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>이상치가 적음
-→ MSE가 많이 사용됨
+x_train = torch.tensor([1.0, 2.0, 3.0])
+y_train = torch.tensor([1.0, 2.0, 3.0])
 
-이상치 영향이 큼
-→ L1Loss 고려
+print(&quot;입력:&quot;, x_train)
+print(&quot;실제값:&quot;, y_train)
 </code></pre></div>
-<h3>3.3 <code>nn.BCELoss()</code></h3>
-<p>BCE(Binary Cross Entropy, 이진 교차 엔트로피)</p>
-<p>중요:</p>
-<blockquote>
-<p><code>BCELoss()</code>는 입력으로 <strong>확률값</strong>을 받는다.</p>
-</blockquote>
-<p>따라서 모델이 Sigmoid까지 수행해야 한다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Linear
- ↓
-Sigmoid
- ↓
-0~1 확률
- ↓
-BCELoss
-</code></pre></div>
-<p>예:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>probability = torch.sigmoid(logit)
-loss = nn.BCELoss()(probability, y)
-</code></pre></div>
-<p>그러나 일반적으로는 이 방법보다 다음 방법을 권장한다.</p>
-<h3>3.4 <code>nn.BCEWithLogitsLoss()</code></h3>
-<p>실무적으로 이진분류에서 가장 중요한 Loss 중 하나이다.</p>
-<p>개념적으로:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>BCEWithLogitsLoss
-≈
-Sigmoid
-+
-Binary Cross Entropy
-</code></pre></div>
-<p>모델:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>self.output = nn.Linear(hidden_size, 1)
-</code></pre></div>
-<p>Forward:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>return self.output(x)
-</code></pre></div>
-<p>Sigmoid를 넣지 않는다.</p>
-<p>학습:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>loss_function = nn.BCEWithLogitsLoss()
-</code></pre></div>
-<p>구조:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Linear
- ↓
-Logit
- ↓
-BCEWithLogitsLoss
-</code></pre></div>
-<p>장점:</p>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 1 · 원본 실행 기록</span></div><pre>입력: tensor([1., 2., 3.])
+실제값: tensor([1., 2., 3.])
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>입력 <code>x</code>와 정답 <code>y</code>가 같은(<code>y = x</code>) 가장 단순한 학습 데이터를 Tensor로 만듭니다.</p>
 <ul>
-<li>수치적으로 더 안정적</li>
-<li>Sigmoid를 따로 계산할 필요 없음</li>
+<li>모델이 최종적으로 찾아야 할 답은 <code>W = 1</code>, <code>b = 0</code>입니다.</li>
 </ul>
-<p>따라서 PyTorch에서는 보통:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>이진분류
-→ BCEWithLogitsLoss
+</div>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_1_linear_forward_and_loss.ipynb · 셀 2 · 미검증</span></div><pre class="src"><code># &lt;참고&gt; 입력 데이터와 실제값을 점으로 표시
+import matplotlib.pyplot as plt
+
+plt.scatter(x_train, y_train, s=200)  #s는 점 크기
+
+plt.xlabel(&quot;x&quot;)
+plt.ylabel(&quot;y&quot;)
+plt.title(&quot;Training Data&quot;)
+plt.grid(True)
+
+#해상도300, 불필요여백 삭제
+plt.savefig(&quot;./png/ch02_1_1.png&quot;, dpi=300, bbox_inches=&quot;tight&quot;) 
+plt.show()
 </code></pre></div>
-<p>를 우선한다.</p>
-<h3>3.5 <code>nn.CrossEntropyLoss()</code></h3>
-<p>Multi-class Classification의 대표 Loss이다.</p>
-<p>개념적으로:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>CrossEntropyLoss
+<p><img src="img/ch02_1_c02_0.png" alt="ch02_1 선형회귀의 순전파와 손실 — 코드 셀 2 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>학습 데이터를 산점도로 그려 눈으로 먼저 확인합니다.</p>
+<ul>
+<li><code>plt.scatter(..., s=200)</code> — 점을 크게 찍습니다(<code>s</code>는 점 크기).</li>
+<li><code>plt.savefig(..., dpi=300, bbox_inches=&quot;tight&quot;)</code> — 고해상도 PNG로 저장하고 바깥 여백을 잘라냅니다.</li>
+</ul>
+</div>
+<h3>2. 순전파로 예측값 계산하기</h3>
+<p>선형회귀는 입력과 출력의 관계를 다음 직선으로 표현합니다.</p>
+<div class="math-block" role="math" aria-label="\hat{y}=Wx+b"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mo>&#x0003D;</mo><mi>W</mi><mi>x</mi><mo>&#x0002B;</mo><mi>b</mi></mrow></math></div>
+<ul>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover></mrow></math>: Prediction(프리딕션, 예측값)</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math>: Weight(웨이트, 가중치 또는 직선의 기울기)</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>b</mi></mrow></math>: Bias(바이어스, 편향 또는 직선의 절편)</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>x</mi></mrow></math>: Input(인풋, 입력값)</li>
+</ul>
+<p>Forward(포워드, 순전파)는 현재 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math>와 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>b</mi></mrow></math>를 사용하여 예측값을 계산하는 과정입니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_1_linear_forward_and_loss.ipynb · 셀 3 · 미검증</span></div><pre class="src"><code>#02_순전파로 예측 : 가설(H)
+# 예시 직선: y = 0.5x + 2
+
+W_example = 0.5
+b_example = 2.0
+
+y_pred = W_example * x_train + b_example #예측 값
+
+print(&quot;예측값:&quot;, y_pred)
+print(&quot;실제값:&quot;, y_train)
+print(&quot;오차:&quot;, y_pred - y_train)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 3 · 원본 실행 기록</span></div><pre>예측값: tensor([2.5000, 3.0000, 3.5000])
+실제값: tensor([1., 2., 3.])
+오차: tensor([1.5000, 1.0000, 0.5000])
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>임의로 정한 직선 <code>y = 0.5x + 2</code>로 예측값을 계산합니다. 이것이 <strong>순전파(forward)</strong>입니다.</p>
+<ul>
+<li><code>W_example * x_train + b_example</code> — 모든 입력에 같은 식을 한 번에 적용합니다.</li>
+<li><code>y_pred - y_train</code> — 예측이 정답에서 얼마나 벗어났는지(오차)를 원소별로 보여 줍니다.</li>
+</ul>
+</div>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_1_linear_forward_and_loss.ipynb · 셀 4 · 미검증</span></div><pre class="src"><code>#&lt;참고&gt;
+plt.plot(x_train, y_train, marker=&quot;o&quot;, markersize=8,
+    linewidth=2, label=&quot;True Data: y = x&quot;)
+
+# 예측값으로 만든 가설 직선 표시
+plt.plot(x_train, y_pred, marker=&quot;o&quot;, markersize=8,
+    linewidth=2, label=&quot;Prediction: y = 0.5x + 2&quot;)
+
+plt.xlabel(&quot;x&quot;)
+plt.ylabel(&quot;y&quot;)
+plt.title(&quot;True Data vs Prediction&quot;)
+plt.grid(True)
+plt.legend()
+
+plt.savefig(&quot;./png/ch02_1_2.png&quot;, dpi=300, bbox_inches=&quot;tight&quot;)
+plt.show()
+</code></pre></div>
+<p><img src="img/ch02_1_c04_0.png" alt="ch02_1 선형회귀의 순전파와 손실 — 코드 셀 4 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>정답 직선과 예측 직선을 한 그래프에 겹쳐 그려 차이를 시각적으로 비교합니다.</p>
+<ul>
+<li><code>label=</code> 과 <code>plt.legend()</code> — 선마다 이름표를 붙여 범례로 표시합니다.</li>
+</ul>
+</div>
+<h3>3. MSE로 Loss(손실) 계산하기</h3>
+<p>Loss(로스, 손실)는 예측값이 실제값과 얼마나 다른지를 나타내는 숫자입니다.</p>
+<p>MSE(엠에스이, Mean Squared Error: 평균제곱오차)는 각 오차를 제곱한 뒤 평균을 계산합니다.</p>
+<div class="math-block" role="math" aria-label="\mathrm{MSE}
 =
-LogSoftmax
-+
-NLLLoss
-</code></pre></div>
-<p>따라서 모델에 Softmax를 넣지 않는다.</p>
-<p>정상 구조:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Linear(C)
- ↓
-Logits
- ↓
-CrossEntropyLoss
-</code></pre></div>
-<p>잘못된 구조:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Linear(C)
- ↓
-Softmax
- ↓
-CrossEntropyLoss
-</code></pre></div>
-<p>즉 Softmax를 중복 적용하는 문제가 생긴다.</p>
-<p>MNIST 10개 클래스:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>self.output = nn.Linear(hidden_size, 10)
-</code></pre></div>
-<p>Forward:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>return self.output(x)
-</code></pre></div>
-<p>Loss:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>loss_function = nn.CrossEntropyLoss()
-</code></pre></div>
-<p>Target:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>tensor([7, 2, 1, 9])
-</code></pre></div>
-<p>dtype:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>torch.long
-</code></pre></div>
-</section><section class="section" id="s05"><h2><span class="num">05</span>4. Loss와 출력층 연결</h2><table>
-<thead>
-<tr>
-  <th>문제</th>
-  <th>출력층</th>
-  <th>출력</th>
-  <th>Loss</th>
-  <th>Target</th>
-  <th>핵심 주의</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td>회귀</td>
-  <td><code>Linear(...,1)</code></td>
-  <td>실수</td>
-  <td><code>MSELoss</code></td>
-  <td>float</td>
-  <td>출력층 활성화 보통 없음</td>
-</tr>
-<tr>
-  <td>이진분류</td>
-  <td><code>Linear(...,1)</code></td>
-  <td>Logit</td>
-  <td><code>BCEWithLogitsLoss</code></td>
-  <td>float 0/1</td>
-  <td>Sigmoid 넣지 않음</td>
-</tr>
-<tr>
-  <td>이진분류 구식 구조</td>
-  <td>Linear + Sigmoid</td>
-  <td>확률</td>
-  <td><code>BCELoss</code></td>
-  <td>float 0/1</td>
-  <td>수치 안정성 낮음</td>
-</tr>
-<tr>
-  <td>다중분류</td>
-  <td><code>Linear(...,C)</code></td>
-  <td>C개 Logit</td>
-  <td><code>CrossEntropyLoss</code></td>
-  <td>long 클래스 번호</td>
-  <td>Softmax 넣지 않음</td>
-</tr>
-<tr>
-  <td>다중레이블</td>
-  <td><code>Linear(...,C)</code></td>
-  <td>C개 Logit</td>
-  <td><code>BCEWithLogitsLoss</code></td>
-  <td>float 0/1 배열</td>
-  <td>각 클래스 독립</td>
-</tr>
-</tbody>
-</table>
-<p>이 표는 거의 암기해도 좋다.</p>
-</section><section class="section" id="s06"><h2><span class="num">06</span>5. Optimizer 선택</h2><p>Loss와 Optimizer는 역할이 다르다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Loss
-→ 얼마나 틀렸는가 계산
+\frac{1}{m}
+\sum_{i=1}^{m}
+(\hat{y}_i-y_i)^2"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mrow><mi mathvariant="normal">M</mi><mi mathvariant="normal">S</mi><mi mathvariant="normal">E</mi></mrow><mo>&#x0003D;</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>m</mi></mrow></mfrac><munderover><mo>&#x02211;</mo><mrow><mi>i</mi><mo>&#x0003D;</mo><mn>1</mn></mrow><mrow><mi>m</mi></mrow></munderover><mo stretchy="false">&#x00028;</mo><msub><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mi>i</mi></msub><mo>&#x02212;</mo><msub><mi>y</mi><mi>i</mi></msub><msup><mo stretchy="false">&#x00029;</mo><mn>2</mn></msup></mrow></math></div>
+<p>계산 순서:</p>
+<ol>
+<li>예측값과 실제값의 차이를 구합니다.</li>
+<li>음수와 양수가 서로 상쇄되지 않도록 제곱합니다.</li>
+<li>모든 제곱 오차의 평균을 구합니다.</li>
+</ol>
+<p>Loss가 작을수록 현재 직선이 데이터에 더 잘 맞습니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_1_linear_forward_and_loss.ipynb · 셀 5 · 미검증</span></div><pre class="src"><code>#03. loss 계산
+errors = y_pred - y_train
+squared_errors = errors ** 2
+mse = squared_errors.mean()
 
-Backward
-→ 어느 방향으로 고쳐야 하는가 계산
-
-Optimizer
-→ W와 b를 실제로 수정
+print(&quot;오차:&quot;, errors)
+print(&quot;제곱 오차:&quot;, squared_errors)
+print(&quot;MSE:&quot;, mse.item())
 </code></pre></div>
-<h3>5.1 SGD</h3>
-<p>SGD(Stochastic Gradient Descent, 확률적 경사하강법)는 가장 기본적인 Optimizer이다.</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>optimizer = torch.optim.SGD(
-    model.parameters(),
-    lr=0.01
-)
-</code></pre></div>
-<p>현재 학습 과정에서는 매우 중요하다.</p>
-<p>왜냐하면:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Loss
- ↓
-Gradient
- ↓
-W, b 업데이트
-</code></pre></div>
-<p>관계를 가장 직접적으로 볼 수 있기 때문이다.</p>
-<p>따라서:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>① Linear Regression
-② Logistic Regression
-③ Multi-class Classification
-</code></pre></div>
-<p>초기 학습에서는 SGD가 매우 좋은 선택이다.</p>
-<p>SGD가 단순하다고 성능이 나쁜 Optimizer라는 뜻은 아니다.</p>
-<p>잘 조정된 SGD + Momentum은 CNN 등에서도 매우 강력하다.</p>
-<h3>5.2 SGD + Momentum</h3>
-<p>Momentum(모멘텀, 이전 업데이트 방향을 함께 활용하는 방법)을 추가한다.</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>optimizer = torch.optim.SGD(
-    model.parameters(),
-    lr=0.01,
-    momentum=0.9
-)
-</code></pre></div>
-<p>기본 SGD:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>현재 Gradient만 보고 이동
-</code></pre></div>
-<p>Momentum:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>현재 Gradient
-+
-이전에 이동하던 방향
-        ↓
-더 안정적인 이동
-</code></pre></div>
-<p>특히 Loss 표면이 다음과 같을 때 효과적이다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>＼       /
- ＼     /
-  ＼   /
-   ＼ /
-</code></pre></div>
-<p>SGD가 좌우로 흔들리면서 이동한다면 Momentum이 진행 방향을 안정시키는 역할을 한다.</p>
-<h3>5.3 Adam</h3>
-<p>Adam(Adaptive Moment Estimation, 적응형 모멘트 추정)은 각 파라미터별로 Learning Rate를 자동 조정하는 성격이 있다.</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>optimizer = torch.optim.Adam(
-    model.parameters(),
-    lr=0.001
-)
-</code></pre></div>
-<p>장점:</p>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 5 · 원본 실행 기록</span></div><pre>오차: tensor([1.5000, 1.0000, 0.5000])
+제곱 오차: tensor([2.2500, 1.0000, 0.2500])
+MSE: 1.1666666269302368
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>오차를 하나의 점수로 요약하는 <strong>평균제곱오차(MSE)</strong>를 단계별로 계산합니다.</p>
 <ul>
-<li>초기 설정이 비교적 쉬움</li>
-<li>빠르게 Loss가 감소하는 경우가 많음</li>
-<li>MLP, CNN, RNN/LSTM 실험에 편리함</li>
+<li><code>errors ** 2</code> — 제곱하면 음수 오차도 양수가 되고, 큰 오차일수록 더 크게 벌점이 붙습니다.</li>
+<li><code>.mean()</code> — 제곱 오차의 평균. <code>.item()</code>은 값이 하나인 Tensor를 파이썬 숫자로 꺼냅니다.</li>
 </ul>
-<p>따라서 새로운 딥러닝 모델의 초기 실험에서는 매우 자주 사용한다.</p>
-<h3>5.4 AdamW</h3>
-<p>AdamW(Adam with decoupled Weight Decay, 가중치 감소를 분리 적용한 Adam)는 Weight Decay를 Adam과 더 적절하게 결합한 방법이다.</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>optimizer = torch.optim.AdamW(
-    model.parameters(),
-    lr=0.001,
-    weight_decay=0.01
-)
-</code></pre></div>
-<p>특히:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Transformer
-대규모 신경망
-정규화가 필요한 딥러닝
-</code></pre></div>
-<p>에서 많이 사용한다.</p>
-<p>Transformer 계열에서는 AdamW가 매우 대표적인 초기 선택이다.</p>
-</section><section class="section" id="s07"><h2><span class="num">07</span>6. Optimizer를 어떻게 선택할 것인가</h2><p>초기 판단은 다음처럼 하면 충분하다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>학습 원리를 이해하고 싶은가?
-        ↓
-SGD
+</div>
+<h3>4. 두 직선의 Loss 비교하기</h3>
+<p>사람은 그래프를 보고 더 좋은 직선을 판단할 수 있지만, 컴퓨터는 Loss를 숫자로 비교합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_1_linear_forward_and_loss.ipynb · 셀 6 · 미검증</span></div><pre class="src"><code>#04. 첫 번째 직선: y = 1x + 0
+pred_1 = 1.0 * x_train + 0.0
+loss_1 = ((pred_1 - y_train) ** 2).mean()
 
-SGD 진동을 줄이고 싶은가?
-        ↓
-SGD + Momentum
+# 두 번째 직선: y = 0.5x + 2
+pred_2 = 0.5 * x_train + 2.0
+loss_2 = ((pred_2 - y_train) ** 2).mean()
 
-MLP/CNN/RNN을 빠르게 학습해보고 싶은가?
-        ↓
-Adam
+print(&quot;y = 1.0x + 0.0의 Loss:&quot;, loss_1.item())
+print(&quot;y = 0.5x + 2.0의 Loss:&quot;, round(loss_2.item(), 4))
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 6 · 원본 실행 기록</span></div><pre>y = 1.0x + 0.0의 Loss: 0.0
+y = 0.5x + 2.0의 Loss: 1.1667
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>두 직선의 MSE를 비교해 Loss가 '어느 직선이 더 좋은가'를 판단하는 기준임을 확인합니다.</p>
+<ul>
+<li>정답과 같은 <code>y = 1.0x + 0.0</code>의 Loss는 0, 다른 직선은 0보다 큽니다.</li>
+</ul>
+</div>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_1_linear_forward_and_loss.ipynb · 셀 7 · 미검증</span></div><pre class="src"><code># &lt;참고&gt; 두 직선의 Loss 비교
 
-Transformer 또는 Weight Decay를 적극적으로 적용하는가?
-        ↓
-AdamW
-</code></pre></div>
-<p>절대적인 규칙은 아니다.</p>
-</section><section class="section" id="s08"><h2><span class="num">08</span>7. SGD를 선택한 후 결정할 것</h2><p>Optimizer 이름을 정했다고 끝나는 것이 아니다.</p>
-<h3>Learning Rate</h3>
-<p>가장 중요한 Hyperparameter(하이퍼파라미터, 학습 전에 사용자가 정하는 값)이다.</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>lr=0.01
-</code></pre></div>
-<p>너무 큼:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Loss
- ↓ ↑ ↓ ↑
-진동
-</code></pre></div>
-<p>더 크면:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Loss → 폭발
-</code></pre></div>
-<p>너무 작음:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Loss
-───────＼
-        ＼
-         ＼
+plt.plot(x_train, y_train, marker=&quot;o&quot;, markersize=8,
+         linewidth=3, label=&quot;True Data: y = x&quot;)
 
-너무 천천히 감소
-</code></pre></div>
-<p>따라서 반드시 Loss 그래프를 본다.</p>
-<h3>Momentum</h3>
-<p>예:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>momentum=0.9
-</code></pre></div>
-<p>효과:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>SGD의 좌우 진동 감소
-+
-이전 이동 방향 유지
-+
-수렴 속도 개선 가능
-</code></pre></div>
-<p>너무 크거나 Learning Rate와 조합이 좋지 않으면 오히려 진동할 수도 있다.</p>
-<h3>Weight Decay</h3>
-<p>Weight Decay(웨이트 디케이, 큰 가중치에 제약을 주는 정규화)는 모델이 지나치게 복잡하게 학습하는 것을 억제한다.</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>weight_decay=1e-4
-</code></pre></div>
-<p>주로:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Train 성능 매우 좋음
-Validation 성능 나쁨
-        ↓
-Overfitting 의심
-        ↓
-Weight Decay 고려
-</code></pre></div>
-</section><section class="section" id="s09"><h2><span class="num">09</span>8. Batch Size</h2><p>Batch Size(배치 크기)는 한 번의 업데이트에 사용하는 데이터 수이다.</p>
-<p>예:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>전체 데이터 60,000개
+plt.plot(x_train, pred_1, marker=&quot;x&quot;, linestyle=&quot;--&quot;,
+         linewidth=2, label=f&quot;Prediction 1  Loss={loss_1.item():.3f}&quot;)
 
-Batch Size = 100
-        ↓
-1 Epoch당 약 600번 업데이트
-</code></pre></div>
-<p>작은 Batch:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Gradient 변동 ↑
-메모리 사용 ↓
-업데이트 횟수 ↑
-</code></pre></div>
-<p>큰 Batch:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Gradient 안정 ↑
-메모리 사용 ↑
-업데이트 횟수 ↓
-</code></pre></div>
-<p>Batch Size를 바꾸면 최적 Learning Rate도 달라질 수 있다.</p>
-</section><section class="section" id="s10"><h2><span class="num">10</span>9. Epoch</h2><p>Epoch(에폭, 전체 훈련 데이터를 한 번 학습하는 단위)</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Epoch 1
-→ 전체 데이터 한 번
+plt.plot(x_train, pred_2, marker=&quot;*&quot;, linestyle=&quot;--&quot;,
+         linewidth=2, label=f&quot;Prediction 2  Loss={loss_2.item():.3f}&quot;)
 
-Epoch 10
-→ 전체 데이터 열 번
-</code></pre></div>
-<p>Epoch를 무조건 늘린다고 좋은 것이 아니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Train Loss ↓
-Validation Loss ↓
-→ 정상
+plt.xlabel(&quot;x&quot;)
+plt.ylabel(&quot;y&quot;)
+plt.title(&quot;Comparison of Loss&quot;)
+plt.grid(True)
+plt.legend()
 
-Train Loss ↓
-Validation Loss ↑
-→ Overfitting 시작
+plt.savefig(&quot;./png/ch02_1_3.png&quot;, dpi=300, bbox_inches=&quot;tight&quot;)
+plt.show()
 </code></pre></div>
-<p>따라서 Epoch는 Validation과 함께 결정한다.</p>
-</section><section class="section" id="s11"><h2><span class="num">11</span>10. 데이터 전처리</h2><h3>Standardization</h3>
-<p>Standardization(스탠더다이제이션, 표준화):</p>
-<div class="math-block" role="math" aria-label="x_{scaled} = \frac{x-\mu}{\sigma}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>x</mi><mrow><mi>s</mi><mi>c</mi><mi>a</mi><mi>l</mi><mi>e</mi><mi>d</mi></mrow></msub><mo>&#x0003D;</mo><mfrac><mrow><mi>x</mi><mo>&#x02212;</mo><mi>&#x003BC;</mi></mrow><mrow><mi>&#x003C3;</mi></mrow></mfrac></mrow></math></div>
-<p>즉:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>평균 → 약 0
-표준편차 → 약 1
-</code></pre></div>
-<p>특징들의 단위 차이가 클 때 특히 중요하다.</p>
-<p>예:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>키          170
-몸무게       70
-연봉   50,000,000
-</code></pre></div>
-<p>그대로 사용하면 스케일 차이가 매우 크다.</p>
-</section><section class="section" id="s12"><h2><span class="num">12</span>11. Train 평균과 표준편차만 사용</h2><p>이 부분은 매우 중요하다.</p>
-<p>정상 과정:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Train
- ↓
-mean, std 계산
- ↓
-Train 변환
-Validation 변환
-Test 변환
-</code></pre></div>
-<p>즉:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>x_train_scaled = (x_train - train_mean) / train_std
-x_val_scaled   = (x_val   - train_mean) / train_std
-x_test_scaled  = (x_test  - train_mean) / train_std
-</code></pre></div>
-<p>잘못된 방식:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Test 데이터
- ↓
-Test mean/std 계산
- ↓
-Test 변환
-</code></pre></div>
-<p>이렇게 하면 Test 데이터의 정보를 미리 사용하게 된다.</p>
-<p>즉:</p>
-<blockquote>
-<p>Data Leakage(데이터 리키지, 데이터 누출)가 발생한다.</p>
-</blockquote>
-<p>Test는 마지막까지 <strong>처음 보는 데이터처럼 유지</strong>해야 한다.</p>
-</section><section class="section" id="s13"><h2><span class="num">13</span>12. Normalization과 Standardization</h2><p>두 용어는 상황에 따라 다르게 사용되지만 교육 단계에서는 다음 정도로 구분하면 좋다.</p>
-<p>Standardization:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>평균 0
-표준편차 1
-</code></pre></div>
-<p>Normalization(노멀라이제이션, 값의 범위를 일정하게 조정):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>예: 0~255
- ↓
-0~1
-</code></pre></div>
-<p>MNIST 예:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>pixel = pixel / 255.0
-</code></pre></div>
-</section><section class="section" id="s14"><h2><span class="num">14</span>13. Class Imbalance</h2><p>예:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>정상 9,900개
-암      100개
-</code></pre></div>
-<p>모델이 전부 정상이라고 해도:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Accuracy = 99%
-</code></pre></div>
-<p>따라서 Accuracy만 보면 매우 좋은 모델처럼 보인다.</p>
-<p>하지만 암 검출:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Recall = 0
-</code></pre></div>
-<p>일 수 있다.</p>
-<p>따라서 클래스 불균형에서는:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Precision
-Recall
-F1 Score
-</code></pre></div>
-<p>를 함께 봐야 한다.</p>
-</section><section class="section" id="s15"><h2><span class="num">15</span>14. Loss와 Metric은 다르다</h2><p>매우 중요한 구분이다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Loss
-→ 학습할 때 W와 b를 수정하기 위한 값
-
-Metric
-→ 학습 결과를 사람이 평가하기 위한 값
-</code></pre></div>
-</section><section class="section" id="s16"><h2><span class="num">16</span>15. Regression 평가</h2><h3>MSE</h3>
-<p>오차 제곱 평균.</p>
-<p>작을수록 좋다.</p>
-<p>큰 오차에 민감하다.</p>
-<h3>MAE</h3>
-<p>오차 절대값 평균.</p>
-<p>단위가 원래 Target과 같다.</p>
-<p>예:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>실제 무게 단위 g
-
-MAE = 80g
-</code></pre></div>
-<p>해석:</p>
-<blockquote>
-<p>평균적으로 약 80g 정도 틀린다.</p>
-</blockquote>
-<h3>RMSE</h3>
-<p>MSE에 제곱근을 취한다.</p>
-<p>원래 Target과 단위가 같아 해석하기 쉽다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>RMSE = 100g
-</code></pre></div>
-<h3>R²</h3>
-<p>R²(R-squared, 결정계수)는 모델이 데이터 변동을 얼마나 설명하는지를 나타낸다.</p>
-<p>보통:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>1에 가까움
-→ 설명력이 높음
-</code></pre></div>
-<p>MAE/MSE와는 다른 평가 지표이다.</p>
-<p>따라서:</p>
-<blockquote>
-<p>R²는 MAE나 MSE로부터 단순 변환한 값이 아니다.</p>
-</blockquote>
-</section><section class="section" id="s17"><h2><span class="num">17</span>16. Classification 평가</h2><h3>Accuracy</h3>
-<p>전체 예측 중 맞힌 비율.</p>
-<h3>Precision</h3>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>모델이 Positive라고 예측한 것 중
-실제로 Positive인 비율
-</code></pre></div>
-<h3>Recall</h3>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>실제 Positive 중
-모델이 찾아낸 비율
-</code></pre></div>
-<h3>F1 Score</h3>
-<p>Precision과 Recall을 함께 고려한다.</p>
-<p>특히 Class Imbalance가 있을 때 중요하다.</p>
-</section><section class="section" id="s18"><h2><span class="num">18</span>17. Validation으로 학습 상태 판단</h2><h3>정상 학습</h3>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Epoch →
-Train Loss       ↘
-Validation Loss  ↘
-</code></pre></div>
-<p>학습이 정상적으로 진행되고 있다.</p>
-</section><section class="section" id="s19"><h2><span class="num">19</span>18. Underfitting</h2><p>Underfitting(언더피팅, 과소적합):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Train Loss 높음
-Validation Loss 높음
-</code></pre></div>
-<p>의미:</p>
-<blockquote>
-<p>모델 자체가 충분히 학습하지 못했다.</p>
-</blockquote>
-<p>검토할 것:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Epoch 증가
-모델 크기 증가
-은닉층 증가
-노드 증가
-Learning Rate 조정
-</code></pre></div>
-</section><section class="section" id="s20"><h2><span class="num">20</span>19. Overfitting</h2><p>Overfitting(오버피팅, 과적합):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Train Loss       계속 ↓
-Validation Loss      ↑
-</code></pre></div>
-<p>의미:</p>
-<blockquote>
-<p>훈련 데이터를 학습하는 것이 아니라 점점 암기하고 있다.</p>
-</blockquote>
-<p>대응:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Epoch 감소
-Early Stopping
-Weight Decay
-Dropout
-데이터 증가
-Data Augmentation
-모델 단순화
-</code></pre></div>
-</section><section class="section" id="s21"><h2><span class="num">21</span>20. MLP와 CNN은 Loss를 결정하지 않는다</h2><p>이 점은 반드시 구분한다.</p>
-<h3>문제 유형</h3>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Regression
-Binary Classification
-Multi-class Classification
-Multi-label Classification
-</code></pre></div>
-<p>이것이:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>출력층
-Activation
-Loss
-Metric
-</code></pre></div>
-<p>을 결정한다.</p>
-<h3>모델 구조</h3>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Linear Model
-MLP
-CNN
-RNN/LSTM
-Transformer
-</code></pre></div>
-<p>이것은:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력 특징을 어떻게 처리할 것인가
-</code></pre></div>
-<p>를 결정한다.</p>
-</section><section class="section" id="s22"><h2><span class="num">22</span>21. MNIST 예</h2><h3>MLP</h3>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>28×28
- ↓
-Flatten
- ↓
-784
- ↓
-Linear
- ↓
-ReLU
- ↓
-Linear
- ↓
-ReLU
- ↓
-Linear(10)
- ↓
-10 Logits
- ↓
-CrossEntropyLoss
-</code></pre></div>
-<h3>CNN</h3>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>28×28
- ↓
-Conv
- ↓
-ReLU
- ↓
-Pooling
- ↓
-Conv
- ↓
-ReLU
- ↓
-Flatten
- ↓
-Linear(10)
- ↓
-10 Logits
- ↓
-CrossEntropyLoss
-</code></pre></div>
-<p>앞부분은 다르다.</p>
-<p>하지만 마지막은 같다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>10개 중 하나를 선택
-        ↓
-10 Logits
-        ↓
-CrossEntropyLoss
-</code></pre></div>
-</section><section class="section" id="s23"><h2><span class="num">23</span>22. 이진분류와 다중분류의 핵심 비교</h2><div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>이진분류
-
-Linear(1)
- ↓
-Logit
- ↓
-BCEWithLogitsLoss
- ↓
-추론 시 Sigmoid
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>다중분류
-
-Linear(C)
- ↓
-C개 Logit
- ↓
-CrossEntropyLoss
- ↓
-추론 시 argmax
-</code></pre></div>
-<p>확률을 보고 싶다면:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>probability = torch.softmax(logits, dim=1)
-</code></pre></div>
-<p>를 <strong>추론 단계에서</strong> 적용할 수 있다.</p>
-</section><section class="section" id="s24"><h2><span class="num">24</span>23. 가장 많이 하는 PyTorch 실수</h2><h4>실수 1. Sigmoid 중복</h4>
-<p>잘못된 구조:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Sigmoid
- ↓
-BCEWithLogitsLoss
-</code></pre></div>
-<p><code>BCEWithLogitsLoss</code> 자체가 Sigmoid 계산을 포함하므로 중복이다.</p>
-<p>정상:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Logit → BCEWithLogitsLoss
-</code></pre></div>
-<h4>실수 2. Softmax 중복</h4>
-<p>잘못된 구조:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Softmax
- ↓
-CrossEntropyLoss
-</code></pre></div>
-<p>정상:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Logits → CrossEntropyLoss
-</code></pre></div>
-<h4>실수 3. CrossEntropy Target을 One-hot으로 사용</h4>
-<p>일반적인 PyTorch 다중분류에서는:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>tensor([2, 0, 7, 1])
-</code></pre></div>
-<p>처럼 클래스 번호를 사용한다.</p>
-<p>dtype:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>torch.long
-</code></pre></div>
-<h4>실수 4. BCE Target을 long으로 사용</h4>
-<p><code>BCEWithLogitsLoss</code>에서는 보통:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>tensor([[0.], [1.], [0.]])
-</code></pre></div>
-<p>처럼 float를 사용한다.</p>
-<h4>실수 5. 출력 Shape 불일치</h4>
-<p>이진분류:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>prediction : [N, 1]
-target     : [N, 1]
-</code></pre></div>
-<p>처럼 맞추는 것이 안전하다.</p>
-<h4>실수 6. Loss와 Accuracy 혼동</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Loss = 0.25
-</code></pre></div>
-<p>라고 해서 Accuracy가 75%라는 의미는 전혀 아니다.</p>
-</section><section class="section" id="s25"><h2><span class="num">25</span>24. 새로운 문제를 받았을 때 의사결정 순서</h2><div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>① 무엇을 예측하는가?
-        ↓
-② Target은 실수인가 클래스인가?
-        ↓
-③ 회귀인가 분류인가?
-        ↓
-④ 분류라면
-   이진 / 다중 / 다중레이블인가?
-        ↓
-⑤ 출력 노드 수 결정
-        ↓
-⑥ 출력층 Activation 결정
-        ↓
-⑦ Loss 결정
-        ↓
-⑧ 모델 구조 결정
-   Linear / MLP / CNN / RNN / Transformer
-        ↓
-⑨ Optimizer 결정
-        ↓
-⑩ Learning Rate 결정
-        ↓
-⑪ Batch Size 결정
-        ↓
-⑫ Epoch 결정
-        ↓
-⑬ 데이터 전처리
-        ↓
-⑭ Train / Validation
-        ↓
-⑮ Metric 평가
-        ↓
-⑯ Underfitting / Overfitting 판단
-        ↓
-⑰ Hyperparameter 조정
-</code></pre></div>
-</section><section class="section" id="s26"><h2><span class="num">26</span>25. 학습 유형별 최종 요약표</h2><table>
+<p><img src="img/ch02_1_c07_0.png" alt="ch02_1 선형회귀의 순전파와 손실 — 코드 셀 7 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>두 예측 직선과 각각의 Loss 값을 범례에 함께 표시합니다.</p>
+<ul>
+<li><code>f&quot;Loss={loss_1.item():.3f}&quot;</code> — 소수점 셋째 자리까지 문자열로 넣습니다.</li>
+<li><code>linestyle=&quot;--&quot;</code>, <code>marker=&quot;x&quot;</code> — 선과 점 모양을 바꿔 구분합니다.</li>
+</ul>
+</div>
+<h3>5. 선형회귀 학습 함수 만들기</h3>
+<p>학습은 다음 네 단계를 반복합니다.</p>
+<table>
 <thead>
 <tr>
-  <th>학습 유형</th>
-  <th>출력층</th>
-  <th>출력 Activation</th>
-  <th>Loss</th>
-  <th>교육용 기본</th>
-  <th>실전 초기 선택</th>
-  <th>주요 Metric</th>
-  <th>관찰</th>
+  <th>단계</th>
+  <th>코드</th>
+  <th>의미</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-  <td>① Linear Regression</td>
-  <td>Linear(1)</td>
-  <td>없음</td>
-  <td>MSELoss</td>
-  <td>SGD</td>
-  <td>SGD / Adam</td>
-  <td>MAE, RMSE, R²</td>
-  <td>Loss 수렴</td>
+  <td>Forward</td>
+  <td><code>prediction = W * x + b</code></td>
+  <td>예측값 계산</td>
 </tr>
 <tr>
-  <td>② Logistic Regression</td>
-  <td>Linear(1)</td>
-  <td>없음</td>
-  <td>BCEWithLogitsLoss</td>
-  <td>SGD</td>
-  <td>SGD / Adam</td>
-  <td>Accuracy, F1</td>
-  <td>확률·경계</td>
+  <td>Loss</td>
+  <td><code>loss = ...</code></td>
+  <td>예측 오차 계산</td>
 </tr>
 <tr>
-  <td>③ Multi-class Classification</td>
-  <td>Linear(C)</td>
-  <td>없음</td>
-  <td>CrossEntropyLoss</td>
-  <td>SGD</td>
-  <td>SGD / Adam</td>
-  <td>Accuracy, F1</td>
-  <td>클래스별 성능</td>
+  <td>Backward</td>
+  <td><code>loss.backward()</code></td>
+  <td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>b</mi></mrow></math>의 기울기 계산</td>
 </tr>
 <tr>
-  <td>④ MLP 회귀</td>
-  <td>Linear(k)</td>
-  <td>없음</td>
-  <td>MSELoss</td>
-  <td>SGD</td>
-  <td>Adam</td>
-  <td>MAE, RMSE, R²</td>
-  <td>Train/Val Loss</td>
-</tr>
-<tr>
-  <td>⑤ MLP 이진분류</td>
-  <td>Linear(1)</td>
-  <td>없음</td>
-  <td>BCEWithLogitsLoss</td>
-  <td>SGD</td>
-  <td>Adam</td>
-  <td>Accuracy, Precision, Recall, F1</td>
-  <td>Train/Val</td>
-</tr>
-<tr>
-  <td>⑥ MLP 다중분류</td>
-  <td>Linear(C)</td>
-  <td>없음</td>
-  <td>CrossEntropyLoss</td>
-  <td>SGD</td>
-  <td>Adam</td>
-  <td>Accuracy, F1</td>
-  <td>Train/Val</td>
-</tr>
-<tr>
-  <td>⑦ CNN 다중분류</td>
-  <td>Linear(C)</td>
-  <td>없음</td>
-  <td>CrossEntropyLoss</td>
-  <td>SGD+Momentum</td>
-  <td>Adam 또는 SGD+Momentum</td>
-  <td>Accuracy, F1</td>
-  <td>Train/Val</td>
+  <td>Update</td>
+  <td><code>optimizer.step()</code></td>
+  <td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math>, <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>b</mi></mrow></math> 갱신</td>
 </tr>
 </tbody>
 </table>
-</section><section class="section" id="s27"><h2><span class="num">27</span>26. ⑥~⑧까지 확장</h2><h3>RNN/LSTM</h3>
-<p>Loss가 RNN/LSTM 때문에 결정되는 것은 아니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>시계열 숫자 예측
-→ MSELoss
+<p>SGD(Stochastic Gradient Descent, 확률적 경사하강법)는 기울기의 반대 방향으로 매개변수를 조금씩 이동합니다.</p>
+<div class="math-block" role="math" aria-label="\text{새 매개변수}
+=
+\text{현재 매개변수}
+-
+\text{학습률}
+\times
+\text{기울기}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>새&#x000A0;매개변수</mtext><mo>&#x0003D;</mo><mtext>현재&#x000A0;매개변수</mtext><mo>&#x02212;</mo><mtext>학습률</mtext><mo>&#x000D7;</mo><mtext>기울기</mtext></mrow></math></div>
+<p>아래 함수는 같은 학습 코드를 여러 데이터에 재사용하기 위한 간단한 함수입니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_1_linear_forward_and_loss.ipynb · 셀 8 · 미검증</span></div><pre class="src"><code>#05.선형회귀 함수
+def train_line(x, y, learning_rate=0.01, epochs=2000):
+    # 학습할 가중치와 편향
+    W = torch.tensor(0.0, requires_grad=True)
+    b = torch.tensor(0.0, requires_grad=True)
 
-감정 긍정/부정
-→ BCEWithLogitsLoss
+    optimizer = torch.optim.SGD([W, b], lr=learning_rate)
 
-문자/단어 분류
-→ CrossEntropyLoss
+    first_loss = None
+
+    for epoch in range(epochs):
+        optimizer.zero_grad()
+
+        # 1. 순전파
+        prediction = W * x + b
+
+        # 2. 손실 계산
+        loss = ((prediction - y) ** 2).mean()
+        print(epoch, loss)
+
+        # 첫 번째 Loss 저장
+        if epoch == 0:
+            first_loss = loss.item()
+
+        # 3. 역전파
+        loss.backward()
+
+        # 4. 매개변수 갱신
+        optimizer.step()
+
+    # return : W, b, first_loss, loss
+    return W.detach(), b.detach(), first_loss, loss.item()
 </code></pre></div>
-<p>Optimizer 초기 선택:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Adam
-</code></pre></div>
-<p>이 편리하다.</p>
-<h3>Autoencoder</h3>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력 → Encoder → Latent → Decoder → 복원
-</code></pre></div>
-<p>대표적으로:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>연속값 복원
-→ MSELoss / L1Loss
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p><code>W</code>와 <code>b</code>를 자동으로 찾는 학습 함수를 만듭니다. 반복문 안의 네 단계가 모든 딥러닝 학습의 기본 골격입니다.</p>
+<ul>
+<li><code>requires_grad=True</code> — 학습 대상인 <code>W</code>, <code>b</code>의 기울기를 기록합니다.</li>
+<li><code>torch.optim.SGD([W, b], lr=...)</code> — 기울기 반대 방향으로 조금씩 값을 고치는 확률적 경사하강법.</li>
+<li><code>zero_grad()</code> → 순전파 → <code>loss.backward()</code> → <code>optimizer.step()</code> — 기울기 초기화, 예측, 기울기 계산, 값 갱신 순서입니다.</li>
+<li><code>W.detach()</code> — 기울기 기록을 떼어 낸 순수한 값만 돌려줍니다.</li>
+</ul>
+</div>
+<h3>6. 기본 데이터 학습하기</h3>
+<p>학습이 잘 진행되면 다음과 같이 변합니다.</p>
+<ul>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math>는 1에 가까워집니다.</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>b</mi></mrow></math>는 0에 가까워집니다.</li>
+<li>Loss는 처음보다 매우 작아집니다.</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_1_linear_forward_and_loss.ipynb · 셀 9 · 미검증</span></div><pre class="src"><code>#06.기본데이터 학습
+W, b, first_loss, final_loss = train_line(x_train, y_train)
 
-이진적 데이터 복원
-→ BCE 계열
+print(&quot;학습된 W:&quot;, W.item())
+print(&quot;학습된 b:&quot;, b.item())
+print(&quot;Loss 변화:&quot;, first_loss, &quot;→&quot;, final_loss)
 </code></pre></div>
-<p>Optimizer:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Adam
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 9 · 원본 실행 기록</span></div><pre>0 tensor(4.6667, grad_fn=&lt;MeanBackward0&gt;)
+1 tensor(3.6927, grad_fn=&lt;MeanBackward0&gt;)
+2 tensor(2.9229, grad_fn=&lt;MeanBackward0&gt;)
+3 tensor(2.3143, grad_fn=&lt;MeanBackward0&gt;)
+4 tensor(1.8333, grad_fn=&lt;MeanBackward0&gt;)
+5 tensor(1.4530, grad_fn=&lt;MeanBackward0&gt;)
+6 tensor(1.1524, grad_fn=&lt;MeanBackward0&gt;)
+7 tensor(0.9148, grad_fn=&lt;MeanBackward0&gt;)
+8 tensor(0.7270, grad_fn=&lt;MeanBackward0&gt;)
+9 tensor(0.5785, grad_fn=&lt;MeanBackward0&gt;)
+10 tensor(0.4611, grad_fn=&lt;MeanBackward0&gt;)
+11 tensor(0.3683, grad_fn=&lt;MeanBackward0&gt;)
+12 tensor(0.2949, grad_fn=&lt;MeanBackward0&gt;)
+13 tensor(0.2368, grad_fn=&lt;MeanBackward0&gt;)
+14 tensor(0.1910, grad_fn=&lt;MeanBackward0&gt;)
+15 tensor(0.1547, grad_fn=&lt;MeanBackward0&gt;)
+16 tensor(0.1260, grad_fn=&lt;MeanBackward0&gt;)
+17 tensor(0.1033, grad_fn=&lt;MeanBackward0&gt;)
+18 tensor(0.0853, grad_fn=&lt;MeanBackward0&gt;)
+19 tensor(0.0711, grad_fn=&lt;MeanBackward0&gt;)
+20 tensor(0.0598, grad_fn=&lt;MeanBackward0&gt;)
+21 tensor(0.0509, grad_fn=&lt;MeanBackward0&gt;)
+22 tensor(0.0439, grad_fn=&lt;MeanBackward0&gt;)
+23 tensor(0.0383, grad_fn=&lt;MeanBackward0&gt;)
+24 tensor(0.0338, grad_fn=&lt;MeanBackward0&gt;)
+25 tensor(0.0303, grad_fn=&lt;MeanBackward0&gt;)
+26 tensor(0.0275, grad_fn=&lt;MeanBackward0&gt;)
+27 tensor(0.0252, grad_fn=&lt;MeanBackward0&gt;)
+28 tensor(0.0235, grad_fn=&lt;MeanBackward0&gt;)
+29 tensor(0.0220, grad_fn=&lt;MeanBackward0&gt;)
+30 tensor(0.0209, grad_fn=&lt;MeanBackward0&gt;)
+31 tensor(0.0200, grad_fn=&lt;MeanBackward0&gt;)
+32 tensor(0.0192, grad_fn=&lt;MeanBackward0&gt;)
+33 tensor(0.0186, grad_fn=&lt;MeanBackward0&gt;)
+34 tensor(0.0181, grad_fn=&lt;MeanBackward0&gt;)
+35 tensor(0.0177, grad_fn=&lt;MeanBackward0&gt;)
+36 tensor(0.0174, grad_fn=&lt;MeanBackward0&gt;)
+37 tensor(0.0171, grad_fn=&lt;MeanBackward0&gt;)
+38 tensor(0.0168, grad_fn=&lt;MeanBackward0&gt;)
+39 tensor(0.0166, grad_fn=&lt;MeanBackward0&gt;)
+... (이하 1963줄 생략, 전체 내용은 노트북 참고)
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>만든 함수로 기본 데이터를 학습합니다. 학습된 <code>W</code>는 1, <code>b</code>는 0에 가까워지고 Loss는 크게 줄어듭니다.</p>
+</div>
+<h3>7. 새로운 입력값 예측하기</h3>
+<p>학습이 끝난 뒤에는 학습된 직선에 새로운 입력값을 넣어 결과를 예측합니다.</p>
+<p>예측할 때는 기울기를 계산할 필요가 없으므로 <code>torch.no_grad()</code>를 사용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_1_linear_forward_and_loss.ipynb · 셀 10 · 미검증</span></div><pre class="src"><code>#07. 새로운 입력값 예측
+x_new = torch.tensor([2.5, 5.0])
+
+with torch.no_grad():
+    y_new = W * x_new + b
+
+print(&quot;새 입력:&quot;, x_new)
+print(&quot;예측값:&quot;, y_new)
 </code></pre></div>
-<p>이 초기 선택으로 많이 사용된다.</p>
-<h3>Transformer</h3>
-<p>대표적인 언어 모델:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>다음 Token 예측
-        ↓
-Vocabulary 중 하나 선택
-        ↓
-Multi-class Classification
-        ↓
-CrossEntropyLoss
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 10 · 원본 실행 기록</span></div><pre>새 입력: tensor([2.5000, 5.0000])
+예측값: tensor([2.4997, 4.9964])
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>학습된 직선으로 처음 보는 입력값을 예측합니다.</p>
+<ul>
+<li><code>with torch.no_grad():</code> — 예측만 할 때는 기울기를 기록하지 않아 메모리와 시간을 아낍니다.</li>
+</ul>
+</div>
+<h3>8. 실무 예제: 센서 입력 전압 보정</h3>
+<p>센서의 입력 전압과 실제 측정값 사이의 관계를 학습합니다.</p>
+<table>
+<thead>
+<tr>
+  <th style="text-align:right">입력 전압</th>
+  <th style="text-align:right">실제 측정값</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td style="text-align:right">0.5 V</td>
+  <td style="text-align:right">11</td>
+</tr>
+<tr>
+  <td style="text-align:right">1.0 V</td>
+  <td style="text-align:right">21</td>
+</tr>
+<tr>
+  <td style="text-align:right">1.5 V</td>
+  <td style="text-align:right">31</td>
+</tr>
+<tr>
+  <td style="text-align:right">2.0 V</td>
+  <td style="text-align:right">41</td>
+</tr>
+</tbody>
+</table>
+<p>이 데이터는 대략 다음 관계를 가집니다.</p>
+<div class="math-block" role="math" aria-label="y=20x+1"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>y</mi><mo>&#x0003D;</mo><mn>20</mn><mi>x</mi><mo>&#x0002B;</mo><mn>1</mn></mrow></math></div>
+<p>앞에서 만든 <code>train_line()</code> 함수를 그대로 재사용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_1_linear_forward_and_loss.ipynb · 셀 11 · 미검증</span></div><pre class="src"><code>#08. 예제-센서입력 전압 보정
+voltage_data = torch.tensor([0.5, 1.0, 1.5, 2.0])
+measured_data = torch.tensor([11.0, 21.0, 31.0, 41.0])
+
+# 생성한 선형회귀학습 함수 train_line 사용
+sensor_W, sensor_b, sensor_first_loss, sensor_final_loss = train_line(
+    voltage_data, measured_data, learning_rate=0.05, epochs=3000,)
+
+new_voltage = torch.tensor(1.25)
+
+with torch.no_grad():
+    corrected_value = sensor_W * new_voltage + sensor_b
+
+print(&quot;학습된 W:&quot;, sensor_W.item())
+print(&quot;학습된 b:&quot;, sensor_b.item())
+
+print(&quot;Loss 변화:&quot;, sensor_first_loss, &quot;→&quot;, sensor_final_loss)
+print(&quot;1.25 V 예측값:&quot;, corrected_value.item())
 </code></pre></div>
-<p>대표 Optimizer:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>AdamW
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 11 · 원본 실행 기록</span></div><pre>0 tensor(801., grad_fn=&lt;MeanBackward0&gt;)
+1 tensor(425.5893, grad_fn=&lt;MeanBackward0&gt;)
+2 tensor(228.7750, grad_fn=&lt;MeanBackward0&gt;)
+3 tensor(125.5318, grad_fn=&lt;MeanBackward0&gt;)
+4 tensor(71.3142, grad_fn=&lt;MeanBackward0&gt;)
+5 tensor(42.7843, grad_fn=&lt;MeanBackward0&gt;)
+6 tensor(27.7153, grad_fn=&lt;MeanBackward0&gt;)
+7 tensor(19.7012, grad_fn=&lt;MeanBackward0&gt;)
+8 tensor(15.3860, grad_fn=&lt;MeanBackward0&gt;)
+9 tensor(13.0113, grad_fn=&lt;MeanBackward0&gt;)
+10 tensor(11.6557, grad_fn=&lt;MeanBackward0&gt;)
+11 tensor(10.8367, grad_fn=&lt;MeanBackward0&gt;)
+12 tensor(10.3011, grad_fn=&lt;MeanBackward0&gt;)
+13 tensor(9.9165, grad_fn=&lt;MeanBackward0&gt;)
+14 tensor(9.6133, grad_fn=&lt;MeanBackward0&gt;)
+15 tensor(9.3550, grad_fn=&lt;MeanBackward0&gt;)
+16 tensor(9.1226, grad_fn=&lt;MeanBackward0&gt;)
+17 tensor(8.9058, grad_fn=&lt;MeanBackward0&gt;)
+18 tensor(8.6993, grad_fn=&lt;MeanBackward0&gt;)
+19 tensor(8.5004, grad_fn=&lt;MeanBackward0&gt;)
+20 tensor(8.3075, grad_fn=&lt;MeanBackward0&gt;)
+21 tensor(8.1197, grad_fn=&lt;MeanBackward0&gt;)
+22 tensor(7.9365, grad_fn=&lt;MeanBackward0&gt;)
+23 tensor(7.7577, grad_fn=&lt;MeanBackward0&gt;)
+24 tensor(7.5830, grad_fn=&lt;MeanBackward0&gt;)
+25 tensor(7.4123, grad_fn=&lt;MeanBackward0&gt;)
+26 tensor(7.2455, grad_fn=&lt;MeanBackward0&gt;)
+27 tensor(7.0825, grad_fn=&lt;MeanBackward0&gt;)
+28 tensor(6.9231, grad_fn=&lt;MeanBackward0&gt;)
+29 tensor(6.7673, grad_fn=&lt;MeanBackward0&gt;)
+30 tensor(6.6150, grad_fn=&lt;MeanBackward0&gt;)
+31 tensor(6.4662, grad_fn=&lt;MeanBackward0&gt;)
+32 tensor(6.3207, grad_fn=&lt;MeanBackward0&gt;)
+33 tensor(6.1784, grad_fn=&lt;MeanBackward0&gt;)
+34 tensor(6.0394, grad_fn=&lt;MeanBackward0&gt;)
+35 tensor(5.9035, grad_fn=&lt;MeanBackward0&gt;)
+36 tensor(5.7707, grad_fn=&lt;MeanBackward0&gt;)
+37 tensor(5.6408, grad_fn=&lt;MeanBackward0&gt;)
+38 tensor(5.5139, grad_fn=&lt;MeanBackward0&gt;)
+39 tensor(5.3898, grad_fn=&lt;MeanBackward0&gt;)
+... (이하 2964줄 생략, 전체 내용은 노트북 참고)
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>같은 함수를 센서 보정 문제에 그대로 재사용합니다. 전압(V)을 넣으면 측정값을 예측하는 직선을 학습합니다.</p>
+<ul>
+<li>데이터 범위가 달라 <code>learning_rate=0.05</code>, <code>epochs=3000</code>으로 조정했습니다.</li>
+<li>데이터가 <code>측정값 = 20 × 전압 + 1</code>을 따르므로 <code>W ≈ 20</code>, <code>b ≈ 1</code>, 1.25 V의 예측값은 약 26입니다.</li>
+</ul>
+</div>
+<h3>10. 핵심 정리</h3>
+<ul>
+<li>선형회귀는 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mo>&#x0003D;</mo><mi>W</mi><mi>x</mi><mo>&#x0002B;</mo><mi>b</mi></mrow></math> 형태의 직선을 학습합니다.</li>
+<li><code>backward()</code>는 Loss를 줄이기 위한 기울기를 계산합니다.</li>
+<li>학습된 모델은 새로운 입력값을 예측하는 데 사용합니다.</li>
+</ul>
+</section><section class="section" id="s04"><h2><span class="num">04</span>ch02_2 신경망 형식의 선형회귀</h2><p>실습 노트북 <code>notebooks/ch02_2_linear_regression_neural_network.ipynb</code></p>
+<h3>개요</h3>
+<ul>
+<li>직접 만든 가중치 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math>와 편향 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>b</mi></mrow></math>를 <code>nn.Linear</code> 구조로 바꿉니다.</li>
+</ul>
+<p><img src="img/ch02_2_md0_image.png" alt="ch02_2 설명 그림" /></p>
+<ul>
+<li>같은 학습 함수를 기본 예제와 센서 보정 예제에 재사용합니다.</li>
+</ul>
+<h3>1. 학습 데이터 준비</h3>
+<p><code>nn.Linear(1, 1)</code>은 데이터 하나당 입력 특성 1개를 받습니다.</p>
+<p>따라서 데이터 모양은 다음과 같이 구성합니다.</p>
+<div class="math-block" role="math" aria-label="[\text{데이터 수},\ \text{입력 특성 수}]"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mo stretchy="false">[</mo><mtext>데이터&#x000A0;수</mtext><mo>&#x0002C;</mo><mtext>&#x000A0;</mtext><mtext>입력&#x000A0;특성&#x000A0;수</mtext><mo stretchy="false">]</mo></mrow></math></div>
+<p>이번 데이터는 3개이며, 각 데이터의 입력 특성은 1개입니다.</p>
+<ul>
+<li>입력 shape: <code>(3, 1)</code></li>
+<li>출력 shape: <code>(3, 1)</code></li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_2_linear_regression_neural_network.ipynb · 셀 1 · 미검증</span></div><pre class="src"><code>#01. 학습데이터 준비
+import torch
+from torch import nn
+
+torch.manual_seed(42)
+
+x_train = torch.tensor([[1.0], [2.0], [3.0]])
+y_train = torch.tensor([[1.0], [2.0], [3.0]])
+
+print(&quot;x_train:&quot;)
+print(x_train)
+print(&quot;shape:&quot;, x_train.shape)
+
+print()
+print(&quot;y_train:&quot;)
+print(y_train)
+print(&quot;shape:&quot;, y_train.shape)
 </code></pre></div>
-</section><section class="section" id="s28"><h2><span class="num">28</span>27. 전체 테크트리를 하나의 원리로 정리</h2><p>현재 테크트리는 사실 두 개의 축으로 이해해야 한다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>[문제 유형 축]
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 1 · 원본 실행 기록</span></div><pre>x_train:
+tensor([[1.],
+        [2.],
+        [3.]])
+shape: torch.Size([3, 1])
 
-Regression
-Binary Classification
-Multi-class Classification
-Multi-label Classification
-Reconstruction
+y_train:
+tensor([[1.],
+        [2.],
+        [3.]])
+shape: torch.Size([3, 1])
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>신경망 입력 형식에 맞춰 데이터를 <strong>2차원</strong> <code>[데이터 수, 특성 수]</code> 모양으로 만듭니다.</p>
+<ul>
+<li><code>[[1.0], [2.0], [3.0]]</code> — 데이터 3개, 각 데이터의 특성 1개 → <code>shape [3, 1]</code>.</li>
+<li><code>torch.manual_seed(42)</code> — 모델의 초기 가중치를 실행마다 같게 고정합니다.</li>
+</ul>
+</div>
+<h3>2. 직접 계산에서 신경망 구조로 바꾸기</h3>
+<div class="math-block" role="math" aria-label="\hat{y}=Wx+b"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mo>&#x0003D;</mo><mi>W</mi><mi>x</mi><mo>&#x0002B;</mo><mi>b</mi></mrow></math></div>
+<ul>
+<li><code>nn.Linear(1, 1)</code>이 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math>와 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>b</mi></mrow></math>를 내부에서 생성하고 관리합니다.</li>
+<li>ReLU(렐루, 음수를 0으로 바꾸는 활성화 함수)는 사용하지 않습니다.</li>
+<li>같은 선형회귀를 신경망 형식으로 표현합니다.</li>
+</ul>
+<h3>3. <code>nn.Module</code>로 모델 정의하기</h3>
+<p>모델 클래스에는 두 부분만 작성합니다.</p>
+<ul>
+<li><code>__init__()</code> : 사용할 계층 정의</li>
+<li><code>forward()</code> : 입력이 모델을 통과하는 과정 정의</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_2_linear_regression_neural_network.ipynb · 셀 2 · 미검증</span></div><pre class="src"><code>#03. nn.Module을 상속받아서 새로운 클래스 생성
+class LinearRegressionModel(nn.Module):  
+    def __init__(self):
+        super().__init__()
 
-             ×
+        # 입력 1개 → 출력 1개
+        self.linear = nn.Linear(1, 1)
 
-[모델 구조 축]
+    def forward(self, x):
+        # 내부에서 y_hat = W*x + b 계산
+        return self.linear(x)
 
-Linear
-MLP
-CNN
-RNN/LSTM
-Autoencoder
-Transformer
+
+model = LinearRegressionModel()
+print(model)
 </code></pre></div>
-<p>예를 들어:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>MLP + Regression
-MLP + Binary Classification
-MLP + Multi-class Classification
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 2 · 원본 실행 기록</span></div><pre>LinearRegressionModel(
+  (linear): Linear(in_features=1, out_features=1, bias=True)
+)
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p><code>nn.Module</code>을 상속해 선형회귀 모델을 클래스로 정의합니다. PyTorch의 모든 모델이 이 형식을 따릅니다.</p>
+<ul>
+<li><code>__init__</code> — 모델이 가질 층을 만듭니다. <code>nn.Linear(1, 1)</code>은 입력 1개 → 출력 1개, 내부에 <code>W</code>와 <code>b</code>를 가집니다.</li>
+<li><code>forward</code> — 입력이 들어왔을 때의 계산 순서. <code>model(x)</code>를 호출하면 이 함수가 실행됩니다.</li>
+</ul>
+</div>
+<h3>4. 모델 안의 가중치와 편향 확인</h3>
+<p><code>nn.Linear</code> 내부에는 학습 대상인 가중치와 편향이 들어 있습니다.</p>
+<ul>
+<li><code>weight</code>: 직선의 기울기 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math></li>
+<li><code>bias</code>: 직선의 절편 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>b</mi></mrow></math></li>
+</ul>
+<p>처음에는 임의의 값으로 시작하고, 학습하면서 데이터에 맞게 변경됩니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_2_linear_regression_neural_network.ipynb · 셀 3 · 미검증</span></div><pre class="src"><code>#04. 모델 안의 가중치와 편향 확인
+print(&quot;초기 W:&quot;, model.linear.weight.item())
+print(&quot;초기 b:&quot;, model.linear.bias.item())
 
-CNN + Binary Classification
-CNN + Multi-class Classification
-
-RNN + Regression
-RNN + Classification
-
-Transformer + Multi-class Classification
+print()
+for name, parameter in model.named_parameters():
+    print(name, parameter.shape)
 </code></pre></div>
-<p>처럼 조합된다.</p>
-<p>따라서:</p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p><code>nn.Linear</code>가 무작위로 초기화한 가중치와 편향을 확인합니다.</p>
+<ul>
+<li><code>model.named_parameters()</code> — 학습 대상 매개변수의 이름과 Tensor를 차례로 돌려줍니다(<code>linear.weight</code>, <code>linear.bias</code>).</li>
+</ul>
+</div>
+<h3>5. 손실함수와 최적화 도구</h3>
+<ul>
+<li><code>nn.MSELoss()</code>는 예측값과 실제값의 평균제곱오차를 계산합니다.</li>
+<li><code>torch.optim.SGD()</code>는 Loss가 감소하도록 모델 매개변수를 갱신합니다.</li>
+<li><code>model.parameters()</code>는 모델 내부의 모든 학습 대상을 가져옵니다.</li>
+</ul>
+<p>학습 순서는 와 같습니다.</p>
+<div class="math-block" role="math" aria-label="\text{Forward}
+\rightarrow
+\text{Loss}
+\rightarrow
+\text{Backward}
+\rightarrow
+\text{Update}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>Forward</mtext><mo>&#x02192;</mo><mtext>Loss</mtext><mo>&#x02192;</mo><mtext>Backward</mtext><mo>&#x02192;</mo><mtext>Update</mtext></mrow></math></div>
+<h3>6. 재사용 가능한 학습 함수</h3>
+<p>학습 코드를 한 번만 작성한 뒤 여러 데이터에 재사용합니다.</p>
+<p>함수 내부에서 다음 작업을 반복합니다.</p>
+<ol>
+<li><code>model(x)</code>로 예측</li>
+<li>Loss 계산</li>
+<li>이전 기울기 초기화</li>
+<li>역전파</li>
+<li>매개변수 갱신</li>
+</ol>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_2_linear_regression_neural_network.ipynb · 셀 4 · 미검증</span></div><pre class="src"><code>#06. 함수 (재사용 가능한 학습)
+def train_model(model, x, y, learning_rate=0.01, epochs=2000):
+    loss_function = nn.MSELoss()
+    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate,)
+
+    first_loss = None
+
+    for epoch in range(epochs):
+        # 1. 순전파
+        prediction = model(x)
+
+        # 2. 손실 계산
+        loss = loss_function(prediction, y)
+
+        if epoch == 0:
+            first_loss = loss.item()
+
+        # 3. 이전 기울기 초기화
+        optimizer.zero_grad()
+
+        # 4. 역전파
+        loss.backward()
+
+        # 5. 매개변수 갱신
+        optimizer.step()
+
+    return first_loss, loss.item()
+</code></pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>손실 계산과 갱신을 PyTorch 도구로 바꾼 재사용 가능한 학습 함수입니다.</p>
+<ul>
+<li><code>nn.MSELoss()</code> — 앞 노트북에서 직접 쓴 <code>((예측 − 정답) ** 2).mean()</code>과 같은 계산입니다.</li>
+<li><code>model.parameters()</code> — 모델 안의 모든 학습 매개변수를 최적화 도구에 한 번에 넘깁니다.</li>
+</ul>
+</div>
+<h3>7. 기본 선형회귀 모델 학습</h3>
+<p>학습 데이터는 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>y</mi><mo>&#x0003D;</mo><mi>x</mi></mrow></math> 관계입니다.</p>
+<p>따라서 학습이 끝나면 다음 값에 가까워집니다.</p>
+<div class="math-block" role="math" aria-label="W \approx 1,\qquad b \approx 0"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>W</mi><mo>&#x02248;</mo><mn>1</mn><mo>&#x0002C;</mo><mspace width="2em" /><mi>b</mi><mo>&#x02248;</mo><mn>0</mn></mrow></math></div>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_2_linear_regression_neural_network.ipynb · 셀 5 · 미검증</span></div><pre class="src"><code>#07. 모델 학습
+torch.manual_seed(42)
+
+model = LinearRegressionModel()
+
+first_loss, final_loss = train_model(
+    model,
+    x_train,
+    y_train,
+)
+
+print(&quot;학습된 W:&quot;, model.linear.weight.item())
+print(&quot;학습된 b:&quot;, model.linear.bias.item())
+print(&quot;Loss 변화:&quot;, first_loss, &quot;→&quot;, final_loss)
+</code></pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>모델을 새로 만들고 학습 함수로 학습합니다. 학습 후 <code>weight</code>는 1, <code>bias</code>는 0에 가까워집니다.</p>
+</div>
+<h3>8. 새로운 값 예측</h3>
+<p>학습이 끝난 뒤에는 <code>model.eval()</code>로 평가 모드로 전환합니다.</p>
+<p>예측 과정에서는 기울기 계산이 필요하지 않으므로 <code>torch.no_grad()</code>를 사용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_2_linear_regression_neural_network.ipynb · 셀 6 · 미검증</span></div><pre class="src"><code>x_new = torch.tensor([[2.5], [5.0]])
+
+model.eval()
+
+with torch.no_grad():
+    y_new = model(x_new)
+
+print(&quot;새 입력:&quot;)
+print(x_new[:, 0])
+
+print()
+print(&quot;예측값:&quot;)
+print(y_new[:, 0])
+</code></pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>학습된 모델로 새 입력을 예측합니다.</p>
+<ul>
+<li><code>model.eval()</code> — 모델을 평가 모드로 바꿉니다. 이 모델에는 차이가 없지만, Dropout·BatchNorm이 있는 모델에서는 필수입니다.</li>
+<li><code>x_new[:, 0]</code> — <code>[2, 1]</code> 모양에서 열 하나를 꺼내 1차원으로 보기 좋게 출력합니다.</li>
+</ul>
+</div>
+<h3>9. 실무 예제: 센서 입력 전압 보정</h3>
+<p>입력 전압과 실제 측정값의 관계를 학습합니다.</p>
+<table>
+<thead>
+<tr>
+  <th style="text-align:right">입력 전압</th>
+  <th style="text-align:right">실제 측정값</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td style="text-align:right">0.5 V</td>
+  <td style="text-align:right">11</td>
+</tr>
+<tr>
+  <td style="text-align:right">1.0 V</td>
+  <td style="text-align:right">21</td>
+</tr>
+<tr>
+  <td style="text-align:right">1.5 V</td>
+  <td style="text-align:right">31</td>
+</tr>
+<tr>
+  <td style="text-align:right">2.0 V</td>
+  <td style="text-align:right">41</td>
+</tr>
+</tbody>
+</table>
+<p>데이터 관계는 대략 다음과 같습니다.</p>
+<div class="math-block" role="math" aria-label="y=20x+1"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>y</mi><mo>&#x0003D;</mo><mn>20</mn><mi>x</mi><mo>&#x0002B;</mo><mn>1</mn></mrow></math></div>
+<p>앞에서 만든 모델 클래스와 학습 함수를 그대로 재사용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_2_linear_regression_neural_network.ipynb · 셀 7 · 미검증</span></div><pre class="src"><code>voltage_data = torch.tensor(
+    [[0.5], [1.0], [1.5], [2.0]]
+)
+
+measured_data = torch.tensor(
+    [[11.0], [21.0], [31.0], [41.0]]
+)
+
+torch.manual_seed(42)
+
+sensor_model = LinearRegressionModel()
+
+sensor_first_loss, sensor_final_loss = train_model(
+    sensor_model,
+    voltage_data,
+    measured_data,
+    learning_rate=0.05,
+    epochs=3000,
+)
+
+new_voltage = torch.tensor([[1.25]])
+
+sensor_model.eval()
+
+with torch.no_grad():
+    corrected_value = sensor_model(new_voltage)
+
+print(&quot;센서 W:&quot;, sensor_model.linear.weight.item())
+print(&quot;센서 b:&quot;, sensor_model.linear.bias.item())
+print(&quot;Loss 변화:&quot;, sensor_first_loss, &quot;→&quot;, sensor_final_loss)
+print(&quot;1.25 V 보정값:&quot;, corrected_value.item())
+</code></pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>같은 모델 클래스와 학습 함수로 센서 전압 보정 문제를 풉니다. 데이터와 학습 설정만 바꾸면 코드를 그대로 재사용할 수 있다는 점이 핵심입니다.</p>
+</div>
+<h3>11. 핵심 정리</h3>
+<ul>
+<li><code>nn.Module</code>은 PyTorch 신경망 모델의 기본 구조입니다.</li>
+<li><code>nn.MSELoss()</code>는 평균제곱오차를 계산합니다.</li>
+<li>같은 모델 클래스와 학습 함수는 다른 선형 데이터에도 재사용할 수 있습니다.</li>
+</ul>
+</section><section class="section" id="s05"><h2><span class="num">05</span>ch02_3 비용함수 최소화</h2><p>실습 노트북 <code>notebooks/ch02_3_minimizing_cost.ipynb</code></p>
+<h3>개요</h3>
+<ul>
+<li>가중치 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math>에 따라 Cost(코스트, 비용)가 어떻게 변하는지 확인합니다.</li>
+<li>같은 함수를 센서 데이터에 재사용합니다.</li>
+</ul>
+<h3>1. 데이터와 단순화된 선형식</h3>
+<p>다음 세 점을 사용합니다.</p>
+<div class="math-block" role="math" aria-label="(1,1),\quad(2,2),\quad(3,3)"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mo stretchy="false">&#x00028;</mo><mn>1</mn><mo>&#x0002C;</mo><mn>1</mn><mo stretchy="false">&#x00029;</mo><mo>&#x0002C;</mo><mspace width="1em" /><mo stretchy="false">&#x00028;</mo><mn>2</mn><mo>&#x0002C;</mo><mn>2</mn><mo stretchy="false">&#x00029;</mo><mo>&#x0002C;</mo><mspace width="1em" /><mo stretchy="false">&#x00028;</mo><mn>3</mn><mo>&#x0002C;</mo><mn>3</mn><mo stretchy="false">&#x00029;</mo></mrow></math></div>
+<p>데이터의 관계는 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>y</mi><mo>&#x0003D;</mo><mi>x</mi></mrow></math>이므로 가장 적절한 가중치는 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi><mo>&#x0003D;</mo><mn>1</mn></mrow></math>입니다.</p>
+<p>비용곡선을 쉽게 보기 위해 편향 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>b</mi></mrow></math>를 잠시 제외합니다.</p>
+<div class="math-block" role="math" aria-label="\hat{y}=Wx"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mo>&#x0003D;</mo><mi>W</mi><mi>x</mi></mrow></math></div>
+<p>편향이 필요 없다는 뜻이 아니라, <strong>가중치 하나의 이동만 관찰하기 위한 단순화</strong>입니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_3_minimizing_cost.ipynb · 셀 1 · 미검증</span></div><pre class="src"><code>import torch
+import matplotlib.pyplot as plt
+
+x_train = torch.tensor([1.0, 2.0, 3.0])
+y_train = torch.tensor([1.0, 2.0, 3.0])
+
+print(&quot;입력:&quot;, x_train)
+print(&quot;실제값:&quot;, y_train)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 1 · 원본 실행 기록</span></div><pre>입력: tensor([1., 2., 3.])
+실제값: tensor([1., 2., 3.])
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p><code>y = x</code> 데이터를 준비합니다. 이 노트북은 편향 없이 <code>H(x) = Wx</code>만 사용해 <code>W</code> 하나의 변화에 집중합니다.</p>
+</div>
+<h3>2. 가중치에 따른 비용 계산</h3>
+<p>MSE(엠에스이, 평균제곱오차)는 예측값과 실제값의 차이를 제곱한 뒤 평균합니다.</p>
+<div class="math-block" role="math" aria-label="\mathrm{Cost}(W)
+=
+\frac{1}{m}
+\sum_{i=1}^{m}
+(Wx_i-y_i)^2"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">t</mi></mrow><mo stretchy="false">&#x00028;</mo><mi>W</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0003D;</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>m</mi></mrow></mfrac><munderover><mo>&#x02211;</mo><mrow><mi>i</mi><mo>&#x0003D;</mo><mn>1</mn></mrow><mrow><mi>m</mi></mrow></munderover><mo stretchy="false">&#x00028;</mo><mi>W</mi><msub><mi>x</mi><mi>i</mi></msub><mo>&#x02212;</mo><msub><mi>y</mi><mi>i</mi></msub><msup><mo stretchy="false">&#x00029;</mo><mn>2</mn></msup></mrow></math></div>
+<ul>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi><mo>&#x0003D;</mo><mn>1</mn></mrow></math>: 예측값과 실제값이 같으므로 비용은 0</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi><mo>&#x02260;</mo><mn>1</mn></mrow></math>: 예측 오차가 생기므로 비용은 0보다 큼</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_3_minimizing_cost.ipynb · 셀 2 · 미검증</span></div><pre class="src"><code>def calculate_cost(weight, x=x_train, y=y_train):
+    prediction = weight * x
+    return ((prediction - y) ** 2).mean().item()
+
+
+for weight in [0.0, 1.0, 2.0]:
+    cost = calculate_cost(weight)
+    print(f&quot;W={weight:.1f} → Cost={cost:.4f}&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 2 · 원본 실행 기록</span></div><pre>W=0.0 → Cost=4.6667
+W=1.0 → Cost=0.0000
+W=2.0 → Cost=4.6667
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p><code>W</code> 값에 따라 비용(Cost, 여기서는 MSE)이 어떻게 달라지는지 계산하는 함수를 만들고 세 값을 비교합니다.</p>
+<ul>
+<li>정답인 <code>W = 1</code>에서 비용이 0이고, 멀어질수록 커집니다.</li>
+</ul>
+</div>
+<h3>3. 비용함수 그래프</h3>
+<p>여러 가중치에서 비용을 계산하면 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi><mo>&#x0003D;</mo><mn>1</mn></mrow></math>이 최저점인 포물선이 나타납니다.</p>
+<p>이 그래프에서:</p>
+<ul>
+<li>가로축: 가중치 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math></li>
+<li>세로축: Cost</li>
+<li>가장 낮은 점: 가장 좋은 가중치</li>
+</ul>
 <blockquote>
-<p><strong>MLP의 Loss는 무엇인가?</strong></p>
+<p><strong>가장 좋은 가중치는 비용곡선의 최저점에 있습니다.</strong></p>
 </blockquote>
-<p>라는 질문 자체에는 하나의 답이 없다.</p>
-<p>정확한 질문은:</p>
-<blockquote>
-<p><strong>MLP를 이용하여 어떤 문제를 해결하는가?</strong></p>
-</blockquote>
-<p>이다.</p>
-</section><section class="section" id="s29"><h2><span class="num">29</span>28. 가장 먼저 외워야 할 4줄</h2><p>현재 단계에서는 사실 다음 네 줄을 가장 확실히 이해하면 된다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>회귀
-→ 실수 출력
-→ MSELoss
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>이진분류
-→ Logit 1개
-→ BCEWithLogitsLoss
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>다중분류
-→ C개 Logit
-→ CrossEntropyLoss
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>다중레이블
-→ C개 독립 Logit
-→ BCEWithLogitsLoss
-</code></pre></div>
-<p>그다음:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>학습 원리 이해
-→ SGD
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_3_minimizing_cost.ipynb · 셀 3 · 미검증</span></div><pre class="src"><code>weight_values = torch.linspace(-3.0, 5.0, 161)
+cost_values = [
+    calculate_cost(weight.item())
+    for weight in weight_values
+]
 
-SGD 개선
-→ SGD + Momentum
+plt.figure(figsize=(8, 5))
+plt.plot(weight_values.numpy(), cost_values, label=&quot;Cost(W)&quot;)
+plt.scatter([1.0], [0.0], label=&quot;Minimum W=1&quot;)
+plt.xlabel(&quot;Weight W&quot;)
+plt.ylabel(&quot;Cost&quot;)
+plt.title(&quot;Cost Function&quot;)
+plt.grid(alpha=0.3)
+plt.legend()
+plt.show()
+</code></pre></div>
+<p><img src="img/ch02_3_c03_0.png" alt="ch02_3 비용함수 최소화 — 코드 셀 3 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p><code>W</code>를 −3부터 5까지 161개 값으로 바꿔 가며 비용을 계산해 그래프로 그립니다.</p>
+<ul>
+<li><code>torch.linspace(-3.0, 5.0, 161)</code> — 구간을 같은 간격으로 나눈 값들.</li>
+<li>결과는 <code>W = 1</code>에서 가장 낮은 아래로 볼록한 포물선입니다.</li>
+</ul>
+</div>
+<h3>4. 기울기의 의미</h3>
+<p>Gradient(기울기)는 현재 위치에서 비용이 어느 방향으로 증가하는지 알려줍니다.</p>
+<ul>
+<li>기울기 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mo>&#x0003E;</mo><mn>0</mn></mrow></math>: 오른쪽으로 갈수록 비용 증가 → <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math>를 줄여야 함</li>
+<li>기울기 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mo>&#x0003C;</mo><mn>0</mn></mrow></math>: 오른쪽으로 갈수록 비용 감소 → <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math>를 늘려야 함</li>
+<li>기울기 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mo>&#x02248;</mo><mn>0</mn></mrow></math>: 비용곡선의 최저점에 가까움</li>
+</ul>
+<p>현재 데이터의 기울기는 다음 식으로 계산할 수 있습니다.</p>
+<div class="math-block" role="math" aria-label="\frac{\partial \mathrm{Cost}}{\partial W}
+=
+\frac{2}{m}
+\sum_{i=1}^{m}
+(Wx_i-y_i)x_i"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mfrac><mrow><mo>&#x02202;</mo><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">t</mi></mrow></mrow><mrow><mo>&#x02202;</mo><mi>W</mi></mrow></mfrac><mo>&#x0003D;</mo><mfrac><mrow><mn>2</mn></mrow><mrow><mi>m</mi></mrow></mfrac><munderover><mo>&#x02211;</mo><mrow><mi>i</mi><mo>&#x0003D;</mo><mn>1</mn></mrow><mrow><mi>m</mi></mrow></munderover><mo stretchy="false">&#x00028;</mo><mi>W</mi><msub><mi>x</mi><mi>i</mi></msub><mo>&#x02212;</mo><msub><mi>y</mi><mi>i</mi></msub><mo stretchy="false">&#x00029;</mo><msub><mi>x</mi><mi>i</mi></msub></mrow></math></div>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_3_minimizing_cost.ipynb · 셀 4 · 미검증</span></div><pre class="src"><code># W=5에서 기울기를 계산합니다.
+weight = torch.tensor(5.0)
 
-딥러닝 초기 실험
-→ Adam
+manual_gradient = 2 * (
+    (weight * x_train - y_train) * x_train
+).mean()
 
-Transformer / Weight Decay 중심
-→ AdamW
+print(&quot;현재 W:&quot;, weight.item())
+print(&quot;기울기:&quot;, manual_gradient.item())
 </code></pre></div>
-<p>로 연결하면 된다.</p>
-</section><section class="section" id="s30"><h2><span class="num">30</span>29. 최종 판단 공식</h2><p>새로운 문제를 만났을 때 Loss 이름부터 떠올리지 않는다.</p>
-<p>먼저 다음 질문을 한다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>&quot;정답 y가 어떻게 생겼는가?&quot;
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 4 · 원본 실행 기록</span></div><pre>현재 W: 5.0
+기울기: 37.33333206176758
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p><code>W = 5</code> 지점의 기울기를 미분 공식으로 직접 계산합니다.</p>
+<ul>
+<li>비용 <code>mean((Wx − y)²)</code>를 <code>W</code>로 미분하면 <code>2 · mean((Wx − y) · x)</code>입니다.</li>
+<li>기울기가 양수이면 <code>W</code>를 줄여야 비용이 내려갑니다.</li>
+</ul>
+</div>
+<h3>5. 직접 계산과 자동미분 비교</h3>
+<p>PyTorch는 <code>backward()</code>를 실행하면 기울기를 자동으로 계산합니다.</p>
+<p>직접 계산한 값과 자동미분 결과가 같으면, PyTorch가 같은 미분 계산을 대신 수행한 것입니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_3_minimizing_cost.ipynb · 셀 5 · 미검증</span></div><pre class="src"><code>weight_auto = torch.tensor(
+    5.0,
+    requires_grad=True,
+)
+
+prediction = weight_auto * x_train
+cost = ((prediction - y_train) ** 2).mean()
+
+cost.backward()
+
+print(&quot;직접 계산:&quot;, manual_gradient.item())
+print(&quot;자동미분:&quot;, weight_auto.grad.item())
 </code></pre></div>
-<h4>y가 실수</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>72.5
-104.2
-350.8
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 5 · 원본 실행 기록</span></div><pre>직접 계산: 37.33333206176758
+자동미분: 37.333335876464844
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>같은 기울기를 <code>backward()</code>로 자동 계산해 직접 계산한 값과 일치하는지 확인합니다.</p>
+<ul>
+<li><code>weight_auto.grad</code> — 역전파 후 <code>W</code>에 저장된 기울기입니다.</li>
+</ul>
+</div>
+<h3>6. 경사하강법으로 한 번 이동하기</h3>
+<p>경사하강법은 기울기의 반대 방향으로 가중치를 이동합니다.</p>
+<div class="math-block" role="math" aria-label="W_{\mathrm{new}}
+=
+W_{\mathrm{old}}
+-
+\alpha
+\frac{\partial \mathrm{Cost}}{\partial W}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>W</mi><mrow><mrow><mi mathvariant="normal">n</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">w</mi></mrow></mrow></msub><mo>&#x0003D;</mo><msub><mi>W</mi><mrow><mrow><mi mathvariant="normal">o</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">d</mi></mrow></mrow></msub><mo>&#x02212;</mo><mi>&#x003B1;</mi><mfrac><mrow><mo>&#x02202;</mo><mrow><mi mathvariant="normal">C</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">t</mi></mrow></mrow><mrow><mo>&#x02202;</mo><mi>W</mi></mrow></mfrac></mrow></math></div>
+<div class="math-block" role="math" aria-label="여기서 (\alpha)는 Learning Rate(학습률)입니다."><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>여</mi><mi>기</mi><mi>서</mi><mo stretchy="false">&#x00028;</mo><mi>&#x003B1;</mi><mo stretchy="false">&#x00029;</mo><mi>는</mi><mi>L</mi><mi>e</mi><mi>a</mi><mi>r</mi><mi>n</mi><mi>i</mi><mi>n</mi><mi>g</mi><mi>R</mi><mi>a</mi><mi>t</mi><mi>e</mi><mo stretchy="false">&#x00028;</mo><mi>학</mi><mi>습</mi><mi>률</mi><mo stretchy="false">&#x00029;</mo><mi>입</mi><mi>니</mi><mi>다</mi><mo>&#x0002E;</mo></mrow></math></div>
+<ul>
+<li>학습률이 작으면 조금 이동</li>
+<li>학습률이 크면 많이 이동</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_3_minimizing_cost.ipynb · 셀 6 · 미검증</span></div><pre class="src"><code>learning_rate = 0.1
+
+new_weight = weight - learning_rate * manual_gradient
+
+print(&quot;이동 전 W:&quot;, weight.item())
+print(&quot;이동 후 W:&quot;, new_weight.item())
+print(&quot;이동 후 Cost:&quot;, calculate_cost(new_weight.item()))
 </code></pre></div>
-<p>→ Regression<br />
-→ MSELoss / L1Loss</p>
-<h4>y가 0 또는 1</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>0
-1
-0
-1
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 6 · 원본 실행 기록</span></div><pre>이동 전 W: 5.0
+이동 후 W: 1.2666666507720947
+이동 후 Cost: 0.3318518102169037
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>경사하강법으로 한 걸음 이동합니다.</p>
+<ul>
+<li><code>새 W = W − 학습률 × 기울기</code> — 기울기 반대 방향으로 학습률만큼 움직입니다.</li>
+<li>이동 후 비용이 줄어든 것을 확인할 수 있습니다.</li>
+</ul>
+</div>
+<h3>7. 재사용 가능한 비용 최소화 함수</h3>
+<p>학습 흐름과 같습니다.</p>
+<div class="math-block" role="math" aria-label="\text{Forward}
+\rightarrow
+\text{Cost}
+\rightarrow
+\text{Backward}
+\rightarrow
+\text{Update}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>Forward</mtext><mo>&#x02192;</mo><mtext>Cost</mtext><mo>&#x02192;</mo><mtext>Backward</mtext><mo>&#x02192;</mo><mtext>Update</mtext></mrow></math></div>
+<p>모델 전체가 아니라 가중치 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math> 하나만 학습합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_3_minimizing_cost.ipynb · 셀 7 · 미검증</span></div><pre class="src"><code>def minimize_cost(
+    x,
+    y,
+    start_weight,
+    learning_rate=0.1,
+    epochs=20,
+):
+    # 학습할 가중치
+    W = torch.tensor(
+        float(start_weight),
+        requires_grad=True,
+    )
+
+    optimizer = torch.optim.SGD(
+        [W],
+        lr=learning_rate,
+    )
+
+    weight_history = [W.item()]
+    cost_history = [
+        ((W * x - y) ** 2).mean().item()
+    ]
+
+    for _ in range(epochs):
+        # 1. 순전파
+        prediction = W * x
+
+        # 2. 비용 계산
+        cost = ((prediction - y) ** 2).mean()
+
+        # 3. 기울기 초기화
+        optimizer.zero_grad()
+
+        # 4. 역전파
+        cost.backward()
+
+        # 5. 가중치 갱신
+        optimizer.step()
+
+        # 갱신된 결과 기록
+        with torch.no_grad():
+            new_cost = ((W * x - y) ** 2).mean()
+
+        weight_history.append(W.item())
+        cost_history.append(new_cost.item())
+
+    return W.detach(), weight_history, cost_history
 </code></pre></div>
-<p>→ Binary Classification<br />
-→ BCEWithLogitsLoss</p>
-<h4>y가 클래스 번호 하나</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>0
-7
-4
-2
-9
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>경사하강법을 여러 번 반복하는 함수를 만들고, 매 단계의 <code>W</code>와 비용을 기록합니다.</p>
+<ul>
+<li><code>weight_history</code>, <code>cost_history</code> — 이동 경로를 그래프로 그리기 위한 기록입니다.</li>
+<li><code>with torch.no_grad():</code> — 기록용 비용 계산은 학습에 영향을 주지 않도록 기울기 없이 계산합니다.</li>
+</ul>
+</div>
+<h3>8. 가중치가 최저점으로 이동하는 과정</h3>
+<p>시작 가중치를 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi><mo>&#x0003D;</mo><mn>5</mn></mrow></math>로 설정합니다.</p>
+<p>학습이 진행되면:</p>
+<ul>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi></mrow></math>는 1에 가까워짐</li>
+<li>Cost는 0에 가까워짐</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_3_minimizing_cost.ipynb · 셀 8 · 미검증</span></div><pre class="src"><code>final_weight, weight_history, cost_history = minimize_cost(
+    x_train,
+    y_train,
+    start_weight=5.0,
+    learning_rate=0.1,
+    epochs=20,
+)
+
+print(&quot;시작 W:&quot;, weight_history[0])
+print(&quot;최종 W:&quot;, final_weight.item())
+print(&quot;시작 Cost:&quot;, cost_history[0])
+print(&quot;최종 Cost:&quot;, cost_history[-1])
 </code></pre></div>
-<p>→ Multi-class Classification<br />
-→ CrossEntropyLoss</p>
-<h4>y가 여러 개의 0/1</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>[1, 0, 1, 0]
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 8 · 원본 실행 기록</span></div><pre>시작 W: 5.0
+최종 W: 1.0
+시작 Cost: 74.66666412353516
+최종 Cost: 0.0
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p><code>W = 5</code>에서 출발해 20번 이동한 결과를 확인합니다. 최종 <code>W</code>는 1에 가깝고 비용은 0에 가까워집니다.</p>
+</div>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_3_minimizing_cost.ipynb · 셀 9 · 미검증</span></div><pre class="src"><code>plt.figure(figsize=(8, 5))
+plt.plot(weight_values.numpy(), cost_values, label=&quot;Cost(W)&quot;)
+plt.scatter(
+    weight_history,
+    cost_history,
+    label=&quot;Gradient Descent&quot;,
+)
+plt.xlabel(&quot;Weight W&quot;)
+plt.ylabel(&quot;Cost&quot;)
+plt.title(&quot;Movement of Weight&quot;)
+plt.grid(alpha=0.3)
+plt.legend()
+plt.show()
 </code></pre></div>
-<p>→ Multi-label Classification<br />
-→ BCEWithLogitsLoss</p>
-<p>이 판단이 되면 그다음 출력층 구조도 거의 자동으로 결정된다.</p>
-</section><section class="section" id="s31"><h2><span class="num">31</span>핵심 정리</h2><div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Target 형태
-   ↓
-문제 유형
-   ↓
-출력 노드 수
-   ↓
-출력 Logit 형태
-   ↓
-Loss Function
-   ↓
-Optimizer
-   ↓
-Learning Rate / Batch / Epoch
-   ↓
-Validation
-   ↓
-Metric
+<p><img src="img/ch02_3_c09_0.png" alt="ch02_3 비용함수 최소화 — 코드 셀 9 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>비용 곡선 위에 <code>W</code>가 이동한 점들을 찍어, 최저점으로 미끄러져 내려가는 과정을 보여 줍니다.</p>
+</div>
+<h3>9. 학습률 비교</h3>
+<p>학습률은 한 번에 이동하는 크기입니다.</p>
+<table>
+<thead>
+<tr>
+  <th style="text-align:right">학습률</th>
+  <th>특징</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td style="text-align:right">너무 작음</td>
+  <td>안정적이지만 느림</td>
+</tr>
+<tr>
+  <td style="text-align:right">적절함</td>
+  <td>빠르고 안정적으로 수렴</td>
+</tr>
+<tr>
+  <td style="text-align:right">너무 큼</td>
+  <td>최저점을 지나치며 발산할 수 있음</td>
+</tr>
+</tbody>
+</table>
+<p>아래에서는 같은 시작점에서 학습률만 바꾸어 비교합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_3_minimizing_cost.ipynb · 셀 10 · 미검증</span></div><pre class="src"><code>for rate in [0.01, 0.1, 0.3]:
+    result_W, _, result_costs = minimize_cost(
+        x_train,
+        y_train,
+        start_weight=5.0,
+        learning_rate=rate,
+        epochs=10,
+    )
+
+    print(
+        f&quot;학습률={rate:.2f} → &quot;
+        f&quot;최종 W={result_W.item():.4f}, &quot;
+        f&quot;최종 Cost={result_costs[-1]:.4f}&quot;
+    )
 </code></pre></div>
-<p>머신러닝과 딥러닝의 학습 설정을 선택할 때 가장 중요한 통찰은 다음이다.</p>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 10 · 원본 실행 기록</span></div><pre>학습률=0.01 → 최종 W=2.5015, 최종 Cost=10.5216
+학습률=0.10 → 최종 W=1.0000, 최종 Cost=0.0000
+학습률=0.30 → 최종 W=1429.1888, 최종 Cost=9518709.0000
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>학습률 0.01, 0.1, 0.3을 같은 조건에서 비교합니다.</p>
+<ul>
+<li>너무 작으면 10번으로는 최저점에 도달하지 못하고, 적당하면 빠르게 수렴합니다.</li>
+<li>너무 크면 최저점을 지나쳐 좌우로 튀거나 발산할 수 있습니다.</li>
+</ul>
+</div>
+<h3>10. 실무 예제: 센서 출력 비율 학습</h3>
+<p>입력과 출력의 관계가 다음과 같은 센서 데이터를 사용합니다.</p>
+<div class="math-block" role="math" aria-label="y=2x"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>y</mi><mo>&#x0003D;</mo><mn>2</mn><mi>x</mi></mrow></math></div>
+<p>따라서 목표 가중치는 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>W</mi><mo>&#x0003D;</mo><mn>2</mn></mrow></math>입니다.</p>
+<p>앞에서 만든 <code>minimize_cost()</code> 함수를 그대로 재사용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_3_minimizing_cost.ipynb · 셀 11 · 미검증</span></div><pre class="src"><code>sensor_x = torch.tensor([1.0, 2.0, 3.0])
+sensor_y = torch.tensor([2.0, 4.0, 6.0])
+
+sensor_W, _, sensor_costs = minimize_cost(
+    sensor_x,
+    sensor_y,
+    start_weight=-3.0,
+    learning_rate=0.1,
+    epochs=20,
+)
+
+new_input = torch.tensor(4.0)
+
+with torch.no_grad():
+    new_output = sensor_W * new_input
+
+print(&quot;학습된 W:&quot;, sensor_W.item())
+print(&quot;최종 Cost:&quot;, sensor_costs[-1])
+print(&quot;입력 4의 예측값:&quot;, new_output.item())
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 11 · 원본 실행 기록</span></div><pre>학습된 W: 2.0
+최종 Cost: 0.0
+입력 4의 예측값: 8.0
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p><code>y = 2x</code> 관계를 가진 센서 데이터에 같은 함수를 적용합니다. <code>W = −3</code>에서 출발해도 정답 <code>W = 2</code>에 가까워지고, 입력 4의 예측값은 약 8입니다.</p>
+</div>
+<h3>12. 핵심 정리</h3>
+<ul>
+<li>Cost는 예측값과 실제값의 차이를 나타냅니다.</li>
+<li>학습률은 한 번에 이동하는 크기를 결정합니다.</li>
+<li>같은 최소화 함수는 다른 선형 데이터에도 재사용할 수 있습니다.</li>
+</ul>
+</section><section class="section" id="s06"><h2><span class="num">06</span>ch02_4 실제 데이터로 선형회귀하기</h2><p>실습 노트북 <code>notebooks/ch02_4_linear_regression.ipynb</code></p>
+<h3>참돔 길이로 무게 예측하기</h3>
+<h3>개요</h3>
+<ul>
+<li>실제 데이터를 Tensor(텐서, 다차원 배열)로 준비합니다.</li>
+<li>학습 범위를 벗어난 예측의 한계를 이해합니다.</li>
+</ul>
+<h3>1. 라이브러리와 참돔 데이터 준비</h3>
+<ul>
+<li>입력 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>x</mi></mrow></math>: 참돔 길이, 단위는 cm</li>
+<li>목표값 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>y</mi></mrow></math>: 참돔 무게, 단위는 g</li>
+<li>데이터 수: 56개</li>
+</ul>
+<p>한 행이 참돔 한 마리를 의미하도록 입력과 목표값의 shape를 <code>(56, 1)</code>로 만듭니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_4_linear_regression.ipynb · 셀 1 · 미검증</span></div><pre class="src"><code>import torch
+from torch import nn
+import matplotlib.pyplot as plt
+
+# 참돔 길이(cm)
+fish_length = torch.tensor(
+    [
+        8.4, 13.7, 15.0, 16.2, 17.4, 18.0, 18.7, 19.0,
+        19.6, 20.0, 21.0, 21.0, 21.0, 21.3, 22.0, 22.0,
+        22.0, 22.0, 22.0, 22.5, 22.5, 22.7, 23.0, 23.5,
+        24.0, 24.0, 24.6, 25.0, 25.6, 26.5, 27.3, 27.5,
+        27.5, 27.5, 28.0, 28.7, 30.0, 32.8, 34.5, 35.0,
+        36.5, 36.0, 37.0, 37.0, 39.0, 39.0, 39.0, 40.0,
+        40.0, 40.0, 40.0, 42.0, 43.0, 43.0, 43.5, 44.0,
+    ],
+    dtype=torch.float32,
+).reshape(-1, 1)
+
+# 참돔 무게(g)
+fish_weight = torch.tensor(
+    [
+        5.9, 32.0, 40.0, 51.5, 70.0, 100.0, 78.0, 80.0,
+        85.0, 85.0, 110.0, 115.0, 125.0, 130.0, 120.0, 120.0,
+        130.0, 135.0, 110.0, 130.0, 150.0, 145.0, 150.0, 170.0,
+        225.0, 145.0, 188.0, 180.0, 197.0, 218.0, 300.0, 260.0,
+        265.0, 250.0, 250.0, 300.0, 320.0, 514.0, 556.0, 840.0,
+        685.0, 700.0, 700.0, 690.0, 900.0, 650.0, 820.0, 850.0,
+        900.0, 1015.0, 820.0, 1100.0, 1000.0, 1100.0, 1000.0, 1000.0,
+    ],
+    dtype=torch.float32,
+).reshape(-1, 1)
+
+print(&quot;길이 shape:&quot;, fish_length.shape)
+print(&quot;무게 shape:&quot;, fish_weight.shape)
+print(&quot;길이 범위:&quot;, fish_length.min().item(), &quot;~&quot;, fish_length.max().item(), &quot;cm&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 1 · 원본 실행 기록</span></div><pre>길이 shape: torch.Size([56, 1])
+무게 shape: torch.Size([56, 1])
+길이 범위: 8.399999618530273 ~ 44.0 cm
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>참돔 56마리의 길이(cm)와 무게(g) 데이터를 Tensor로 만듭니다.</p>
+<ul>
+<li><code>.reshape(-1, 1)</code> — 1차원 목록을 <code>[56, 1]</code> 모양으로 바꿉니다. <code>-1</code>은 '나머지 크기는 자동으로 계산'이라는 뜻입니다.</li>
+</ul>
+</div>
+<h3>2. 데이터 분포 확인</h3>
+<p>Scatter Plot(스캐터 플롯, 산점도)은 두 변수의 관계를 점으로 나타냅니다.</p>
+<p>길이가 증가할수록 무게도 증가하지만, 점들이 완전한 직선 위에 있지는 않습니다.
+선형회귀는 이 데이터의 전체 경향을 하나의 직선으로 표현합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_4_linear_regression.ipynb · 셀 2 · 미검증</span></div><pre class="src"><code>plt.figure(figsize=(8, 5))
+plt.scatter(fish_length.numpy(), fish_weight.numpy())
+plt.xlabel(&quot;Length (cm)&quot;)
+plt.ylabel(&quot;Weight (g)&quot;)
+plt.title(&quot;Fish Length and Weight&quot;)
+plt.grid(alpha=0.3)
+plt.show()
+</code></pre></div>
+<p><img src="img/ch02_4_c02_0.png" alt="ch02_4 실제 데이터로 선형회귀하기 — 코드 셀 2 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>길이와 무게의 관계를 산점도로 확인합니다. 길이가 길수록 무게가 늘지만 완전한 직선은 아니라는 점도 함께 보입니다.</p>
+</div>
+<h3>3. 훈련 데이터와 테스트 데이터 분리</h3>
+<ul>
+<li>훈련 데이터 42개: 가중치와 편향 학습</li>
+<li>테스트 데이터 14개: 학습에 사용하지 않고 성능 평가</li>
+<li>분할 비율: 75% 대 25%</li>
+</ul>
+<p><code>torch.randperm()</code>은 데이터의 순서를 무작위로 섞은 인덱스를 만듭니다.
+<code>manual_seed()</code>를 사용하여 다시 실행해도 같은 분할 결과가 나오도록 합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_4_linear_regression.ipynb · 셀 3 · 미검증</span></div><pre class="src"><code>torch.manual_seed(42)
+
+indices = torch.randperm(len(fish_length))
+
+test_indices = indices[:14]
+train_indices = indices[14:]
+
+x_train = fish_length[train_indices]
+y_train = fish_weight[train_indices]
+
+x_test = fish_length[test_indices]
+y_test = fish_weight[test_indices]
+
+print(&quot;훈련 데이터:&quot;, x_train.shape, y_train.shape)
+print(&quot;테스트 데이터:&quot;, x_test.shape, y_test.shape)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 3 · 원본 실행 기록</span></div><pre>훈련 데이터: torch.Size([42, 1]) torch.Size([42, 1])
+테스트 데이터: torch.Size([14, 1]) torch.Size([14, 1])
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>데이터를 무작위로 섞어 테스트 14개, 훈련 42개로 나눕니다.</p>
+<ul>
+<li><code>torch.randperm(n)</code> — 0부터 n−1까지의 순서를 무작위로 섞은 인덱스.</li>
+<li>테스트 데이터는 학습에 쓰지 않고, 처음 보는 데이터에서의 성능을 확인하는 데만 씁니다.</li>
+</ul>
+</div>
+<h3>4. 입력값 표준화</h3>
+<p>참돔 길이를 평균 0, 표준편차 1에 가까운 값으로 바꿉니다.</p>
+<div class="math-block" role="math" aria-label="x_{\mathrm{scaled}}
+=
+\frac{x-\mu}{\sigma}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>x</mi><mrow><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow></mrow></msub><mo>&#x0003D;</mo><mfrac><mrow><mi>x</mi><mo>&#x02212;</mo><mi>&#x003BC;</mi></mrow><mrow><mi>&#x003C3;</mi></mrow></mfrac></mrow></math></div>
+<ul>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x003BC;</mi></mrow></math>: 훈련 데이터 길이의 평균</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x003C3;</mi></mrow></math>: 훈련 데이터 길이의 표준편차</li>
+<li>테스트 데이터에도 <strong>훈련 데이터에서 계산한 평균과 표준편차</strong>를 사용</li>
+</ul>
+<p>테스트 데이터로 평균과 표준편차를 다시 계산하면 평가 정보가 학습 과정에 섞일 수 있습니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_4_linear_regression.ipynb · 셀 4 · 미검증</span></div><pre class="src"><code>x_mean = x_train.mean()
+x_std = x_train.std()
+
+x_train_scaled = (x_train - x_mean) / x_std
+x_test_scaled = (x_test - x_mean) / x_std
+
+print(&quot;표준화 전 평균:&quot;, x_train.mean().item())
+print(&quot;표준화 후 평균:&quot;, x_train_scaled.mean().item())
+print(&quot;표준화 후 표준편차:&quot;, x_train_scaled.std().item())
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 4 · 원본 실행 기록</span></div><pre>표준화 전 평균: 28.4809513092041
+표준화 후 평균: 1.0217939205858784e-07
+표준화 후 표준편차: 0.9999999403953552
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>길이를 평균 0, 표준편차 1로 바꾸는 <strong>표준화</strong>를 합니다.</p>
+<ul>
+<li>평균과 표준편차는 <strong>훈련 데이터에서만</strong> 구하고, 테스트 데이터에도 같은 값을 적용합니다. 테스트 정보가 학습에 새어 들어가지 않게 하기 위해서입니다.</li>
+<li>입력 크기를 맞추면 경사하강법이 안정적으로 빠르게 수렴합니다.</li>
+</ul>
+</div>
+<h3>5. 선형회귀 모델 학습</h3>
+<p>이번 모델은 선형 계층 하나뿐이므로 별도의 모델 클래스를 다시 만들지 않고 <code>nn.Linear(1, 1)</code>을 바로 사용합니다.</p>
+<div class="math-block" role="math" aria-label="\hat{y}=Wx+b"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mo>&#x0003D;</mo><mi>W</mi><mi>x</mi><mo>&#x0002B;</mo><mi>b</mi></mrow></math></div>
+<p>학습 흐름은 와 같습니다.</p>
+<div class="math-block" role="math" aria-label="\text{순전파}
+\rightarrow
+\text{손실}
+\rightarrow
+\text{역전파}
+\rightarrow
+\text{갱신}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>순전파</mtext><mo>&#x02192;</mo><mtext>손실</mtext><mo>&#x02192;</mo><mtext>역전파</mtext><mo>&#x02192;</mo><mtext>갱신</mtext></mrow></math></div>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_4_linear_regression.ipynb · 셀 5 · 미검증</span></div><pre class="src"><code>torch.manual_seed(42)
+
+model = nn.Linear(1, 1)
+loss_function = nn.MSELoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=0.05,)
+
+epochs = 100
+loss_history = []
+
+for epoch in range(epochs):
+    # 1. 순전파
+    prediction = model(x_train_scaled)
+
+    # 2. 손실 계산
+    loss = loss_function(prediction, y_train)
+
+    # 3. 이전 기울기 초기화
+    optimizer.zero_grad()
+
+    # 4. 역전파
+    loss.backward()
+
+    # 5. 가중치와 편향 갱신
+    optimizer.step()
+
+    loss_history.append(loss.item())
+
+print(&quot;처음 Loss:&quot;, loss_history[0])
+print(&quot;마지막 Loss:&quot;, loss_history[-1])
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 5 · 원본 실행 기록</span></div><pre>처음 Loss: 300126.0625
+마지막 Loss: 9840.4189453125
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p><code>nn.Linear(1, 1)</code> 모델을 100 에폭 학습하며 매 에폭의 Loss를 기록합니다.</p>
+<ul>
+<li>클래스를 정의하지 않고 <code>nn.Linear</code>를 바로 모델로 써도 됩니다.</li>
+<li><code>loss_history.append(loss.item())</code> — 학습 곡선을 그리기 위해 숫자만 저장합니다.</li>
+</ul>
+</div>
+<h3>6. 손실 변화 확인</h3>
+<p>학습이 진행될수록 MSE Loss(엠에스이 로스, 평균제곱오차 손실)가 감소합니다.</p>
+<p>손실이 0이 되지 않는 이유는 실제 참돔 데이터가 완전한 직선 관계가 아니기 때문입니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_4_linear_regression.ipynb · 셀 6 · 미검증</span></div><pre class="src"><code>plt.figure(figsize=(8, 5))
+plt.plot(loss_history)
+plt.xlabel(&quot;Epoch&quot;)
+plt.ylabel(&quot;MSE Loss&quot;)
+plt.title(&quot;Training Loss&quot;)
+plt.grid(alpha=0.3)
+plt.show()
+</code></pre></div>
+<p><img src="img/ch02_4_c06_0.png" alt="ch02_4 실제 데이터로 선형회귀하기 — 코드 셀 6 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>에폭별 Loss를 선 그래프로 그려 학습이 잘 수렴했는지 확인합니다.</p>
+</div>
+<h3>7. 실제 단위의 회귀식 확인</h3>
+<p>모델은 표준화된 길이를 입력받습니다.</p>
+<div class="math-block" role="math" aria-label="\hat{y}
+=
+W_{\mathrm{scaled}}
+\left(
+\frac{x-\mu}{\sigma}
+\right)
++
+b_{\mathrm{scaled}}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mo>&#x0003D;</mo><msub><mi>W</mi><mrow><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow></mrow></msub><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><mfrac><mrow><mi>x</mi><mo>&#x02212;</mo><mi>&#x003BC;</mi></mrow><mrow><mi>&#x003C3;</mi></mrow></mfrac><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow><mo>&#x0002B;</mo><msub><mi>b</mi><mrow><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow></mrow></msub></mrow></math></div>
+<p>이를 cm와 g 단위의 직선으로 바꾸면 다음과 같습니다.</p>
+<div class="math-block" role="math" aria-label="\hat{y}
+=
+W_{\mathrm{real}}x+b_{\mathrm{real}}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mo>&#x0003D;</mo><msub><mi>W</mi><mrow><mrow><mi mathvariant="normal">r</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi></mrow></mrow></msub><mi>x</mi><mo>&#x0002B;</mo><msub><mi>b</mi><mrow><mrow><mi mathvariant="normal">r</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi></mrow></mrow></msub></mrow></math></div>
+<p>이 변환은 결과를 실제 단위로 해석하기 위한 과정입니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_4_linear_regression.ipynb · 셀 7 · 미검증</span></div><pre class="src"><code>scaled_weight = model.weight.item()
+scaled_bias = model.bias.item()
+
+real_weight = scaled_weight / x_std.item()
+real_bias = (scaled_bias - scaled_weight * x_mean.item() / x_std.item())
+
+print(f&quot;학습된 회귀식:&quot; f&quot;무게 = {real_weight:.2f} x 길이 {real_bias:+.2f}&quot;)
+print(f&quot;기울기: {real_weight:.2f} g/cm&quot;)
+print(f&quot;절편: {real_bias:.2f} g&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 7 · 원본 실행 기록</span></div><pre>학습된 회귀식:무게 = 36.26 × 길이 -618.12
+기울기: 36.26 g/cm
+절편: -618.12 g
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>표준화된 입력 기준으로 학습된 가중치를 원래 단위(cm → g)의 식으로 되돌립니다.</p>
+<ul>
+<li>실제 기울기 = 표준화 기울기 ÷ 표준편차.</li>
+<li>실제 절편 = 표준화 절편 − 표준화 기울기 × 평균 ÷ 표준편차.</li>
+<li><code>{real_bias:+.2f}</code> — 부호(+/−)를 항상 붙여 출력합니다.</li>
+</ul>
+</div>
+<h3>8. 훈련 데이터와 테스트 데이터 평가</h3>
+<ul>
+<li>세 가지 지표를 함께 확인합니다.</li>
+<li>지표단위이상치 민감도주요 사용 목적</li>
+<li>MSE : 실제 단위의 제곱매우 높음모델 학습(손실함수)에 최적화</li>
+<li>RMSE : 실제 데이터와 동일높음큰 오차에 민감하게 반응하며 직관적 단위 확인</li>
+<li>MAE : 실제 데이터와 동일낮음이상치가 많은 데이터에서 강건한 오차 측정</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msup><mi>R</mi><mn>2</mn></msup></mrow></math> : 없음 (0~1)-모델의 전체적인 데이터 설명력(상대적 성능) 평가</li>
+</ul>
+<table>
+<thead>
+<tr>
+  <th>지표</th>
+  <th>의미</th>
+  <th>해석</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>MAE</td>
+  <td>오차 절댓값의 평균</td>
+  <td>평균적으로 몇 g 틀리는지 확인</td>
+</tr>
+<tr>
+  <td>RMSE</td>
+  <td>제곱오차 평균의 제곱근</td>
+  <td>큰 오차에 더 민감</td>
+</tr>
+<tr>
+  <td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msup><mi>R</mi><mn>2</mn></msup></mrow></math></td>
+  <td>실제값 변화의 설명 정도</td>
+  <td>1에 가까울수록 좋음</td>
+</tr>
+</tbody>
+</table>
+<div class="math-block" role="math" aria-label="\mathrm{MAE} = \frac{1}{n} \sum_{i=1}^{n} |y_i-\hat{y}_i|"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mrow><mi mathvariant="normal">M</mi><mi mathvariant="normal">A</mi><mi mathvariant="normal">E</mi></mrow><mo>&#x0003D;</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>n</mi></mrow></mfrac><munderover><mo>&#x02211;</mo><mrow><mi>i</mi><mo>&#x0003D;</mo><mn>1</mn></mrow><mrow><mi>n</mi></mrow></munderover><mo stretchy="false">&#x0007C;</mo><msub><mi>y</mi><mi>i</mi></msub><mo>&#x02212;</mo><msub><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mi>i</mi></msub><mo stretchy="false">&#x0007C;</mo></mrow></math></div>
+<div class="math-block" role="math" aria-label="\mathrm{RMSE} = \sqrt{ \frac{1}{n} \sum_{i=1}^{n} (y_i-\hat{y}_i)^2 }"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mrow><mi mathvariant="normal">R</mi><mi mathvariant="normal">M</mi><mi mathvariant="normal">S</mi><mi mathvariant="normal">E</mi></mrow><mo>&#x0003D;</mo><msqrt><mrow><mfrac><mrow><mn>1</mn></mrow><mrow><mi>n</mi></mrow></mfrac><msubsup><mo>&#x02211;</mo><mrow><mi>i</mi><mo>&#x0003D;</mo><mn>1</mn></mrow><mrow><mi>n</mi></mrow></msubsup><mo stretchy="false">&#x00028;</mo><msub><mi>y</mi><mi>i</mi></msub><mo>&#x02212;</mo><msub><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mi>i</mi></msub><msup><mo stretchy="false">&#x00029;</mo><mn>2</mn></msup></mrow></msqrt></mrow></math></div>
+<div class="math-block" role="math" aria-label="R^2 = 1- \frac{ \sum (y_i-\hat{y}_i)^2 }{ \sum (y_i-\bar{y})^2 }"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msup><mi>R</mi><mn>2</mn></msup><mo>&#x0003D;</mo><mn>1</mn><mo>&#x02212;</mo><mfrac><mrow><mo>&#x02211;</mo><mo stretchy="false">&#x00028;</mo><msub><mi>y</mi><mi>i</mi></msub><mo>&#x02212;</mo><msub><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mi>i</mi></msub><msup><mo stretchy="false">&#x00029;</mo><mn>2</mn></msup></mrow><mrow><mo>&#x02211;</mo><mo stretchy="false">&#x00028;</mo><msub><mi>y</mi><mi>i</mi></msub><mo>&#x02212;</mo><mover><mrow><mi>y</mi></mrow><mo stretchy="true">&#x000AF;</mo></mover><msup><mo stretchy="false">&#x00029;</mo><mn>2</mn></msup></mrow></mfrac></mrow></math></div>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_4_linear_regression.ipynb · 셀 8 · 미검증</span></div><pre class="src"><code>def regression_metrics(y_true, y_pred):
+    error = y_pred - y_true
+
+    mae = error.abs().mean()
+    rmse = (error ** 2).mean().sqrt()
+
+    residual_sum = (error ** 2).sum()
+    total_sum = ((y_true - y_true.mean()) ** 2).sum()
+    r2 = 1 - residual_sum / total_sum
+
+    return mae, rmse, r2
+
+
+model.eval()
+
+with torch.no_grad():
+    train_prediction = model(x_train_scaled)
+    test_prediction = model(x_test_scaled)
+
+train_mae, train_rmse, train_r2 = regression_metrics(
+    y_train, train_prediction,)
+
+test_mae, test_rmse, test_r2 = regression_metrics(
+    y_test,test_prediction,)
+
+print(&quot;[훈련 데이터]&quot;)
+print(f&quot;MAE : {train_mae.item():.2f} g&quot;)
+print(f&quot;RMSE: {train_rmse.item():.2f} g&quot;)
+print(f&quot;R²  : {train_r2.item():.4f}&quot;)
+
+print()
+print(&quot;[테스트 데이터]&quot;)
+print(f&quot;MAE : {test_mae.item():.2f} g&quot;)
+print(f&quot;RMSE: {test_rmse.item():.2f} g&quot;)
+print(f&quot;R²  : {test_r2.item():.4f}&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 8 · 원본 실행 기록</span></div><pre>[훈련 데이터]
+MAE : 77.94 g
+RMSE: 99.20 g
+R²  : 0.9240
+
+[테스트 데이터]
+MAE : 80.80 g
+RMSE: 97.74 g
+R²  : 0.8705
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>회귀 성능 지표 세 가지를 계산하는 함수를 만들고 훈련·테스트 데이터에 각각 적용합니다.</p>
+<ul>
+<li><code>MAE</code> — 오차 절댓값의 평균. 'g 단위로 평균 얼마나 틀리는가'.</li>
+<li><code>RMSE</code> — 제곱 오차 평균의 제곱근. 큰 오차에 더 민감합니다.</li>
+<li><code>R²</code> — 1에 가까울수록 데이터의 변화를 잘 설명합니다. 0이면 평균으로만 찍는 것과 같습니다.</li>
+</ul>
+</div>
+<h3>9. 여러 길이의 무게 예측</h3>
+<p>25 cm, 35 cm, 40 cm와 함께 50 cm 참돔의 무게를 예측합니다.</p>
+<p>50 cm는 학습 데이터의 최대 길이인 44 cm보다 큽니다.
+이처럼 학습 범위를 벗어난 값을 예측하는 것을 Extrapolation(엑스트라폴레이션, 외삽)이라고 합니다.</p>
 <blockquote>
-<p><strong>손실함수는 모델 이름이 아니라 정답과 출력의 관계로 결정한다.</strong></p>
+<p>선형회귀는 직선을 그대로 연장하므로 값을 계산할 수는 있지만,
+<strong>학습 범위 밖의 예측은 실제 생물의 성장 특성과 다를 수 있어 주의해야 합니다.</strong></p>
 </blockquote>
-<blockquote>
-<p><strong>Optimizer는 문제 종류보다 학습 과정의 속도·안정성·일반화 특성을 보고 선택한다.</strong></p>
-</blockquote>
-<blockquote>
-<p><strong>Validation은 별도의 모델이 아니라 모든 학습에서 과소적합과 과적합을 판단하는 공통 축이다.</strong></p>
-</blockquote>
-<p>이 세 가지가 잡히면 Linear Regression → Logistic Regression → Multi-class → MLP → CNN → RNN/LSTM → Autoencoder → Transformer가 서로 별개 주제가 아니라 하나의 학습 체계로 연결된다.</p>
-</section><section class="section" id="s32"><h2><span class="num">32</span>검증</h2><table>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_4_linear_regression.ipynb · 셀 9 · 미검증</span></div><pre class="src"><code>new_lengths = torch.tensor([[25.0], [35.0], [40.0], [50.0]])
+
+new_lengths_scaled = (new_lengths - x_mean) / x_std
+
+with torch.no_grad():
+    new_weights = model(new_lengths_scaled)
+
+for length, weight in zip(new_lengths, new_weights):
+    print(f&quot;{length.item():.0f} cm &quot;
+          f&quot;→ {weight.item():.1f} g&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 9 · 원본 실행 기록</span></div><pre>25 cm → 288.4 g
+35 cm → 650.9 g
+40 cm → 832.2 g
+50 cm → 1194.8 g
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>새 길이의 무게를 예측합니다. 새 입력에도 <strong>훈련 데이터의 평균·표준편차</strong>로 똑같이 표준화해야 합니다.</p>
+<ul>
+<li><code>zip(new_lengths, new_weights)</code> — 입력과 예측을 짝지어 한 줄씩 출력합니다.</li>
+</ul>
+</div>
+<h3>10. 데이터와 회귀 직선 확인</h3>
+<ul>
+<li>점: 실제 참돔 데이터</li>
+<li>선: 모델이 학습한 선형회귀 직선</li>
+<li>삼각형: 50 cm 예측값</li>
+</ul>
+<p>그래프에서 데이터가 직선 주변에 퍼져 있는 정도를 함께 확인합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_4_linear_regression.ipynb · 셀 10 · 미검증</span></div><pre class="src"><code>line_x = torch.linspace(fish_length.min().item(),
+    50.0, steps=100,).reshape(-1, 1)
+
+line_x_scaled = (line_x - x_mean) / x_std
+
+with torch.no_grad():
+    line_y = model(line_x_scaled)
+
+plt.figure(figsize=(8, 5))
+plt.scatter(fish_length.numpy(),fish_weight.numpy(),label=&quot;Data&quot;,)
+plt.plot(line_x.numpy(),line_y.numpy(),label=&quot;Linear Regression&quot;,)
+plt.scatter([50.0],[new_weights[-1].item()], marker=&quot;^&quot;, 
+            s=90, label=&quot;50 cm Prediction&quot;,)
+plt.xlabel(&quot;Length (cm)&quot;)
+plt.ylabel(&quot;Weight (g)&quot;)
+plt.title(&quot;Linear Regression&quot;)
+plt.grid(alpha=0.3)
+plt.legend()
+plt.show()
+</code></pre></div>
+<p><img src="img/ch02_4_c10_0.png" alt="ch02_4 실제 데이터로 선형회귀하기 — 코드 셀 10 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>데이터 위에 학습된 회귀 직선과 50 cm 예측점을 함께 그립니다.</p>
+<ul>
+<li>50 cm는 훈련 데이터 범위(최대 44 cm) 밖이라 예측을 믿기 어렵습니다. 실제 무게는 길이에 따라 곡선으로 늘어나기 때문입니다.</li>
+</ul>
+</div>
+<h3>12. 핵심 정리</h3>
+<ul>
+<li>실제 데이터는 완전한 직선이 아니므로 Loss가 0이 되지 않을 수 있습니다.</li>
+<li>MAE와 RMSE는 오차를 g 단위로 해석하게 해줍니다.</li>
+<li>학습 범위를 벗어난 외삽 결과는 신중하게 해석해야 합니다.</li>
+</ul>
+</section><section class="section" id="s07"><h2><span class="num">07</span>ch02_5 다중 선형회귀</h2><p>실습 노트북 <code>notebooks/ch02_5_multi_variable_linear_regression.ipynb</code></p>
+<h3>세 개의 시험 점수로 최종 점수 예측하기</h3>
+<h3>개요</h3>
+<ul>
+<li>Multiple Linear Regression(멀티플 리니어 리그레션, 다중 선형회귀)의 구조를 이해합니다.</li>
+<li>새로운 학생의 최종 점수를 예측합니다.</li>
+</ul>
+<h3>1. 시험 점수 데이터 준비</h3>
+<p>입력 특성은 세 개입니다.</p>
+<ul>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>x</mi><mn>1</mn></msub></mrow></math>: Quiz 1(퀴즈 원, 첫 번째 퀴즈)</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>x</mi><mn>2</mn></msub></mrow></math>: Quiz 2(퀴즈 투, 두 번째 퀴즈)</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>x</mi><mn>3</mn></msub></mrow></math>: Midterm(미드텀, 중간시험)</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>y</mi></mrow></math>: Final Score(파이널 스코어, 최종 점수)</li>
+</ul>
+<p>각 행은 학생 한 명의 데이터입니다.</p>
+<table>
+<thead>
+<tr>
+  <th style="text-align:right">학생</th>
+  <th style="text-align:right">Quiz 1</th>
+  <th style="text-align:right">Quiz 2</th>
+  <th style="text-align:right">Midterm</th>
+  <th style="text-align:right">Final</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td style="text-align:right">1</td>
+  <td style="text-align:right">73</td>
+  <td style="text-align:right">80</td>
+  <td style="text-align:right">75</td>
+  <td style="text-align:right">152</td>
+</tr>
+<tr>
+  <td style="text-align:right">2</td>
+  <td style="text-align:right">93</td>
+  <td style="text-align:right">88</td>
+  <td style="text-align:right">93</td>
+  <td style="text-align:right">185</td>
+</tr>
+<tr>
+  <td style="text-align:right">3</td>
+  <td style="text-align:right">89</td>
+  <td style="text-align:right">91</td>
+  <td style="text-align:right">90</td>
+  <td style="text-align:right">180</td>
+</tr>
+<tr>
+  <td style="text-align:right">4</td>
+  <td style="text-align:right">96</td>
+  <td style="text-align:right">98</td>
+  <td style="text-align:right">100</td>
+  <td style="text-align:right">196</td>
+</tr>
+<tr>
+  <td style="text-align:right">5</td>
+  <td style="text-align:right">73</td>
+  <td style="text-align:right">66</td>
+  <td style="text-align:right">70</td>
+  <td style="text-align:right">142</td>
+</tr>
+</tbody>
+</table>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_5_multi_variable_linear_regression.ipynb · 셀 1 · 미검증</span></div><pre class="src"><code>#01.데이터 준비
+import torch
+from torch import nn
+import matplotlib.pyplot as plt
+
+x_train = torch.tensor(
+    [
+        [73.0, 80.0,  75.0],
+        [93.0, 88.0,  93.0],
+        [89.0, 91.0,  90.0],
+        [96.0, 98.0, 100.0],
+        [73.0, 66.0,  70.0],
+    ],
+    dtype=torch.float32,)
+
+y_train = torch.tensor(
+    [[152.0], [185.0], [180.0], [196.0], [142.0]], 
+    dtype=torch.float32,)
+
+print(&quot;입력 shape:&quot;, x_train.shape)
+print(&quot;목표값 shape:&quot;, y_train.shape)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 1 · 원본 실행 기록</span></div><pre>입력 shape: torch.Size([5, 3])
+목표값 shape: torch.Size([5, 1])
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>학생 5명의 시험 점수 3개(입력)와 최종 점수(목표값)를 준비합니다.</p>
+<ul>
+<li>입력 <code>shape [5, 3]</code> — 학생 5명 × 특성 3개 / 목표값 <code>shape [5, 1]</code>.</li>
+</ul>
+</div>
+<h3>2. 다중 선형회귀식</h3>
+<p>입력 특성이 세 개이면 가중치도 세 개입니다.</p>
+<div class="math-block" role="math" aria-label="\hat{y}
+=
+w_1x_1+w_2x_2+w_3x_3+b"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mo>&#x0003D;</mo><msub><mi>w</mi><mn>1</mn></msub><msub><mi>x</mi><mn>1</mn></msub><mo>&#x0002B;</mo><msub><mi>w</mi><mn>2</mn></msub><msub><mi>x</mi><mn>2</mn></msub><mo>&#x0002B;</mo><msub><mi>w</mi><mn>3</mn></msub><msub><mi>x</mi><mn>3</mn></msub><mo>&#x0002B;</mo><mi>b</mi></mrow></math></div>
+<p>계산 순서:</p>
+<ol>
+<li>각 입력과 가중치를 곱합니다.</li>
+<li>곱한 값을 모두 더합니다.</li>
+<li>편향 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>b</mi></mrow></math>를 더합니다.</li>
+</ol>
+<p>입력이 여러 개로 늘어났을 뿐, 단일 선형회귀와 계산 원리는 같습니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_5_multi_variable_linear_regression.ipynb · 셀 2 · 미검증</span></div><pre class="src"><code>#02. 첫 번째 학생을 예로 직접 계산합니다.
+first_student = x_train[0]
+
+sample_weight = torch.tensor([0.5, 0.8, 0.7])   # 가중치 가설
+sample_bias = 10.0
+
+sample_prediction = (first_student * sample_weight).sum() + sample_bias
+
+print(&quot;첫 번째 학생 점수:&quot;, first_student)
+print(&quot;예시 예측값:&quot;, sample_prediction.item())
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 2 · 원본 실행 기록</span></div><pre>첫 번째 학생 점수: tensor([73., 80., 75.])
+예시 예측값: 163.0
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>다중 선형회귀식 <code>y = w₁x₁ + w₂x₂ + w₃x₃ + b</code>를 첫 번째 학생 한 명에 대해 직접 계산합니다.</p>
+<ul>
+<li><code>(first_student * sample_weight).sum()</code> — 점수와 가중치를 위치별로 곱해 모두 더합니다.</li>
+</ul>
+</div>
+<h3>3. 특성별 표준화</h3>
+<p>세 시험의 점수 분포가 다를 수 있으므로 각 열을 따로 표준화합니다.</p>
+<div class="math-block" role="math" aria-label="x_{\mathrm{scaled}}
+=
+\frac{x-\mu}{\sigma}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>x</mi><mrow><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow></mrow></msub><mo>&#x0003D;</mo><mfrac><mrow><mi>x</mi><mo>&#x02212;</mo><mi>&#x003BC;</mi></mrow><mrow><mi>&#x003C3;</mi></mrow></mfrac></mrow></math></div>
+<ul>
+<li>Quiz 1은 Quiz 1의 평균과 표준편차 사용</li>
+<li>Quiz 2는 Quiz 2의 평균과 표준편차 사용</li>
+<li>Midterm은 Midterm의 평균과 표준편차 사용</li>
+</ul>
+<p>목표값 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>y</mi></mrow></math>는 실제 점수 단위를 유지합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_5_multi_variable_linear_regression.ipynb · 셀 3 · 미검증</span></div><pre class="src"><code>#03. 각 열의 평균과 표준편차
+x_mean = x_train.mean(dim=0)
+x_std = x_train.std(dim=0)
+
+# 각 열을 따로 표준화
+x_train_scaled = (x_train - x_mean) / x_std
+
+print(&quot;특성별 평균:&quot;, x_train_scaled.mean(dim=0))
+print(&quot;특성별 표준편차:&quot;, x_train_scaled.std(dim=0))
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 3 · 원본 실행 기록</span></div><pre>특성별 평균: tensor([-2.3842e-07,  1.1921e-07,  1.4305e-07])
+특성별 표준편차: tensor([1., 1., 1.])
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>세 특성을 <strong>열마다 따로</strong> 표준화합니다.</p>
+<ul>
+<li><code>mean(dim=0)</code>, <code>std(dim=0)</code> — 행 방향(학생들)으로 계산해 열별 평균·표준편차 3개를 얻습니다.</li>
+<li>브로드캐스팅으로 <code>[5, 3] − [3]</code> 계산이 각 열에 자동으로 적용됩니다.</li>
+</ul>
+</div>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_5_multi_variable_linear_regression.ipynb · 셀 4 · 미검증</span></div><pre class="src"><code>#&lt;참고&gt; 부분 값 확인
+print(&quot;x_train : \n&quot;,x_train)
+print(&quot;x_mean : \n&quot;, x_mean)
+print(&quot;x_train - x_mean : \n&quot;, x_train - x_mean)
+print(&quot;x_std : \n&quot;, x_std)
+
+print(&quot;x_train_scaled : \n&quot;, x_train_scaled)
+
+print(&quot;특성별 평균: \n&quot;, x_train_scaled.mean(dim=0))
+print(&quot;특성별 표준편차: \n&quot;, x_train_scaled.std(dim=0))
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 4 · 원본 실행 기록</span></div><pre>x_train : 
+ tensor([[ 73.,  80.,  75.],
+        [ 93.,  88.,  93.],
+        [ 89.,  91.,  90.],
+        [ 96.,  98., 100.],
+        [ 73.,  66.,  70.]])
+x_mean : 
+ tensor([84.8000, 84.6000, 85.6000])
+x_train - x_mean : 
+ tensor([[-11.8000,  -4.6000, -10.6000],
+        [  8.2000,   3.4000,   7.4000],
+        [  4.2000,   6.4000,   4.4000],
+        [ 11.2000,  13.4000,  14.4000],
+        [-11.8000, -18.6000, -15.6000]])
+x_std : 
+ tensor([11.0544, 12.2393, 12.6214])
+x_train_scaled : 
+ tensor([[-1.0674, -0.3758, -0.8398],
+        [ 0.7418,  0.2778,  0.5863],
+        [ 0.3799,  0.5229,  0.3486],
+        [ 1.0132,  1.0948,  1.1409],
+        [-1.0674, -1.5197, -1.2360]])
+특성별 평균: 
+ tensor([-2.3842e-07,  1.1921e-07,  1.4305e-07])
+특성별 표준편차: 
+ tensor([1., 1., 1.])
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>표준화 과정의 중간값을 모두 출력해 브로드캐스팅이 어떻게 계산되는지 확인합니다.</p>
+</div>
+<h3>4. 다중 선형회귀 모델</h3>
+<p>입력 특성이 세 개이고 출력이 하나이므로 다음 계층을 사용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>nn.Linear(3, 1)
+</code></pre></div>
+<table>
 <thead>
 <tr>
   <th>항목</th>
-  <th>판정</th>
-  <th>근거</th>
+  <th>shape</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-  <td>원본 문서 내용 보존</td>
-  <td>통과</td>
-  <td>본문 문장·코드·순서는 원본과 같고 제목 단계(<code>#</code>·<code>##</code>)만 장 원고 형식으로 조정</td>
+  <td>입력</td>
+  <td><code>[5, 3]</code></td>
 </tr>
 <tr>
-  <td>문서 안 코드 예시 실행</td>
-  <td>미검증</td>
-  <td>설명용 짧은 예시이며 이번 정리에서 실행하지 않음</td>
+  <td>가중치</td>
+  <td><code>[1, 3]</code></td>
 </tr>
 <tr>
-  <td>발표 자료(PPTX) 내용 대조</td>
-  <td>통과</td>
-  <td>슬라이드 글자를 추출해 이 문서의 판단 순서·Loss 대응표와 같은 내용임을 확인</td>
+  <td>편향</td>
+  <td><code>[1]</code></td>
 </tr>
 <tr>
-  <td>발표 자료 화면 표시</td>
-  <td>미검증</td>
-  <td>PowerPoint에서 직접 열어 보지 않음</td>
+  <td>출력</td>
+  <td><code>[5, 1]</code></td>
 </tr>
 </tbody>
 </table>
+<p>별도의 모델 클래스를 만들지 않고 선형 계층 하나를 바로 사용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_5_multi_variable_linear_regression.ipynb · 셀 5 · 미검증</span></div><pre class="src"><code>#04. 다중 선형회귀 모델
+
+torch.manual_seed(42)
+
+model = nn.Linear(3, 1)
+
+print(model)
+print(&quot;가중치 shape:&quot;, model.weight.shape)
+print(&quot;편향 shape:&quot;, model.bias.shape)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 5 · 원본 실행 기록</span></div><pre>Linear(in_features=3, out_features=1, bias=True)
+가중치 shape: torch.Size([1, 3])
+편향 shape: torch.Size([1])
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>입력 3개 → 출력 1개인 모델 <code>nn.Linear(3, 1)</code>을 만듭니다.</p>
+<ul>
+<li>가중치 <code>shape [1, 3]</code> — 특성마다 가중치 하나 / 편향 <code>shape [1]</code>.</li>
+</ul>
+</div>
+<h3>5. 모델 학습</h3>
+<p>학습 순서는 와 같습니다.</p>
+<div class="math-block" role="math" aria-label="\text{순전파}
+\rightarrow
+\text{손실}
+\rightarrow
+\text{역전파}
+\rightarrow
+\text{갱신}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>순전파</mtext><mo>&#x02192;</mo><mtext>손실</mtext><mo>&#x02192;</mo><mtext>역전파</mtext><mo>&#x02192;</mo><mtext>갱신</mtext></mrow></math></div>
+<p>입력 특성이 세 개이므로 세 개의 가중치가 함께 학습됩니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_5_multi_variable_linear_regression.ipynb · 셀 6 · 미검증</span></div><pre class="src"><code>#05. 모델 학습
+loss_function = nn.MSELoss()
+
+optimizer = torch.optim.SGD(model.parameters(),lr=0.05,)
+epochs = 1500
+loss_history = []
+
+for epoch in range(epochs):
+    # 1. 순전파
+    prediction = model(x_train_scaled)
+
+    # 2. 손실 계산
+    loss = loss_function(prediction, y_train,)
+   
+    # 3. 이전 기울기 초기화
+    optimizer.zero_grad()
+
+    # 4. 역전파
+    loss.backward()
+
+    # 5. 가중치와 편향 갱신
+    optimizer.step()
+
+    loss_history.append(loss.item())
+
+print(&quot;처음 Loss:&quot;, loss_history[0])
+print(&quot;마지막 Loss:&quot;, loss_history[-1])
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 6 · 원본 실행 기록</span></div><pre>처음 Loss: 29453.453125
+마지막 Loss: 0.10819890350103378
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>1500 에폭 동안 학습하며 Loss를 기록합니다. 학습 반복문의 다섯 단계는 단일 선형회귀와 같습니다.</p>
+</div>
+<h3>6. 손실 변화 확인</h3>
+<p>학습이 진행되면서 MSE Loss(엠에스이 로스, 평균제곱오차 손실)가 감소하는지 확인합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_5_multi_variable_linear_regression.ipynb · 셀 7 · 미검증</span></div><pre class="src"><code>#06. 손실변화 확인
+plt.figure(figsize=(8, 5))
+plt.plot(loss_history)
+plt.xlabel(&quot;Epoch&quot;)
+plt.ylabel(&quot;MSE Loss&quot;)
+plt.title(&quot;Training Loss&quot;)
+plt.grid(alpha=0.3)
+plt.show()
+</code></pre></div>
+<p><img src="img/ch02_5_c07_0.png" alt="ch02_5 다중 선형회귀 — 코드 셀 7 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>Loss 변화를 그래프로 확인합니다.</p>
+</div>
+<h3>7. 실제 점수와 예측 점수 비교</h3>
+<p>현재 데이터는 5개뿐이므로 훈련 데이터와 테스트 데이터로 나누지 않습니다.</p>
+<p>따라서 아래 결과는 <strong>새로운 학생에 대한 성능</strong>이 아니라, 현재 5개 데이터를 얼마나 잘 맞추었는지를 보여줍니다.</p>
+<ul>
+<li>torch.no_grad()(No Gradient, 기울기 계산 비활성화)는 자동 미분을 끄는 기능이고,</li>
+<li>torch.inference_mode()(Inference Mode, 추론 전용 모드)는 자동 미분뿐 아니라, 추론에 필요 없는 추가 추적 기능까지 더 강하게 끄는 기능</li>
+</ul>
+<table>
+<thead>
+<tr>
+  <th>구분</th>
+  <th><code>torch.no_grad()</code></th>
+  <th><code>torch.inference_mode()</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Gradient 계산</td>
+  <td>끔</td>
+  <td>끔</td>
+</tr>
+<tr>
+  <td>계산 그래프 생성</td>
+  <td>안 함</td>
+  <td>안 함</td>
+</tr>
+<tr>
+  <td>View 추적 등 내부 관리</td>
+  <td>일부 유지</td>
+  <td>더 많이 비활성화</td>
+</tr>
+<tr>
+  <td>속도/메모리</td>
+  <td>절약</td>
+  <td><strong>조금 더 절약 가능</strong></td>
+</tr>
+<tr>
+  <td>이후 Autograd 재사용</td>
+  <td>비교적 자유로움</td>
+  <td><strong>제약이 더 큼</strong></td>
+</tr>
+<tr>
+  <td>권장 용도</td>
+  <td>일반적인 평가/부분 계산</td>
+  <td><strong>완전한 추론·평가</strong></td>
+</tr>
+</tbody>
+</table>
+<p>zip(집, 여러 데이터를 같은 위치끼리 묶는 함수)은 여러 개의 반복 가능한 데이터를 같은 순서끼리 묶어줍니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_5_multi_variable_linear_regression.ipynb · 셀 8 · 미검증</span></div><pre class="src"><code>#07_실제점수와 예측점수 비교
+model.eval() # 모델을 평가상태로 전환
+
+with torch.no_grad():
+    predicted_score = model(x_train_scaled)
+
+for actual, predicted in zip(y_train, predicted_score,):
+    print(f&quot;실제: {actual.item():6.1f} | &quot;
+        f&quot;예측: {predicted.item():6.1f}&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 8 · 원본 실행 기록</span></div><pre>실제:  152.0 | 예측:  151.7
+실제:  185.0 | 예측:  184.5
+실제:  180.0 | 예측:  180.4
+실제:  196.0 | 예측:  196.2
+실제:  142.0 | 예측:  142.2
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>학생별 실제 점수와 예측 점수를 나란히 출력합니다.</p>
+<ul>
+<li><code>{actual.item():6.1f}</code> — 폭 6칸, 소수점 한 자리로 맞춰 열이 가지런히 정렬됩니다.</li>
+</ul>
+</div>
+<h3>8. 실제 점수 단위의 예측식</h3>
+<p>모델은 표준화된 입력을 사용하므로, 학습된 가중치를 원래 점수 단위로 바꾸어 해석합니다.</p>
+<div class="math-block" role="math" aria-label="\hat{y}
+=
+w_1x_1+w_2x_2+w_3x_3+b"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mo>&#x0003D;</mo><msub><mi>w</mi><mn>1</mn></msub><msub><mi>x</mi><mn>1</mn></msub><mo>&#x0002B;</mo><msub><mi>w</mi><mn>2</mn></msub><msub><mi>x</mi><mn>2</mn></msub><mo>&#x0002B;</mo><msub><mi>w</mi><mn>3</mn></msub><msub><mi>x</mi><mn>3</mn></msub><mo>&#x0002B;</mo><mi>b</mi></mrow></math></div>
+<p>각 가중치는 <strong>다른 시험 점수가 같을 때</strong>, 해당 시험 점수가 1점 증가하면 최종 예측값이 얼마나 변하는지를 나타냅니다. 데이터가 5개뿐이므로 가중치를 확정적인 영향도로 해석해서는 안 됩니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_5_multi_variable_linear_regression.ipynb · 셀 9 · 미검증</span></div><pre class="src"><code>#08_실제점수 단위의 예측 식
+
+scaled_weight = model.weight.detach().squeeze(0)
+scaled_bias = model.bias.detach().squeeze(0)
+
+# 표준화 이전 단위의 가중치와 편향
+real_weight = scaled_weight / x_std
+
+real_bias = (scaled_bias - torch.sum(real_weight * x_mean))
+
+print(&quot;예측식:&quot;)
+print(
+    f&quot;y = {real_weight[0].item():.3f}x1 &quot;
+    f&quot;{real_weight[1].item():+.3f}x2 &quot;
+    f&quot;{real_weight[2].item():+.3f}x3 &quot;
+    f&quot;{real_bias.item():+.3f}&quot;
+)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 9 · 원본 실행 기록</span></div><pre>예측식:
+y = 0.867x1 +0.441x2 +0.662x3 +3.437
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>표준화 기준의 가중치를 원래 점수 단위의 예측식으로 되돌립니다.</p>
+<ul>
+<li><code>.squeeze(0)</code> — <code>[1, 3]</code>에서 크기가 1인 0번째 차원을 없애 <code>[3]</code>으로 만듭니다.</li>
+<li>실제 가중치 = 표준화 가중치 ÷ 표준편차 / 실제 편향 = 표준화 편향 − Σ(실제 가중치 × 평균).</li>
+</ul>
+</div>
+<h3>9. 학습 데이터 적합도 확인</h3>
+<p>같은 지표를 사용합니다.</p>
+<ul>
+<li>MAE(엠에이이, 평균절대오차): 평균적으로 몇 점 틀리는지 확인</li>
+<li>RMSE(알엠에스이, 평균제곱근오차): 큰 오차에 더 민감</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msup><mi>R</mi><mn>2</mn></msup></mrow></math>(알 스퀘어, 결정계수): 1에 가까울수록 현재 데이터를 잘 설명</li>
+</ul>
+<p>이 결과는 훈련 데이터 적합도이며 일반화 성능이 아닙니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_5_multi_variable_linear_regression.ipynb · 셀 10 · 미검증</span></div><pre class="src"><code>#09_ 학습데이터 적합도 확인
+
+error = predicted_score - y_train
+
+mae = error.abs().mean()
+rmse = (error ** 2).mean().sqrt()
+
+residual_sum = (error ** 2).sum()
+total_sum = ((y_train - y_train.mean()) ** 2).sum()
+
+r2 = 1 - residual_sum / total_sum
+
+print(f&quot;MAE : {mae.item():.3f}점&quot;)
+print(f&quot;RMSE: {rmse.item():.3f}점&quot;)
+print(f&quot;R²  : {r2.item():.6f}&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 10 · 원본 실행 기록</span></div><pre>MAE : 0.308점
+RMSE: 0.329점
+R²  : 0.999743
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>학습 데이터에서 MAE, RMSE, R²를 계산해 얼마나 잘 맞췄는지 확인합니다. 데이터가 5개뿐이므로 새 데이터 성능은 따로 확인해야 합니다.</p>
+</div>
+<h3>10. 새로운 학생 점수 예측</h3>
+<p>새로운 학생도 입력 shape를 <code>[학생 수, 3]</code>으로 맞춥니다.</p>
+<p>새 입력에도 훈련 데이터에서 계산한 평균과 표준편차를 사용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_5_multi_variable_linear_regression.ipynb · 셀 11 · 미검증</span></div><pre class="src"><code>#10_새로운 학생 점수 예측
+
+new_scores = torch.tensor(
+    [
+        [85.0, 90.0, 88.0],
+        [95.0, 90.0, 92.0],
+        [70.0, 75.0, 80.0],
+    ],
+    dtype=torch.float32,
+)
+
+new_scores_scaled = (new_scores - x_mean) / x_std
+
+with torch.no_grad():
+    new_prediction = model(new_scores_scaled)
+
+for scores, predicted in zip(new_scores,new_prediction,):
+    print(f&quot;입력 {scores.tolist()} &quot; 
+        f&quot;→ 예상 최종 점수 &quot; f&quot;{predicted.item():.1f}&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 11 · 원본 실행 기록</span></div><pre>입력 [85.0, 90.0, 88.0] → 예상 최종 점수 175.1
+입력 [95.0, 90.0, 92.0] → 예상 최종 점수 186.5
+입력 [70.0, 75.0, 80.0] → 예상 최종 점수 150.2
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>새로운 학생 3명의 점수로 최종 점수를 예측합니다. 새 입력도 훈련 데이터의 평균·표준편차로 표준화한 뒤 모델에 넣습니다.</p>
+<ul>
+<li><code>scores.tolist()</code> — Tensor를 파이썬 리스트로 바꿔 보기 좋게 출력합니다.</li>
+</ul>
+</div>
+<h3>11. 입력 특성의 영향 비교</h3>
+<p>기준 입력을 <code>[80, 80, 80]</code>으로 두고, 시험 점수를 하나씩 10점 올립니다.</p>
+<ul>
+<li>두 번째 행: Quiz 1만 10점 증가</li>
+<li>세 번째 행: Quiz 2만 10점 증가</li>
+<li>네 번째 행: Midterm만 10점 증가</li>
+</ul>
+<p>예측값 변화가 큰 특성일수록 현재 모델의 가중치가 더 큽니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_5_multi_variable_linear_regression.ipynb · 셀 12 · 미검증</span></div><pre class="src"><code>#11_입력 특성의 영향 비교
+
+practice_scores = torch.tensor(
+    [
+        [80.0, 80.0, 80.0],
+        [90.0, 80.0, 80.0],
+        [80.0, 90.0, 80.0],
+        [80.0, 80.0, 90.0],
+    ],
+    dtype=torch.float32,
+)
+
+practice_scaled = (practice_scores - x_mean) / x_std
+
+with torch.no_grad():
+    practice_prediction = model(practice_scaled)
+
+base_score = practice_prediction[0].item()
+
+for scores, predicted in zip(practice_scores,practice_prediction,):
+    change = predicted.item() - base_score
+
+    print(
+        f&quot;{scores.tolist()} &quot;
+        f&quot;→ {predicted.item():.1f}점 &quot;
+        f&quot;(기준 대비 {change:+.1f})&quot;
+    )
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 12 · 원본 실행 기록</span></div><pre>[80.0, 80.0, 80.0] → 161.1점 (기준 대비 +0.0)
+[90.0, 80.0, 80.0] → 169.8점 (기준 대비 +8.7)
+[80.0, 90.0, 80.0] → 165.5점 (기준 대비 +4.4)
+[80.0, 80.0, 90.0] → 167.7점 (기준 대비 +6.6)
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>기준 점수 <code>[80, 80, 80]</code>에서 한 과목만 10점 올렸을 때 예측이 얼마나 바뀌는지 비교합니다.</p>
+<ul>
+<li>변화량이 클수록 그 과목이 최종 점수에 미치는 영향이 큽니다.</li>
+</ul>
+</div>
+<h3>12. 실제값과 예측값 시각화</h3>
+<p>점이 대각선에 가까울수록 예측값이 실제값과 비슷합니다.</p>
+<p>데이터가 적으므로 모델 비교보다는 학습 결과를 확인하는 용도로 사용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_5_multi_variable_linear_regression.ipynb · 셀 13 · 미검증</span></div><pre class="src"><code>#12_ 실제값과 예측값 시각화
+
+actual_values = y_train.squeeze().numpy()
+predicted_values = (predicted_score.squeeze().numpy())
+
+score_min = min(actual_values.min(), predicted_values.min(),) - 3
+score_max = max(actual_values.max(), predicted_values.max(),) + 3
+
+plt.figure(figsize=(7, 6))
+plt.scatter(actual_values, predicted_values,)
+
+plt.plot([score_min, score_max], [score_min, score_max], 
+    linestyle=&quot;--&quot;,label=&quot;Ideal Prediction&quot;,)
+
+plt.xlabel(&quot;Actual Score&quot;)
+plt.ylabel(&quot;Predicted Score&quot;)
+plt.title(&quot;Actual vs Predicted&quot;)
+plt.grid(alpha=0.3)
+plt.legend()
+plt.show()
+</code></pre></div>
+<p><img src="img/ch02_5_c13_0.png" alt="ch02_5 다중 선형회귀 — 코드 셀 13 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>실제값(가로)과 예측값(세로)의 산점도를 그립니다.</p>
+<ul>
+<li>점선 <code>y = x</code>는 완벽한 예측선입니다. 점이 이 선에 가까울수록 예측이 정확합니다.</li>
+</ul>
+</div>
+<h3>14. 핵심 정리</h3>
+<ul>
+<li>다중 선형회귀는 여러 입력 특성으로 하나의 값을 예측합니다.</li>
+<li>각 특성은 자기 열의 평균과 표준편차로 표준화합니다.</li>
+<li>실제 일반화 성능을 확인하려면 더 많은 데이터와 테스트 데이터가 필요합니다.</li>
+</ul>
+</section><section class="section" id="s08"><h2><span class="num">08</span>ch02_6 주택가격 예측</h2><p>실습 노트북 <code>notebooks/ch02_6_housing_price_prediction.ipynb</code></p>
+<ul>
+<li>실제 데이터로 다중 선형회귀의 일반화 성능 확인하기</li>
+<li><code>housing.csv</code>에서 주택 데이터를 불러옵니다.</li>
+<li>가중치와 잔차를 이용해 모델 결과를 해석합니다.</li>
+</ul>
+<h3>1. 라이브러리와 CSV 파일 준비</h3>
+<ul>
+<li>CSV(씨에스브이, 쉼표로 구분된 데이터 파일)는 NumPy(넘파이)로 읽습니다.</li>
+<li>이후 데이터 분리·표준화·학습은 PyTorch Tensor(파이토치 텐서)로 처리합니다.</li>
+<li>Colab(코랩)에서 파일이 없으면 업로드 창이 열립니다.</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_6_housing_price_prediction.ipynb · 셀 1 · 미검증</span></div><pre class="src"><code>#01_데이터 준비
+from pathlib import Path
+
+import numpy as np
+import torch
+from torch import nn
+import matplotlib.pyplot as plt
+
+torch.manual_seed(42)
+
+# 노트북과 같은 폴더의 housing.csv를 읽습니다.
+data_path = Path(&quot;housing.csv&quot;)
+
+
+# Colab에서 파일이 없으면 업로드 창을 엽니다.
+# if not data_path.exists():
+#     try:
+#         from google.colab import files
+#         files.upload()
+#     except ImportError:
+#         pass
+
+# if not data_path.exists():
+#     raise FileNotFoundError(&quot;현재 폴더에 housing.csv를 넣은 뒤 다시 실행해 주세요.&quot;)
+</code></pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>필요한 라이브러리를 불러오고 데이터 파일 경로를 지정합니다.</p>
+<ul>
+<li><code>Path(&quot;housing.csv&quot;)</code> — 노트북과 같은 폴더의 CSV 파일 경로 객체.</li>
+<li>주석 처리된 부분은 Colab에서 파일을 업로드할 때만 쓰는 선택 코드입니다.</li>
+</ul>
+</div>
+<h3>2. <code>housing.csv</code> 불러오기</h3>
+<p>첫 번째 줄은 열 이름이고, 나머지는 숫자 데이터입니다.</p>
+<ul>
+<li>마지막 열: 목표값 <code>MEDV</code></li>
+<li>나머지 열: 주택가격 예측에 사용하는 입력 특성</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_6_housing_price_prediction.ipynb · 셀 2 · 미검증</span></div><pre class="src"><code>#02_첫 줄에서 열 이름 읽기
+with data_path.open(&quot;r&quot;, encoding=&quot;utf-8&quot;) as file:
+    column_names = file.readline().strip().split(&quot;,&quot;)
+
+# 숫자 데이터 읽기
+housing_array = np.loadtxt(
+    data_path,
+    delimiter=&quot;,&quot;,
+    skiprows=1,
+    dtype=np.float32,
+)
+
+feature_names = column_names[:-1]
+target_name = column_names[-1]
+
+print(&quot;데이터 수:&quot;, len(housing_array))
+print(&quot;입력 특성 수:&quot;, len(feature_names))
+print(&quot;목표값:&quot;, target_name)
+print(&quot;앞부분 3행:&quot;)
+print(housing_array[:3])
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 2 · 원본 실행 기록</span></div><pre>데이터 수: 506
+입력 특성 수: 12
+목표값: MEDV
+앞부분 3행:
+[[6.3200e-03 1.8000e+01 2.3100e+00 0.0000e+00 5.3800e-01 6.5750e+00
+  6.5200e+01 4.0900e+00 1.0000e+00 2.9600e+02 1.5300e+01 4.9800e+00
+  2.4000e+01]
+ [2.7310e-02 0.0000e+00 7.0700e+00 0.0000e+00 4.6900e-01 6.4210e+00
+  7.8900e+01 4.9671e+00 2.0000e+00 2.4200e+02 1.7800e+01 9.1400e+00
+  2.1600e+01]
+ [2.7290e-02 0.0000e+00 7.0700e+00 0.0000e+00 4.6900e-01 7.1850e+00
+  6.1100e+01 4.9671e+00 2.0000e+00 2.4200e+02 1.7800e+01 4.0300e+00
+  3.4700e+01]]
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>CSV 첫 줄에서 열 이름을 읽고, 나머지 숫자 데이터를 NumPy 배열로 불러옵니다.</p>
+<ul>
+<li><code>np.loadtxt(..., delimiter=&quot;,&quot;, skiprows=1)</code> — 쉼표로 구분된 숫자를 읽고 첫 줄(열 이름)은 건너뜁니다.</li>
+<li>마지막 열 <code>MEDV</code>(주택가격 중앙값, 천 달러)가 목표값, 나머지는 입력 특성입니다.</li>
+</ul>
+</div>
+<h3>3. 입력 특성과 목표값 분리</h3>
+<p>입력 특성 12개:</p>
+<ul>
+<li><code>CRIM</code>(크라임, 지역별 범죄율)</li>
+<li><code>ZN</code>(지엔, 넓은 주거용 부지 비율)</li>
+<li><code>INDUS</code>(인더스, 비소매 상업지역 비율)</li>
+<li><code>CHAS</code>(채스, 찰스강 인접 여부)</li>
+<li><code>NOX</code>(녹스, 질소산화물 농도)</li>
+<li><code>RM</code>(알엠, 주택당 평균 방 수)</li>
+<li><code>AGE</code>(에이지, 오래된 주택 비율)</li>
+<li><code>DIS</code>(디아이에스, 고용 중심지까지의 거리)</li>
+<li><code>RAD</code>(래드, 고속도로 접근성)</li>
+<li><code>TAX</code>(택스, 재산세율)</li>
+<li><code>PTRATIO</code>(피티레이쇼, 학생·교사 비율)</li>
+<li><code>LSTAT</code>(엘스탯, 저소득 인구 비율)</li>
+</ul>
+<p>목표값:</p>
+<ul>
+<li><code>MEDV</code>(메드브이, 자가주택 가격 중앙값)</li>
+<li>단위: 천 달러</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_6_housing_price_prediction.ipynb · 셀 3 · 미검증</span></div><pre class="src"><code>#03_NumPy 배열을 Tensor로 변환
+housing_tensor = torch.tensor(housing_array,
+                              dtype=torch.float32,)
+x_all = housing_tensor[:, :-1]
+y_all = housing_tensor[:, -1:]
+
+print(&quot;전체 입력 shape:&quot;, x_all.shape)
+print(&quot;전체 목표 shape:&quot;, y_all.shape)
+print(&quot;첫 번째 입력:&quot;, x_all[0])
+print(&quot;첫 번째 목표값:&quot;, y_all[0].item())
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 3 · 원본 실행 기록</span></div><pre>전체 입력 shape: torch.Size([506, 12])
+전체 목표 shape: torch.Size([506, 1])
+첫 번째 입력: tensor([6.3200e-03, 1.8000e+01, 2.3100e+00, 0.0000e+00, 5.3800e-01, 6.5750e+00,
+        6.5200e+01, 4.0900e+00, 1.0000e+00, 2.9600e+02, 1.5300e+01, 4.9800e+00])
+첫 번째 목표값: 24.0
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>배열을 Tensor로 바꾸고 입력과 목표값으로 나눕니다.</p>
+<ul>
+<li><code>[:, :-1]</code> — 마지막 열을 뺀 모든 열(입력).</li>
+<li><code>[:, -1:]</code> — 마지막 열만. <code>-1:</code>처럼 범위로 꺼내야 <code>[N, 1]</code> 2차원 모양이 유지됩니다.</li>
+</ul>
+</div>
+<h3>4. 훈련 데이터와 테스트 데이터 분리</h3>
+<ul>
+<li>훈련 데이터 80%: 모델 학습</li>
+<li>테스트 데이터 20%: 보지 않은 데이터의 예측 성능 확인</li>
+</ul>
+<p><code>torch.randperm()</code>으로 데이터 순서를 섞고, 같은 결과가 나오도록 난수 기준값을 고정합니다.</p>
+<blockquote>
+<p>테스트 데이터는 모델 학습과 표준화 통계 계산에 사용하지 않습니다.</p>
+</blockquote>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_6_housing_price_prediction.ipynb · 셀 4 · 미검증</span></div><pre class="src"><code>#04_훈련데이터, 테스트데이터 분리 : 80% vs 20%
+
+torch.manual_seed(42)
+
+indices = torch.randperm(len(x_all))
+train_count = int(len(x_all) * 0.8)
+
+train_indices = indices[:train_count]
+test_indices = indices[train_count:]
+
+x_train = x_all[train_indices]
+y_train = y_all[train_indices]
+
+x_test = x_all[test_indices]
+y_test = y_all[test_indices]
+
+print(&quot;훈련 데이터:&quot;, x_train.shape, y_train.shape)
+print(&quot;테스트 데이터:&quot;, x_test.shape, y_test.shape)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 4 · 원본 실행 기록</span></div><pre>훈련 데이터: torch.Size([404, 12]) torch.Size([404, 1])
+테스트 데이터: torch.Size([102, 12]) torch.Size([102, 1])
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>데이터를 무작위로 섞어 80%는 훈련, 20%는 테스트로 나눕니다.</p>
+</div>
+<h3>5. 입력 특성 표준화</h3>
+<p>특성마다 숫자의 범위가 크게 다릅니다.</p>
+<ul>
+<li><code>CHAS</code>: 0 또는 1</li>
+<li><code>TAX</code>: 수백 단위</li>
+<li><code>CRIM</code>: 작은 소수부터 큰 값까지 분포</li>
+</ul>
+<p>각 열을 평균 0, 표준편차 1에 가까운 값으로 바꿉니다.</p>
+<div class="math-block" role="math" aria-label="x_{\mathrm{scaled}}
+=
+\frac{x-\mu_{\mathrm{train}}}
+{\sigma_{\mathrm{train}}}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>x</mi><mrow><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow></mrow></msub><mo>&#x0003D;</mo><mfrac><mrow><mi>x</mi><mo>&#x02212;</mo><msub><mi>&#x003BC;</mi><mrow><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi></mrow></mrow></msub></mrow><mrow><msub><mi>&#x003C3;</mi><mrow><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi></mrow></mrow></msub></mrow></mfrac></mrow></math></div>
+<p>테스트 데이터에도 훈련 데이터에서 계산한 평균과 표준편차를 사용합니다.
+테스트 통계량을 미리 사용하면 Data Leakage(데이터 리키지, 데이터 누출)가 발생합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_6_housing_price_prediction.ipynb · 셀 5 · 미검증</span></div><pre class="src"><code># 각 입력 특성의 평균과 표준편차
+x_mean = x_train.mean(dim=0)
+x_std = x_train.std(dim=0)
+
+# 표준편차가 0인 특성이 있으면 1로 대체
+x_std = torch.where(x_std == 0,torch.ones_like(x_std),x_std,)
+x_train_scaled = (x_train - x_mean) / x_std
+x_test_scaled = (x_test - x_mean) / x_std
+
+print(&quot;표준화 후 평균:&quot;,torch.round(x_train_scaled.mean(dim=0),decimals=3,),)
+print(&quot;표준화 후 표준편차:&quot;,torch.round(x_train_scaled.std(dim=0),decimals=3,),)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 5 · 원본 실행 기록</span></div><pre>표준화 후 평균: tensor([-0., -0., -0., 0., 0., -0., 0., 0., 0., -0., 0., 0.])
+표준화 후 표준편차: tensor([1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.])
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>특성별 표준화를 합니다. 평균·표준편차는 훈련 데이터에서만 구합니다.</p>
+<ul>
+<li><code>torch.where(x_std == 0, 1, x_std)</code> — 값이 모두 같은 열이 있으면 0으로 나누는 오류가 나므로 1로 바꿉니다.</li>
+<li><code>torch.round(..., decimals=3)</code> — 출력을 소수점 셋째 자리로 반올림합니다.</li>
+</ul>
+</div>
+<h3>6. 주택가격 예측 모델</h3>
+<p>입력 특성 12개로 가격 1개를 예측하므로 다음 계층을 사용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>nn.Linear(12, 1)
+</code></pre></div>
+<div class="math-block" role="math" aria-label="\hat{y}
+=
+w_1x_1+w_2x_2+\cdots+w_{12}x_{12}+b"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover><mo>&#x0003D;</mo><msub><mi>w</mi><mn>1</mn></msub><msub><mi>x</mi><mn>1</mn></msub><mo>&#x0002B;</mo><msub><mi>w</mi><mn>2</mn></msub><msub><mi>x</mi><mn>2</mn></msub><mo>&#x0002B;</mo><mo>&#x022EF;</mo><mo>&#x0002B;</mo><msub><mi>w</mi><mrow><mn>12</mn></mrow></msub><msub><mi>x</mi><mrow><mn>12</mn></mrow></msub><mo>&#x0002B;</mo><mi>b</mi></mrow></math></div>
+<p>같은 선형 계층이므로 별도의 모델 클래스를 다시 만들지 않습니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_6_housing_price_prediction.ipynb · 셀 6 · 미검증</span></div><pre class="src"><code>#06_주택가격 예측 모델
+
+torch.manual_seed(42)
+
+model = nn.Linear(len(feature_names),1,)
+
+print(model)
+print(&quot;가중치 shape:&quot;, model.weight.shape)
+print(&quot;편향 shape:&quot;, model.bias.shape)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 6 · 원본 실행 기록</span></div><pre>Linear(in_features=12, out_features=1, bias=True)
+가중치 shape: torch.Size([1, 12])
+편향 shape: torch.Size([1])
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>특성 수만큼 입력을 받는 선형회귀 모델을 만듭니다. <code>len(feature_names)</code>를 쓰면 열 수가 바뀌어도 코드를 고칠 필요가 없습니다.</p>
+</div>
+<h3>7. 모델 학습</h3>
+<p>학습 흐름은 와 같습니다.</p>
+<div class="math-block" role="math" aria-label="\text{순전파}
+\rightarrow
+\text{손실}
+\rightarrow
+\text{역전파}
+\rightarrow
+\text{갱신}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>순전파</mtext><mo>&#x02192;</mo><mtext>손실</mtext><mo>&#x02192;</mo><mtext>역전파</mtext><mo>&#x02192;</mo><mtext>갱신</mtext></mrow></math></div>
+<p>목표값은 실제 천 달러 단위를 유지합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_6_housing_price_prediction.ipynb · 셀 7 · 미검증</span></div><pre class="src"><code>#07_모델 학습
+loss_function = nn.MSELoss()
+
+optimizer = torch.optim.SGD(model.parameters(),lr=0.03,)
+
+epochs = 2000
+loss_history = []
+
+model.train()
+
+for epoch in range(epochs):
+    # 1. 순전파
+    train_prediction = model(x_train_scaled)
+
+    # 2. 손실 계산
+    loss = loss_function(train_prediction, y_train)
+
+    # 3. 이전 기울기 초기화
+    optimizer.zero_grad()
+
+    # 4. 역전파
+    loss.backward()
+
+    # 5. 가중치와 편향 갱신
+    optimizer.step()
+
+    loss_history.append(loss.item())
+
+print(&quot;처음 Loss:&quot;, loss_history[0])
+print(&quot;마지막 Loss:&quot;, loss_history[-1])
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 7 · 원본 실행 기록</span></div><pre>처음 Loss: 575.1853637695312
+마지막 Loss: 20.720441818237305
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>2000 에폭 학습합니다.</p>
+<ul>
+<li><code>model.train()</code> — 학습 모드로 전환합니다. 평가 후 다시 학습할 때 꼭 필요한 습관입니다.</li>
+</ul>
+</div>
+<h3>8. 손실 변화 확인</h3>
+<p>학습이 진행되면서 MSE Loss(엠에스이 로스, 평균제곱오차 손실)가 감소하는지 확인합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_6_housing_price_prediction.ipynb · 셀 8 · 미검증</span></div><pre class="src"><code>plt.figure(figsize=(8, 5))
+plt.plot(loss_history)
+plt.xlabel(&quot;Epoch&quot;)
+plt.ylabel(&quot;MSE Loss&quot;)
+plt.title(&quot;Training Loss&quot;)
+plt.grid(alpha=0.3)
+plt.show()
+</code></pre></div>
+<p><img src="img/ch02_6_c08_0.png" alt="ch02_6 주택가격 예측 — 코드 셀 8 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>Loss 변화를 그래프로 확인합니다.</p>
+</div>
+<h3>9. 훈련·테스트 데이터 예측</h3>
+<ul>
+<li><code>model.eval()</code> : 평가 모드</li>
+<li><code>torch.no_grad()</code> : 예측 중 기울기 계산 중지</li>
+<li>훈련 예측: 학습 적합도 확인</li>
+<li>테스트 예측: 일반화 성능 확인</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_6_housing_price_prediction.ipynb · 셀 9 · 미검증</span></div><pre class="src"><code>#09_훈련, 테스트 데이터 예측
+model.eval()
+
+with torch.no_grad():
+    train_prediction = model(x_train_scaled)
+    test_prediction = model(x_test_scaled)
+
+print(&quot;테스트 실제값 5개:&quot;)
+print(y_test[:5, 0])
+
+print()
+print(&quot;테스트 예측값 5개:&quot;)
+print(torch.round(test_prediction[:5, 0], decimals=2,))
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 9 · 원본 실행 기록</span></div><pre>테스트 실제값 5개:
+tensor([20.0000, 18.6000, 22.8000, 10.9000, 20.4000])
+
+테스트 예측값 5개:
+tensor([16.7300, 16.3000, 27.2200, 16.3400, 22.1100])
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>평가 모드에서 훈련·테스트 데이터를 모두 예측하고, 테스트 데이터 앞 5개의 실제값과 예측값을 비교합니다.</p>
+</div>
+<h3>10. 회귀 성능 평가</h3>
+<p>사용한 세 지표를 그대로 적용합니다.</p>
+<table>
+<thead>
+<tr>
+  <th>지표</th>
+  <th>의미</th>
+  <th>좋은 결과</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>MAE</td>
+  <td>평균적으로 몇 천 달러 틀리는지 표시</td>
+  <td>작을수록 좋음</td>
+</tr>
+<tr>
+  <td>RMSE</td>
+  <td>큰 오차에 더 민감한 평균 오차</td>
+  <td>작을수록 좋음</td>
+</tr>
+<tr>
+  <td><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msup><mi>R</mi><mn>2</mn></msup></mrow></math></td>
+  <td>주택가격 변화의 설명 정도</td>
+  <td>1에 가까울수록 좋음</td>
+</tr>
+</tbody>
+</table>
+<p>훈련 결과와 테스트 결과를 함께 비교해야 합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_6_housing_price_prediction.ipynb · 셀 10 · 미검증</span></div><pre class="src"><code>#10_회귀 성능 평가
+
+def regression_metrics(y_true, y_pred):
+    error = y_pred - y_true
+
+    mae = error.abs().mean()
+    rmse = (error ** 2).mean().sqrt()
+
+    residual_sum = (error ** 2).sum()
+    total_sum = ((y_true - y_true.mean()) ** 2).sum()
+
+    r2 = 1 - residual_sum / total_sum
+
+    return mae, rmse, r2
+
+
+train_mae, train_rmse, train_r2 = (
+    regression_metrics(y_train, train_prediction,))
+
+test_mae, test_rmse, test_r2 = ( 
+    regression_metrics(y_test, test_prediction, ))
+
+print(&quot;[훈련 데이터: 학습 적합도]&quot;)
+print(f&quot;MAE : {train_mae.item():.3f} 천 달러&quot;)
+print(f&quot;RMSE: {train_rmse.item():.3f} 천 달러&quot;)
+print(f&quot;R²  : {train_r2.item():.3f}&quot;)
+
+print()
+print(&quot;[테스트 데이터: 일반화 성능]&quot;)
+print(f&quot;MAE : {test_mae.item():.3f} 천 달러&quot;)
+print(f&quot;RMSE: {test_rmse.item():.3f} 천 달러&quot;)
+print(f&quot;R²  : {test_r2.item():.3f}&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 10 · 원본 실행 기록</span></div><pre>[훈련 데이터: 학습 적합도]
+MAE : 3.265 천 달러
+RMSE: 4.552 천 달러
+R²  : 0.747
+
+[테스트 데이터: 일반화 성능]
+MAE : 3.500 천 달러
+RMSE: 5.629 천 달러
+R²  : 0.663
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>MAE, RMSE, R²로 훈련(학습 적합도)과 테스트(일반화 성능)를 각각 평가합니다. 단위는 천 달러입니다.</p>
+</div>
+<h3>11. 훈련 성능과 테스트 성능 해석</h3>
+<ul>
+<li>두 오차가 모두 큼 → Underfitting(언더피팅, 과소적합) 가능성</li>
+<li>훈련 오차는 작고 테스트 오차가 크게 증가 → Overfitting(오버피팅, 과적합) 가능성</li>
+<li>두 결과가 비슷함 → 학습한 관계가 새로운 데이터에도 비교적 유지</li>
+</ul>
+<p>한 번의 데이터 분할 결과이므로 절대적인 성능 판정이 아니라 실습용 비교 기준으로 사용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_6_housing_price_prediction.ipynb · 셀 11 · 미검증</span></div><pre class="src"><code>#11_훈련 성능과 테스트 성능 해석
+
+rmse_gap = (test_rmse - train_rmse).item()
+
+print(&quot;RMSE 차이(테스트 - 훈련):&quot;, round(rmse_gap, 3),)
+
+if test_rmse &gt; train_rmse * 1.3:
+    print(&quot;해석: 테스트 오차 증가가 커서 과적합 가능성을 점검합니다.&quot;)
+else:
+    print(&quot;해석: 훈련과 테스트 오차 사이에 큰 급증은 없습니다.&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 11 · 원본 실행 기록</span></div><pre>RMSE 차이(테스트 - 훈련): 1.077
+해석: 훈련과 테스트 오차 사이에 큰 급증은 없습니다.
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>테스트 RMSE가 훈련 RMSE보다 30% 넘게 크면 과적합 가능성을 알리는 간단한 판단 규칙입니다.</p>
+<ul>
+<li>과적합(overfitting) — 훈련 데이터에만 지나치게 맞춰져 새 데이터에서 성능이 떨어지는 현상입니다.</li>
+</ul>
+</div>
+<h3>12. 실제값과 예측값 비교</h3>
+<p>점이 대각선에 가까울수록 예측이 정확합니다.</p>
+<p>테스트 데이터만 사용하여 모델이 보지 않은 데이터의 결과를 확인합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_6_housing_price_prediction.ipynb · 셀 12 · 미검증</span></div><pre class="src"><code>#12_실제값과 예측값 비교
+
+actual_values = y_test[:, 0].numpy()
+predicted_values = (test_prediction[:, 0].numpy())
+
+price_min = min(actual_values.min(), predicted_values.min(),)
+
+price_max = max(actual_values.max(), predicted_values.max(),)
+
+plt.figure(figsize=(7, 6))
+plt.scatter(actual_values, predicted_values, alpha=0.7,)
+
+plt.plot([price_min, price_max], [price_min, price_max],
+    linestyle=&quot;--&quot;, label=&quot;Ideal Prediction&quot;,)
+
+plt.xlabel(&quot;Actual MEDV&quot;)
+plt.ylabel(&quot;Predicted MEDV&quot;)
+plt.title(&quot;Actual vs Predicted&quot;)
+plt.grid(alpha=0.3)
+plt.legend()
+plt.show()
+</code></pre></div>
+<p><img src="img/ch02_6_c12_0.png" alt="ch02_6 주택가격 예측 — 코드 셀 12 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>테스트 데이터의 실제 가격과 예측 가격을 산점도로 비교합니다. 점선에 가까울수록 정확한 예측입니다.</p>
+<ul>
+<li><code>alpha=0.7</code> — 점을 약간 투명하게 해 겹친 부분도 보이게 합니다.</li>
+</ul>
+</div>
+<h3>13. 잔차 확인</h3>
+<p>Residual(리주얼, 잔차)은 실제값에서 예측값을 뺀 값입니다.</p>
+<div class="math-block" role="math" aria-label="\text{Residual}
+=
+y-\hat{y}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>Residual</mtext><mo>&#x0003D;</mo><mi>y</mi><mo>&#x02212;</mo><mover accent="true"><mrow><mi>y</mi></mrow><mo>&#x0005E;</mo></mover></mrow></math></div>
+<ul>
+<li>잔차가 0에 가까움 → 예측이 정확함</li>
+<li>잔차가 양수 → 실제 가격보다 낮게 예측</li>
+<li>잔차가 음수 → 실제 가격보다 높게 예측</li>
+<li>특정 모양이 반복됨 → 직선 모델이 설명하지 못한 관계가 있을 수 있음</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_6_housing_price_prediction.ipynb · 셀 13 · 미검증</span></div><pre class="src"><code>#13_잔차: 실제값에서 예측값을 뺀 값
+residuals = (actual_values - predicted_values)
+
+plt.figure(figsize=(8, 5))
+plt.scatter(predicted_values, residuals, alpha=0.7,)
+
+plt.axhline(0, linestyle=&quot;--&quot;,)
+
+plt.xlabel(&quot;Predicted MEDV&quot;)
+plt.ylabel(&quot;Residual&quot;)
+plt.title(&quot;Residual Plot&quot;)
+plt.grid(alpha=0.3)
+plt.show()
+</code></pre></div>
+<p><img src="img/ch02_6_c13_0.png" alt="ch02_6 주택가격 예측 — 코드 셀 13 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>잔차(실제값 − 예측값)를 예측값에 대해 그립니다.</p>
+<ul>
+<li>점들이 0 기준선 위아래로 고르게 퍼져 있으면 좋은 신호입니다.</li>
+<li>특정 구간에서 한쪽으로 몰리면 직선 모델로는 설명하지 못하는 패턴이 남아 있다는 뜻입니다.</li>
+</ul>
+</div>
+<h3>14. 표준화된 가중치 해석</h3>
+<p>입력 특성을 모두 표준화했으므로 가중치의 크기를 비교할 수 있습니다.</p>
+<ul>
+<li>양수 가중치: 특성이 증가할수록 예측 가격이 증가하는 방향</li>
+<li>음수 가중치: 특성이 증가할수록 예측 가격이 감소하는 방향</li>
+<li>절댓값이 큰 가중치: 1 표준편차 변화에 대한 예측값 변화가 큼</li>
+</ul>
+<p>가중치는 관계의 방향을 보여주지만, 인과관계를 증명하지는 않습니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_6_housing_price_prediction.ipynb · 셀 14 · 미검증</span></div><pre class="src"><code>#14_표준화된 가중치 해석
+
+weights = (model.weight.detach().squeeze(0))
+
+weight_order = torch.argsort(weights.abs(), descending=True,)
+
+print(&quot;절댓값이 큰 가중치부터 확인:&quot;)
+for index in weight_order:
+    feature_index = index.item()
+
+    print(f&quot;{feature_names[feature_index]:8s}: &quot;
+        f&quot;{weights[feature_index].item(): .4f}&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 14 · 원본 실행 기록</span></div><pre>절댓값이 큰 가중치부터 확인:
+RM      :  3.0898
+LSTAT   : -2.9926
+DIS     : -2.9905
+NOX     : -2.1885
+PTRATIO : -2.1113
+RAD     :  1.9562
+TAX     : -1.9393
+ZN      :  0.9172
+CHAS    :  0.8213
+CRIM    : -0.7282
+AGE     : -0.2258
+INDUS   : -0.0270
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>표준화된 입력으로 학습한 가중치를 절댓값 크기 순으로 정렬해, 가격에 영향이 큰 특성을 찾습니다.</p>
+<ul>
+<li>입력을 표준화했기 때문에 특성끼리 가중치 크기를 비교할 수 있습니다.</li>
+<li><code>torch.argsort(..., descending=True)</code> — 큰 값부터의 인덱스 순서를 돌려줍니다.</li>
+<li>부호가 <code>+</code>이면 값이 클수록 가격이 오르고, <code>−</code>이면 내려가는 관계입니다.</li>
+</ul>
+</div>
+<h3>15. 주택 한 채의 예측 결과 확인</h3>
+<p>테스트 데이터의 첫 번째 주택에 대해:</p>
+<ul>
+<li>입력 특성 12개</li>
+<li>실제 가격</li>
+<li>예측 가격</li>
+<li>잔차</li>
+</ul>
+<p>위 항목을 함께 확인합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch02_6_housing_price_prediction.ipynb · 셀 15 · 미검증</span></div><pre class="src"><code>#15_주택 한 채의 예측 결과 확인
+sample_index = 0
+
+sample_actual = (y_test[sample_index].item())
+sample_prediction = (test_prediction[sample_index].item())
+sample_residual = (sample_actual - sample_prediction)
+
+print(&quot;입력 특성:&quot;)
+
+for name, value in zip(feature_names, x_test[sample_index],):
+    print(f&quot;{name:8s}: {value.item():.4f}&quot;)
+
+print()
+print(f&quot;실제 가격: {sample_actual:.2f} 천 달러&quot;)
+print(f&quot;예측 가격: {sample_prediction:.2f} 천 달러&quot;)
+print(f&quot;잔차    : {sample_residual:.2f} 천 달러&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 15 · 원본 실행 기록</span></div><pre>입력 특성:
+CRIM    : 6.8012
+ZN      : 0.0000
+INDUS   : 18.1000
+CHAS    : 0.0000
+NOX     : 0.7130
+RM      : 6.0810
+AGE     : 84.4000
+DIS     : 2.7175
+RAD     : 24.0000
+TAX     : 666.0000
+PTRATIO : 20.2000
+LSTAT   : 14.7000
+
+실제 가격: 20.00 천 달러
+예측 가격: 16.73 천 달러
+잔차      : 3.27 천 달러
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>테스트 데이터 한 채의 입력 특성, 실제 가격, 예측 가격, 잔차를 한 번에 확인합니다.</p>
+<ul>
+<li><code>{name:8s}</code> — 이름을 8칸 폭으로 맞춰 정렬합니다.</li>
+</ul>
+</div>
+<h3>17. 핵심 정리</h3>
+<ul>
+<li><code>housing.csv</code>에는 주택 데이터 506개가 들어 있습니다.</li>
+<li>목표값을 실제 천 달러 단위로 유지하면 예측값 복원 과정이 필요 없습니다.</li>
+<li>가중치는 관계의 방향을 보여주지만 인과관계를 증명하지는 않습니다.</li>
+</ul>
+</section><section class="section" id="s09"><h2><span class="num">09</span>검증</h2><table>
+<thead>
+<tr>
+  <th>노트북</th>
+  <th>실행 기록</th>
+  <th>재실행</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>ch02_1</td>
+  <td>있음</td>
+  <td>미검증</td>
+</tr>
+<tr>
+  <td>ch02_2</td>
+  <td>있음</td>
+  <td>미검증</td>
+</tr>
+<tr>
+  <td>ch02_3</td>
+  <td>있음</td>
+  <td>미검증</td>
+</tr>
+<tr>
+  <td>ch02_4</td>
+  <td>있음</td>
+  <td>미검증</td>
+</tr>
+<tr>
+  <td>ch02_5</td>
+  <td>있음</td>
+  <td>미검증</td>
+</tr>
+<tr>
+  <td>ch02_6</td>
+  <td>있음</td>
+  <td>미검증</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>페이지의 실행 결과와 그림은 원본 노트북에 저장된 실행 기록이며, 다시 실행해 확인하지는 않았습니다(미검증).</li>
+</ul>
+<p><strong>완료 기준:</strong> 노트북을 순서대로 실행해 오류 없이 끝나고, 손실 감소와 평가 지표가 페이지의 기록과 비슷한 범위로 나오면 됩니다.</p>
 </section><div class="chapter-links" id="chapter-links"></div></main></div>
-<footer class="footer">PyTorch 머신러닝 기초 · v02  · 실습 결과는 실제 환경에서 검증</footer>
-<script>window.COURSE={"title": "PyTorch 머신러닝 기초", "short_title": "MACHINE LEARNING", "home_label": "전체 학습 안내서", "chapters": [{"id": "ch01", "number": 1, "title": "Tensor 기초", "file": "ch01_tensor_basics_v02.html"}, {"id": "ch02", "number": 2, "title": "선형회귀", "file": "ch02_linear_regression_v02.html"}, {"id": "ch03", "number": 3, "title": "로지스틱·Softmax 분류", "file": "ch03_classification_v02.html"}, {"id": "ch04", "number": 4, "title": "학습 설정 선택 기준", "file": "ch04_training_setup_guide_v02.html"}]};</script><script>/*
+<footer class="footer">PyTorch 머신러닝 기초 · v03  · 실습 결과는 실제 환경에서 검증</footer>
+<script>window.COURSE={"title": "PyTorch 머신러닝 기초", "short_title": "MACHINE LEARNING", "home_label": "전체 학습 안내서", "chapters": [{"id": "ch01", "number": 1, "title": "Tensor 기초", "file": "ch01_tensor_basics_v03.html"}, {"id": "ch02", "number": 2, "title": "선형회귀", "file": "ch02_linear_regression_v03.html"}, {"id": "ch03", "number": 3, "title": "로지스틱·Softmax 분류", "file": "ch03_classification_v03.html"}, {"id": "ch04", "number": 4, "title": "학습 설정 선택 기준", "file": "ch04_training_setup_guide_v03.html"}]};</script><script>/*
  * 교육용 HTML 공통 동작 — 유지보수용 원본 (STANDARD 4·10.3·10.4)
  * 페이지 본문은 바꾸지 않고 탐색·이전/다음·모바일 메뉴·코드 복사만 덧붙인다.
  * 입력: 페이지의 window.COURSE (tools/guide/build_guides.py가 실제 존재하는 장만 넣음),
