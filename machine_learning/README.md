@@ -9,10 +9,10 @@ NumPy·PyTorch Tensor에서 출발해 선형회귀, 로지스틱·Softmax 분류
 
 | 장 | 제목 | 내용 | 안내서 |
 |---|---|---|---|
-| 01 | Tensor 기초 | NumPy 배열 → PyTorch Tensor → 연산 → 자동 미분 | [`ch01_tensor_basics_v02.html`](dist/ch01_tensor_basics_v02.html) |
-| 02 | 선형회귀 | 순전파·손실 → 비용 최소화 → 실제 데이터 → 주택가격 예측 | [`ch02_linear_regression_v02.html`](dist/ch02_linear_regression_v02.html) |
-| 03 | 로지스틱·Softmax 분류 | 이진분류 → 실제 CSV → 다중분류 → 학습 최적화 | [`ch03_classification_v02.html`](dist/ch03_classification_v02.html) |
-| 04 | 학습 설정 선택 기준 | Target 형태 → 출력층 → Loss → Optimizer → Metric | [`ch04_training_setup_guide_v02.html`](dist/ch04_training_setup_guide_v02.html) |
+| 01 | Tensor 기초 | NumPy 배열 → PyTorch Tensor → 연산 → 자동 미분 | [`ch01_tensor_basics_v03.html`](dist/ch01_tensor_basics_v03.html) |
+| 02 | 선형회귀 | 순전파·손실 → 비용 최소화 → 실제 데이터 → 주택가격 예측 | [`ch02_linear_regression_v03.html`](dist/ch02_linear_regression_v03.html) |
+| 03 | 로지스틱·Softmax 분류 | 이진분류 → 실제 CSV → 다중분류 → 학습 최적화 | [`ch03_classification_v03.html`](dist/ch03_classification_v03.html) |
+| 04 | 학습 설정 선택 기준 | Target 형태 → 출력층 → Loss → Optimizer → Metric | [`ch04_training_setup_guide_v03.html`](dist/ch04_training_setup_guide_v03.html) |
 
 ## 노트북 순번 대응표
 

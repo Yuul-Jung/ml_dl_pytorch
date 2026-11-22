@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="state_dict 저장·복원 → 추론 함수 → ONNX 내보내기·Runtime 추론"><title>제06장 · 모델 저장·ONNX · PyTorch 딥러닝 실습</title>
+<meta name="description" content="CIFAR-10 ResNet18 학습 → 사전학습 가중치 전이학습"><title>제05장 · ResNet18·전이학습 · PyTorch 딥러닝 실습</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>/*
@@ -618,6 +618,41 @@ pre code {
   overflow-wrap: anywhere;
 }
 
+/* (추가) 코드 풀이 상자: 코드·실행 결과 바로 아래에서 무엇을 하는 코드인지 풀어 씁니다. */
+.explain {
+  margin: -6px 0 22px;
+  padding: 12px 16px 4px;
+  background: #fbfbf9;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  font-size: 0.93rem;
+}
+.explain p,
+.explain ul {
+  margin: 0 0 9px;
+}
+.explain ul {
+  padding-left: 1.2em;
+}
+.explain li {
+  margin: 3px 0;
+}
+.box-title {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin: 0 0 6px !important;
+}
+.note.insight p:last-child,
+.note.insight ul:last-child {
+  margin-bottom: 0;
+}
+.note.insight ul {
+  margin: 0;
+  padding-left: 1.2em;
+}
+
 /* (추가) 수식(MathML): 블록 수식은 가운데 정렬, 넓으면 가로 스크롤 */
 .math-block {
   margin: 14px 0;
@@ -758,39 +793,50 @@ math {
     grid-template-columns: 1fr;
   }
 }
-</style></head><body data-chapter="ch06">
+</style></head><body data-chapter="ch05">
 <button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button><div class="shade" id="shade"></div>
-<header class="hero"><div class="hero-inner"><p class="kicker">DEEP LEARNING · CHAPTER 06</p><h1>제06장 · 모델 저장·ONNX</h1><p>state_dict 저장·복원 → 추론 함수 → ONNX 내보내기·Runtime 추론</p><div class="chips"><span class="chip">state_dict</span><span class="chip">Checkpoint</span><span class="chip">ONNX</span><span class="chip">ONNX Runtime</span></div></div></header>
-<div class="wrap"><nav class="toc" id="course-nav" aria-label="장과 절 탐색"></nav><main class="content" id="main-content"><section class="section" id="s00"><h2><span class="num">00</span>배경 개념</h2><p>학습한 모델을 다시 쓰려면 가중치(<code>state_dict</code>, 층 이름별 가중치 사전)와 추론에 필요한 정보(클래스 이름·전처리·기준 출력)를 함께 저장하고, 복원한 모델이 같은 출력을 내는지 비교해야 합니다.</p>
-<p>ONNX(Open Neural Network Exchange, 오닉스 — 신경망 교환 형식)는 PyTorch 모델을 프레임워크와 무관한 형식으로 내보내는 표준입니다. ONNX Runtime(오닉스 런타임, ONNX 모델 실행기)으로 추론한 결과와 PyTorch 결과를 비교해 배포용 변환이 맞는지 검증합니다.</p>
+<header class="hero"><div class="hero-inner"><p class="kicker">DEEP LEARNING · CHAPTER 05</p><h1>제05장 · ResNet18·전이학습</h1><p>CIFAR-10 ResNet18 학습 → 사전학습 가중치 전이학습</p><div class="chips"><span class="chip">ResNet18</span><span class="chip">Transfer Learning</span><span class="chip">Fine-tuning</span></div></div></header>
+<div class="wrap"><nav class="toc" id="course-nav" aria-label="장과 절 탐색"></nav><main class="content" id="main-content"><section class="section" id="s00"><h2><span class="num">00</span>배경 개념</h2><p>ResNet은 잔차 연결(Residual Connection)로 블록의 입력을 출력에 그대로 더해, 층이 깊어져도 기울기가 잘 전달되게 만든 CNN 구조입니다. 먼저 ResNet18을 CIFAR-10의 작은 이미지에 맞게 고쳐 처음부터 학습합니다.</p>
+<p>전이학습(Transfer Learning)은 ImageNet 같은 대규모 데이터로 미리 학습한 가중치를 가져와, 마지막 분류층만 새 클래스 수에 맞게 바꿔 학습하는 방법입니다. 적은 데이터와 짧은 학습으로도 높은 성능을 얻을 수 있습니다.</p>
+<div class="note insight"><p class="box-title">쉽게 이해하기</p>
+<p>잔차 연결은 '원본은 그대로 두고 고칠 부분만 덧붙이는' 방식입니다. 블록은 입력 전체를 새로 만드는 대신 차이(잔차)만 배우면 되므로 깊게 쌓아도 학습이 무너지지 않습니다. 전이학습은 이미 사물을 보는 눈을 가진 모델에게 새 이름표만 가르치는 일입니다.</p>
+</div>
+<div class="note insight"><p class="box-title">꼭 기억할 점</p>
+<ul>
+<li>작은 이미지(32×32)에 ResNet을 쓸 때는 첫 층과 MaxPool을 고쳐 정보가 너무 빨리 줄지 않게 합니다.</li>
+<li>전이학습은 출력층만 학습(Feature Extraction)한 뒤 일부 층을 풀어 미세조정(Fine-Tuning)하는 두 단계가 기본입니다.</li>
+<li>사전학습 가중치를 쓸 때는 그 가중치가 학습될 때와 같은 전처리(크기·정규화)를 맞춥니다.</li>
+</ul>
+</div>
 </section><section class="section" id="s01"><h2><span class="num">01</span>전체 실습 흐름</h2><p>개념 흐름도 — 이 장 노트북의 공통 학습 절차 (개념도, 이름은 실제 코드 기준):</p>
-<div class="flow" role="list" aria-label="개념 흐름도"><div class="step">5장 전이학습 모델 <code>load_state_dict</code> 복원</div><div class="down" aria-hidden="true">↓</div><div class="step"><code>torch.save</code> 가중치·추론 정보 저장 → 복원 출력 비교</div><div class="down" aria-hidden="true">↓</div><div class="step"><code>torch.onnx.export</code> ONNX 내보내기</div><div class="down" aria-hidden="true">↓</div><div class="step"><code>onnx.checker</code> 모델 검사</div><div class="down" aria-hidden="true">↓</div><div class="step"><code>onnxruntime.InferenceSession</code> 추론 → PyTorch 출력·Top-5 비교</div></div>
+<div class="flow" role="list" aria-label="개념 흐름도"><div class="step">CIFAR-10 <code>DataLoader</code></div><div class="down" aria-hidden="true">↓</div><div class="step"><code>resnet18</code> 모델 생성 (잔차 연결)</div><div class="down" aria-hidden="true">↓</div><div class="step">분류층 <code>model.fc</code>를 10개 클래스로 교체</div><div class="down" aria-hidden="true">↓</div><div class="step">학습·검증 → 최적 모델 저장</div><div class="down" aria-hidden="true">↓</div><div class="step">사전학습 가중치로 전이학습 → 정확도·혼동행렬 비교</div></div>
 <p>노트북별 실습 순서:</p>
 <ol>
-<li><strong>ch06_1</strong> PyTorch 모델 저장·불러오기·추론 — 5장 전이학습 모델 저장·복원, 저장 전후 출력 비교, 추론 함수</li>
-<li><strong>ch06_2</strong> PyTorch ONNX 내보내기와 Runtime 추론 — ResNet18 ONNX 내보내기 → 모델 검사 → ONNX Runtime 추론 → Top-5 비교</li>
+<li><strong>ch05_1</strong> CIFAR-10 ResNet18 학습과 평가 — CIFAR-10 ResNet18 학습·평가와 최적 모델 저장</li>
+<li><strong>ch05_2</strong> ResNet18 전이학습 — 사전학습 ResNet18 전이학습: 전처리, 분류층 교체, 학습·평가</li>
 </ol>
 <p>노트북 파일(<code>notebooks/</code> 폴더):</p>
 <ul>
-<li><strong>ch06_1</strong> <code>ch06_1_model_save_load_inference.ipynb</code> (원본 <code>ch06_1_PyTorch_Model_Save_Load_Inference.ipynb</code>)</li>
-<li><strong>ch06_2</strong> <code>ch06_2_onnx_export_runtime_inference.ipynb</code> (원본 <code>ch06_2_PyTorch_ONNX_Export_Runtime_Inference.ipynb</code>)</li>
+<li><code>ch05_1_cifar10_resnet18_training_evaluation.ipynb</code></li>
+<li><code>ch05_2_resnet18_transfer_learning.ipynb</code></li>
 </ul>
 </section><section class="section" id="s02"><h2><span class="num">02</span>환경 확인</h2><ul>
-<li>필요 환경: Python 3, <code>torch</code>, <code>torchvision</code>, <code>onnx</code>, <code>onnxruntime</code>, <code>matplotlib</code> · 06_1은 05_2가 저장한 모델 사용 · 06_2 예제 이미지 <code>png/dog.jpg</code></li>
+<li>필요 환경: Python 3, <code>torch</code>, <code>torchvision</code>, <code>matplotlib</code> · GPU 권장 · 사전학습 가중치 내려받기 필요</li>
 <li>Google Colab 또는 로컬 Jupyter에서 <code>notebooks/</code> 폴더를 작업 폴더로 열고 순서대로 실행합니다.</li>
+<li>각 코드 아래의 <strong>코드 풀이</strong> 상자는 그 코드가 무엇을 하는지, 처음 보는 함수와 인자가 어떤 뜻인지 설명합니다.</li>
 </ul>
 <div class="codeblock"><div class="codebar"><span>BASH · Ubuntu 터미널 · 예시 명령 · 미검증</span></div><pre class="src"><code># 필요한 패키지 설치 (로컬 실행 시)
 python -m pip install torch torchvision numpy pandas scikit-learn matplotlib
 </code></pre></div>
-</section><section class="section" id="s03"><h2><span class="num">03</span>ch06_1 PyTorch 모델 저장·불러오기·추론</h2><p>노트북: <code>notebooks/ch06_1_model_save_load_inference.ipynb</code> · 원본 파일: <code>ch06_1_PyTorch_Model_Save_Load_Inference.ipynb</code> · 상태: 원본 · 실행 기록 있음 · 재실행 미검증</p>
+</section><section class="section" id="s03"><h2><span class="num">03</span>ch05_1 CIFAR-10 ResNet18 학습과 평가</h2><p>실습 노트북 <code>notebooks/ch05_1_cifar10_resnet18_training_evaluation.ipynb</code></p>
 <h3>개요</h3>
 <ul>
-<li><code>state_dict()</code>가 저장하는 내용을 이해합니다.</li>
-<li><code>load_state_dict()</code>로 모델 가중치를 복원합니다.</li>
+<li>Residual Connection(레지듀얼 커넥션, 잔차 연결)의 원리를 이해합니다.</li>
+<li>훈련·검증·시험 데이터의 역할을 구분합니다.</li>
 </ul>
 <h3>공통 설정</h3>
 <p>데이터·모델·이미지 폴더 위치를 지정합니다.</p>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_1_model_save_load_inference.ipynb · 코드 셀 1 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>from pathlib import Path
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 1 · 미검증</span></div><pre class="src"><code>from pathlib import Path
 
 DATA_DIR = Path(&quot;data&quot;)
 MODEL_DIR = Path(&quot;models&quot;)
@@ -805,748 +851,1166 @@ print(&quot;데이터 폴더:&quot;, DATA_DIR)
 print(&quot;모델 폴더  :&quot;, MODEL_DIR)
 print(&quot;이미지 폴더:&quot;, PNG_DIR)
 </code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 1</span></div><pre>데이터 폴더: data
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 1 · 원본 실행 기록</span></div><pre>데이터 폴더: data
 모델 폴더  : models
 이미지 폴더: png
 </pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>데이터·모델·이미지를 저장할 폴더를 만듭니다.</p>
+</div>
 <h3>공통 import</h3>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_1_model_save_load_inference.ipynb · 코드 셀 2 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>import json
-import platform
-import shutil
-import sys
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 2 · 미검증</span></div><pre class="src"><code>import random
 import time
 from pathlib import Path
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torch.nn as nn
-from PIL import Image
-from torchvision.models import resnet18, ResNet18_Weights
+from torch.utils.data import DataLoader, Subset
+from torchvision import datasets, transforms
+from torchvision.models import resnet18
 </code></pre></div>
-<h4>1) 실행 장치 확인</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>1. 실행 환경 확인
-2. 모델 소스 선택
-3. ResNet18 모델 준비
-4. state_dict와 Checkpoint 저장
-5. CPU에서 모델 복원
-6. 저장 전후 출력 비교
-7. 원하는 장치에서 추론
-8. 실제 이미지와 배치 추론
-9. 평균 추론 시간 측정
-10. PC 배포 폴더와 ZIP 생성
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>이 노트북에서 쓰는 라이브러리를 불러옵니다. <code>torchvision.models.resnet18</code>은 ResNet18 구조를 바로 만들어 줍니다.</p>
+</div>
+<h4>1) 난수 시드 고정</h4>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>CIFAR-10 데이터 준비
+→ 훈련·검증·시험 데이터 구성
+→ CIFAR-10용 ResNet18 생성
+→ Residual Block과 Shape 확인
+→ 모델 학습
+→ 최고 모델 저장
+→ 시험 세트 최종 평가
+→ 혼동행렬·클래스별 정확도
+→ 예측 결과·오답 분석
 </code></pre></div>
+<p>일반적인 CNN Block(씨엔엔 블록, 합성곱 계층 묶음)은 입력 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x1D431;</mi></mrow></math>를 여러 계층에 통과시킨 결과 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>F</mi><mo stretchy="false">&#x00028;</mo><mi>&#x1D431;</mi><mo stretchy="false">&#x00029;</mo></mrow></math>를 다음 계층으로 전달합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>일반 블록
+x → Conv → BatchNorm → ReLU → Conv → BatchNorm → F(x)
+</code></pre></div>
+<p>Residual Block(레지듀얼 블록, 잔차 블록)은 원래 입력 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x1D431;</mi></mrow></math>를 변환 결과에 더합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code> ┌──────────── x ────────────┐
+ │ ↓
+x → Conv → BN → ReLU → Conv → BN → F(x) → F(x) + x → ReLU
+</code></pre></div>
+<div class="math-block" role="math" aria-label="\mathbf{y}=F(\mathbf{x};\mathbf{W})+\mathbf{x}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>&#x1D432;</mi><mo>&#x0003D;</mo><mi>F</mi><mo stretchy="false">&#x00028;</mo><mi>&#x1D431;</mi><mi>;</mi><mi>&#x1D416;</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0002B;</mo><mi>&#x1D431;</mi></mrow></math></div>
 <ul>
-<li>학습 코드는 다시 작성하지 않습니다.</li>
-<li>모델 생성 함수는 하나만 사용합니다.</li>
-<li>단일 추론과 배치 추론은 같은 함수로 처리합니다.</li>
-<li>배포에 필요하지 않은 Optimizer(옵티마이저, 가중치 갱신 알고리즘) 상태는 저장하지 않습니다.</li>
-<li>복잡한 자동 분기보다 설정값을 명확하게 표시합니다.</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x1D431;</mi></mrow></math>: 블록에 들어온 원래 특징</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>F</mi><mo stretchy="false">&#x00028;</mo><mi>&#x1D431;</mi><mi>;</mi><mi>&#x1D416;</mi><mo stretchy="false">&#x00029;</mo></mrow></math>: 합성곱 계층이 가중치 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x1D416;</mi></mrow></math>로 학습한 변화량</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x1D432;</mi></mrow></math>: 기존 특징과 새 특징을 더한 출력</li>
 </ul>
-<table>
-<thead>
-<tr>
-  <th>저장 방식</th>
-  <th>저장 내용</th>
-  <th>사용 목적</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td><code>state_dict</code></td>
-  <td>Weight(웨이트, 가중치), Bias(바이어스, 편향), Buffer(버퍼, 계층 상태값)</td>
-  <td>가장 기본적인 모델 저장</td>
-</tr>
-<tr>
-  <td>Checkpoint(체크포인트)</td>
-  <td><code>state_dict</code> + 모델 정보 + 클래스 + 전처리</td>
-  <td>재현 가능한 추론·배포</td>
-</tr>
-<tr>
-  <td>전체 모델 객체</td>
-  <td>Python 모델 객체 전체</td>
-  <td>코드 경로 의존성이 커서 기본 방식으로 권장하지 않음</td>
-</tr>
-</tbody>
-</table>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>학습 재개
-→ 모델 상태 + Optimizer 상태 + Epoch 정보
+<blockquote>
+<p><strong>ResNet은 출력 전체를 새로 만드는 대신, 입력에 더할 변화량을 학습합니다.</strong></p>
+</blockquote>
+<p>입력과 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>F</mi><mo stretchy="false">&#x00028;</mo><mi>&#x1D431;</mi><mo stretchy="false">&#x00029;</mo></mrow></math>의 Shape(셰이프, 텐서 크기)가 다르면 바로 더할 수 없습니다. 이때 Downsample(다운샘플, 크기와 채널을 맞추는 변환)이 입력의 Shape를 조정합니다.</p>
+<ul>
+<li><p><code>torch</code>: 텐서 연산과 모델 학습</p>
+</li>
+<li><p><code>torch.nn</code>: 신경망 계층과 손실함수</p>
+</li>
+<li><p><code>torchvision.datasets</code>: CIFAR-10 데이터셋</p>
+</li>
+<li><p><code>torchvision.transforms</code>: 이미지 전처리와 데이터 증강</p>
+</li>
+<li><p><code>torchvision.models.resnet18</code>: ResNet18 모델 생성</p>
+</li>
+<li><p><code>DataLoader</code>: 미니배치 구성</p>
+</li>
+<li><p><code>Subset</code>: 지정한 인덱스만 선택</p>
+</li>
+<li><p><code>QUICK_RUN = True</code>: 일부 데이터와 3 Epoch로 코드 흐름 확인</p>
+</li>
+<li><p><code>QUICK_RUN = False</code>: 전체 데이터와 40 Epoch로 본 학습</p>
+</li>
+</ul>
+<p>빠른 실행 결과는 최종 정확도 비교용이 아닙니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 3 · 미검증</span></div><pre class="src"><code>SEED = 42
 
-추론 배포
-→ 모델 상태 + 모델 구조 정보 + 전처리 + 클래스 정보
+random.seed(SEED)
+
+np.random.seed(SEED)
+
+torch.manual_seed(SEED)
 </code></pre></div>
-<p>BatchNorm(배치 노멀라이제이션, 배치 정규화)의 <code>running_mean</code>, <code>running_var</code>도 <code>state_dict</code>에 포함됩니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>모델 파일
-.pt 또는 .pth
-
-Runtime(런타임, 실행 엔진)
-PyTorch
-
-계산 장치
-CPU, CUDA GPU 또는 Apple MPS
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_1_model_save_load_inference.ipynb · 코드 셀 3 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>torch.manual_seed(42)
-
-if torch.cuda.is_available():
-    device = torch.device(&quot;cuda&quot;)
-elif hasattr(torch.backends, &quot;mps&quot;) and torch.backends.mps.is_available():
-    device = torch.device(&quot;mps&quot;)
-else:
-    device = torch.device(&quot;cpu&quot;)
-
-print(&quot;Python 버전 :&quot;, sys.version.split()[0])
-
-print(&quot;PyTorch 버전:&quot;, torch.__version__)
-
-print(&quot;운영체제     :&quot;, platform.system())
-
-print(&quot;실행 장치    :&quot;, device)
-
-if device.type == &quot;cuda&quot;:
-    print(&quot;GPU 이름     :&quot;, torch.cuda.get_device_name(0))
-</code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 3</span></div><pre>Python 버전 : 3.12.3
-PyTorch 버전: 2.13.0+cu130
-운영체제     : Linux
-실행 장치    : cuda
-GPU 이름     : NVIDIA GeForce RTX 3070 Laptop GPU
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 3 · 원본 실행 기록</span></div><pre>&lt;torch._C.Generator at 0x76ef72d8ba50&gt;
 </pre></div>
-<h4>2) 모델 구성</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>ResNet18_Weights.DEFAULT
-→ ImageNet-1K 사전학습 가중치
-→ 1,000개 클래스
-→ 별도 학습 없이 저장·복원·추론 실습
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>파이썬·NumPy·PyTorch의 난수 시드를 모두 고정합니다. 무작위 요소가 여러 라이브러리에 흩어져 있기 때문입니다.</p>
+</div>
+<h4>2) GPU 난수 시드 고정</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 4 · 미검증</span></div><pre class="src"><code>if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(SEED)
 </code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>CIFAR-10 전이학습 Checkpoint
-→ CIFAR-10 10개 클래스
-→ 마지막 fc 계층을 10개 출력으로 복원
-→ 학습 결과를 이어서 사용
-</code></pre></div>
-<p>아래 설정에서 <code>MODEL_SOURCE</code>만 변경합니다.</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>MODEL_SOURCE = &quot;imagenet&quot;
-MODEL_SOURCE = &quot;transfer&quot;
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_1_model_save_load_inference.ipynb · 코드 셀 4 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>MODEL_SOURCE = &quot;transfer&quot;
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>GPU가 있으면 GPU의 난수 시드도 고정합니다.</p>
+</div>
+<h4>3) 실행 장치와 학습 설정</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 5 · 미검증</span></div><pre class="src"><code>device = torch.device(&quot;cuda&quot; if torch.cuda.is_available() else &quot;cpu&quot;)
 
-TRANSFER_CHECKPOINT_PATH = MODEL_DIR / &quot;ch05_2_best_resnet18_transfer_learning.pt&quot;
+QUICK_RUN = True
 
-CIFAR10_CLASSES = [
+BATCH_SIZE = 128
+
+EPOCHS = 3 if QUICK_RUN else 40
+
+LEARNING_RATE = 0.1
+
+MOMENTUM = 0.9
+
+WEIGHT_DECAY = 5e-4
+
+PATIENCE = 3 if QUICK_RUN else 10
+
+VALIDATION_SIZE = 5_000
+
+NUM_WORKERS = 2
+
+CIFAR10_MEAN = (0.4914, 0.4822, 0.4465)
+
+CIFAR10_STD = (0.2470, 0.2435, 0.2616)
+
+class_names = [
     &quot;airplane&quot;, &quot;automobile&quot;, &quot;bird&quot;, &quot;cat&quot;, &quot;deer&quot;,
     &quot;dog&quot;, &quot;frog&quot;, &quot;horse&quot;, &quot;ship&quot;, &quot;truck&quot;,
 ]
 
-weights = ResNet18_Weights.DEFAULT
+class_names_ko = [
+    &quot;비행기&quot;, &quot;자동차&quot;, &quot;새&quot;, &quot;고양이&quot;, &quot;사슴&quot;,
+    &quot;개&quot;, &quot;개구리&quot;, &quot;말&quot;, &quot;배&quot;, &quot;트럭&quot;,
+]
 
-preprocess = weights.transforms()
+print(&quot;PyTorch 버전:&quot;, torch.__version__)
+
+print(&quot;실행 장치:&quot;, device)
+
+print(&quot;Quick Run:&quot;, QUICK_RUN)
+
+print(&quot;Epoch:&quot;, EPOCHS)
 </code></pre></div>
-<h4>3) 모델 구성</h4>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_1_model_save_load_inference.ipynb · 코드 셀 5 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def create_resnet18(num_classes=1000, pretrained=False):
-    &quot;&quot;&quot;출력 클래스 수에 맞는 ResNet18을 생성합니다.&quot;&quot;&quot;
-    selected_weights = weights if pretrained else None
-    model = resnet18(weights=selected_weights)
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 5 · 원본 실행 기록</span></div><pre>PyTorch 버전: 2.13.0+cu130
+실행 장치: cuda
+Quick Run: True
+Epoch: 3
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>학습 설정을 한곳에 모읍니다.</p>
+<ul>
+<li><code>QUICK_RUN = True</code> — 동작 확인용으로 3 에폭, 일부 데이터만 씁니다. <code>False</code>로 바꾸면 40 에폭 전체 학습입니다.</li>
+<li><code>LEARNING_RATE = 0.1</code>, <code>MOMENTUM = 0.9</code>, <code>WEIGHT_DECAY = 5e-4</code> — ResNet을 CIFAR-10에 학습할 때 널리 쓰는 SGD 설정입니다.</li>
+<li><code>NUM_WORKERS = 2</code> — 데이터를 미리 읽어 두는 보조 프로세스 수.</li>
+</ul>
+</div>
+<h4>4) 변환과 데이터 분할</h4>
+<p>CIFAR-10 공식 훈련 데이터 50,000개에서 검증 데이터 5,000개를 분리합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>공식 훈련 데이터 50,000개
+├─ 훈련 데이터 45,000개
+└─ 검증 데이터 5,000개
 
-    if num_classes != 1000:
-        model.fc = nn.Linear(model.fc.in_features, num_classes)
+공식 시험 데이터 10,000개
+└─ 최종 시험 데이터 10,000개
+</code></pre></div>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>RandomCrop
+→ RandomHorizontalFlip
+→ ToTensor
+→ Normalize
+</code></pre></div>
+<p>훈련 데이터에만 무작위 변형을 적용하여 다양한 이미지를 학습하게 합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>ToTensor
+→ Normalize
+</code></pre></div>
+<p>검증과 시험 데이터는 성능을 공정하게 측정해야 하므로 무작위 변형을 적용하지 않습니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 6 · 미검증</span></div><pre class="src"><code>train_transform = transforms.Compose([
+    transforms.RandomCrop(32, padding=4),
+    transforms.RandomHorizontalFlip(),
+    transforms.ToTensor(),
+    transforms.Normalize(CIFAR10_MEAN, CIFAR10_STD),
+])
+
+evaluation_transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize(CIFAR10_MEAN, CIFAR10_STD),
+])
+
+train_source = datasets.CIFAR10(
+    root=str(DATA_DIR / &quot;torchvision&quot;), train=True, download=True, transform=train_transform
+)
+
+validation_source = datasets.CIFAR10(
+    root=str(DATA_DIR / &quot;torchvision&quot;), train=True, download=False, transform=evaluation_transform
+)
+
+test_dataset = datasets.CIFAR10(
+    root=str(DATA_DIR / &quot;torchvision&quot;), train=False, download=True, transform=evaluation_transform
+)
+
+generator = torch.Generator().manual_seed(SEED)
+
+indices = torch.randperm(len(train_source), generator=generator).tolist()
+
+train_indices = indices[:-VALIDATION_SIZE]
+
+validation_indices = indices[-VALIDATION_SIZE:]
+</code></pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>학습용(증강 포함)과 평가용 변환을 만들고, 같은 인덱스로 학습·검증 데이터를 나눕니다. 검증 데이터에는 증강을 적용하지 않습니다.</p>
+</div>
+<h4>5) 빠른 실행용 데이터 축소</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 7 · 미검증</span></div><pre class="src"><code>if QUICK_RUN:
+    train_indices = train_indices[:5_000]
+    validation_indices = validation_indices[:1_000]
+    test_dataset = Subset(test_dataset, range(2_000))
+</code></pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p><code>QUICK_RUN</code>이면 학습 5,000 / 검증 1,000 / 테스트 2,000장만 씁니다. 결과 숫자는 전체 학습보다 낮게 나옵니다.</p>
+</div>
+<h4>6) 학습·검증 Subset 만들기</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 8 · 미검증</span></div><pre class="src"><code>train_dataset = Subset(train_source, train_indices)
+
+validation_dataset = Subset(validation_source, validation_indices)
+</code></pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>인덱스 목록으로 학습·검증 <code>Subset</code>을 만듭니다.</p>
+</div>
+<h4>7) DataLoader 생성 함수</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 9 · 미검증</span></div><pre class="src"><code>def make_loader(dataset, shuffle):
+    return DataLoader(
+        dataset,
+        batch_size=BATCH_SIZE,
+        shuffle=shuffle,
+        num_workers=NUM_WORKERS,
+        pin_memory=torch.cuda.is_available(),
+    )
+</code></pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>DataLoader를 만드는 함수입니다.</p>
+<ul>
+<li><code>pin_memory=True</code> — GPU로 복사할 때 더 빠른 고정 메모리를 씁니다(GPU가 있을 때만).</li>
+</ul>
+</div>
+<h4>8) DataLoader 준비</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 10 · 미검증</span></div><pre class="src"><code>train_loader = make_loader(train_dataset, shuffle=True)
+
+validation_loader = make_loader(validation_dataset, shuffle=False)
+
+test_loader = make_loader(test_dataset, shuffle=False)
+
+print(&quot;훈련 데이터:&quot;, len(train_dataset))
+
+print(&quot;검증 데이터:&quot;, len(validation_dataset))
+
+print(&quot;시험 데이터:&quot;, len(test_dataset))
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 10 · 원본 실행 기록</span></div><pre>훈련 데이터: 5000
+검증 데이터: 1000
+시험 데이터: 2000
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>학습·검증·테스트 DataLoader를 만들고 데이터 수를 출력합니다.</p>
+</div>
+<h4>9) 배치 데이터 확인</h4>
+<p>정규화된 이미지는 그대로 표시하면 색상이 어색하게 보입니다.</p>
+<p>정규화 식은 다음과 같습니다.</p>
+<div class="math-block" role="math" aria-label="\mathbf{x}_{norm}=\frac{\mathbf{x}-\boldsymbol{\mu}}{\boldsymbol{\sigma}}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>&#x1D431;</mi><mrow><mi>n</mi><mi>o</mi><mi>r</mi><mi>m</mi></mrow></msub><mo>&#x0003D;</mo><mfrac><mrow><mi>&#x1D431;</mi><mo>&#x02212;</mo><mrow><mi mathvariant="bold-italic">&#x003BC;</mi></mrow></mrow><mrow><mrow><mi mathvariant="bold-italic">&#x003C3;</mi></mrow></mrow></mfrac></mrow></math></div>
+<p>화면에 표시할 때는 역변환합니다.</p>
+<div class="math-block" role="math" aria-label="\mathbf{x}=\mathbf{x}_{norm}\boldsymbol{\sigma}+\boldsymbol{\mu}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>&#x1D431;</mi><mo>&#x0003D;</mo><msub><mi>&#x1D431;</mi><mrow><mi>n</mi><mi>o</mi><mi>r</mi><mi>m</mi></mrow></msub><mrow><mi mathvariant="bold-italic">&#x003C3;</mi></mrow><mo>&#x0002B;</mo><mrow><mi mathvariant="bold-italic">&#x003BC;</mi></mrow></mrow></math></div>
+<ul>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mrow><mi mathvariant="bold-italic">&#x003BC;</mi></mrow></mrow></math>: 채널별 평균</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mrow><mi mathvariant="bold-italic">&#x003C3;</mi></mrow></mrow></math>: 채널별 표준편차</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 11 · 미검증</span></div><pre class="src"><code>def denormalize_image(image):
+    mean = torch.tensor(CIFAR10_MEAN).view(3, 1, 1)
+    std = torch.tensor(CIFAR10_STD).view(3, 1, 1)
+    return (image.cpu() * std + mean).clamp(0, 1)
+
+sample_images, sample_labels = next(iter(train_loader))
+
+plt.figure(figsize=(12, 6))
+
+for index in range(12):
+    image = denormalize_image(sample_images[index]).permute(1, 2, 0)
+    label = sample_labels[index].item()
+
+    plt.subplot(3, 4, index + 1)
+    plt.imshow(image)
+    plt.title(f&quot;{class_names_ko[label]}\n({class_names[label]})&quot;)
+    plt.axis(&quot;off&quot;)
+
+plt.tight_layout()
+
+plt.show()
+</code></pre></div>
+<p><img src="img/ch05_1_c11_0.png" alt="ch05_1 CIFAR-10 ResNet18 학습과 평가 — 코드 셀 11 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>정규화를 되돌리는 함수를 만들고, 첫 배치의 12장을 한국어·영어 클래스 이름과 함께 표시합니다.</p>
+</div>
+<h4>10) 모델 구성</h4>
+<p>기본 <code>resnet18()</code>은 ImageNet(이미지넷, 대규모 이미지 데이터셋)의 큰 이미지를 기준으로 설계되었습니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>기본 입력부
+7×7 Conv, stride=2
+→ 3×3 MaxPool, stride=2
+</code></pre></div>
+<p>32×32 CIFAR-10 이미지에 그대로 적용하면 공간 크기가 초반에 너무 빠르게 줄어듭니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>CIFAR-10용 입력부
+3×3 Conv, stride=1
+→ MaxPool 제거
+</code></pre></div>
+<p>마지막 출력층은 CIFAR-10의 10개 클래스에 맞춥니다.</p>
+<p><code>weights=None</code>은 사전학습 가중치를 사용하지 않고 처음부터 학습한다는 뜻입니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 12 · 미검증</span></div><pre class="src"><code>def create_cifar10_resnet18(num_classes=10):
+    model = resnet18(weights=None, num_classes=num_classes)
+
+    # CIFAR-10의 32×32 이미지에 맞게 입력부 수정
+    model.conv1 = nn.Conv2d(
+        3, 64, kernel_size=3, stride=1, padding=1, bias=False
+    )
+    model.maxpool = nn.Identity()
 
     return model
+
+model = create_cifar10_resnet18().to(device)
+
+print(model)
 </code></pre></div>
-<h4>4) 모델 구성</h4>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_1_model_save_load_inference.ipynb · 코드 셀 6 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>if MODEL_SOURCE == &quot;transfer&quot; and TRANSFER_CHECKPOINT_PATH.exists():
-    source_checkpoint = torch.load(
-        TRANSFER_CHECKPOINT_PATH,
-        map_location=&quot;cpu&quot;,
-        weights_only=True,
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 12 · 원본 실행 기록</span></div><pre>ResNet(
+  (conv1): Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+  (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+  (relu): ReLU(inplace=True)
+  (maxpool): Identity()
+  (layer1): Sequential(
+    (0): BasicBlock(
+      (conv1): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+      (relu): ReLU(inplace=True)
+      (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
     )
-
-    num_classes = int(
-        source_checkpoint.get(&quot;number_of_classes&quot;, 10)
+    (1): BasicBlock(
+      (conv1): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+      (relu): ReLU(inplace=True)
+      (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
     )
-    class_names = source_checkpoint.get(
-        &quot;class_names&quot;, CIFAR10_CLASSES
+  )
+  (layer2): Sequential(
+    (0): BasicBlock(
+      (conv1): Conv2d(64, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+      (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+      (relu): ReLU(inplace=True)
+      (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+      (downsample): Sequential(
+        (0): Conv2d(64, 128, kernel_size=(1, 1), stride=(2, 2), bias=False)
+        (1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+      )
     )
-
-    model = create_resnet18(num_classes=num_classes)
-    model.load_state_dict(source_checkpoint[&quot;model_state_dict&quot;])
-
-    model_description = &quot;CIFAR-10 Fine-Tuned ResNet18&quot;
-    dataset_name = &quot;CIFAR-10&quot;
-
-elif MODEL_SOURCE == &quot;transfer&quot;:
-    # 전이학습 Checkpoint가 없어도 저장·복원 실습 자체는 실행할 수 있습니다.
-    source_checkpoint = None
-    num_classes = 10
-    class_names = CIFAR10_CLASSES
-    model = create_resnet18(num_classes=num_classes)
-
-    model_description = &quot;Demo ResNet18 (untrained)&quot;
-    dataset_name = &quot;CIFAR-10 class layout&quot;
-
-    print(&quot;전이학습 Checkpoint가 없어 실습용 미학습 ResNet18을 사용합니다.&quot;)
-
-else:
-    source_checkpoint = None
-    num_classes = 1000
-    class_names = list(weights.meta[&quot;categories&quot;])
-
-    try:
-        model = create_resnet18(
-            num_classes=num_classes,
-            pretrained=True,
-        )
-        model_description = &quot;ImageNet Pretrained ResNet18&quot;
-    except Exception:
-        model = create_resnet18(
-            num_classes=num_classes,
-            pretrained=False,
-        )
-        model_description = &quot;Demo ResNet18 (untrained)&quot;
-        print(&quot;사전학습 가중치를 받을 수 없어 미학습 ResNet18을 사용합니다.&quot;)
-
-    dataset_name = &quot;ImageNet-1K&quot;
+    (1): BasicBlock(
+      (conv1): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+      (relu): ReLU(inplace=True)
+      (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+    )
+... (이하 44줄 생략, 전체 내용은 노트북 참고)
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>torchvision의 ResNet18을 CIFAR-10에 맞게 고칩니다.</p>
+<ul>
+<li>원래 ResNet18은 224×224 이미지용이라 첫 층(7×7, stride 2)과 MaxPool로 크기를 크게 줄입니다.</li>
+<li>32×32 이미지에서는 정보가 너무 빨리 사라지므로, 첫 층을 3×3·stride 1로 바꾸고 <code>maxpool</code>을 <code>nn.Identity()</code>(아무것도 하지 않는 층)로 바꿉니다.</li>
+<li><code>weights=None</code> — 사전학습 가중치 없이 처음부터 학습합니다.</li>
+</ul>
+</div>
+<h4>11) 모델 파라미터 확인</h4>
+<p>ResNet18의 첫 번째 BasicBlock(베이식 블록, 기본 잔차 블록)은 입력과 출력 Shape가 같으므로 입력을 그대로 더합니다.</p>
+<p><code>layer2[0]</code>은 채널 수와 공간 크기가 바뀌므로 Downsample 경로를 사용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력 : [N, 3, 32, 32]
+conv1 : [N, 64, 32, 32]
+layer1 : [N, 64, 32, 32]
+layer2 : [N, 128, 16, 16]
+layer3 : [N, 256, 8, 8]
+layer4 : [N, 512, 4, 4]
+avgpool : [N, 512, 1, 1]
+flatten : [N, 512]
+fc : [N, 10]
 </code></pre></div>
-<h4>5) 모델 확인</h4>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_1_model_save_load_inference.ipynb · 코드 셀 7 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>model = model.to(device)
+<p>공간 크기는 줄어들고 채널 수는 증가합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>공간 크기: 32 → 16 → 8 → 4 → 1
+채널 수 : 64 → 128 → 256 → 512
+</code></pre></div>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 13 · 미검증</span></div><pre class="src"><code>print(&quot;===== layer1[0] =====&quot;)
+
+print(model.layer1[0])
+
+print(&quot;Downsample:&quot;, model.layer1[0].downsample)
+
+print(&quot;\n===== layer2[0] =====&quot;)
+
+print(model.layer2[0])
+
+print(&quot;Downsample:&quot;, model.layer2[0].downsample)
+
+x = torch.randn(2, 3, 32, 32, device=device)
 
 model.eval()
 
-print(&quot;모델       :&quot;, model_description)
-
-print(&quot;데이터 기준:&quot;, dataset_name)
-
-print(&quot;클래스 수  :&quot;, num_classes)
-</code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 7</span></div><pre>모델       : CIFAR-10 Fine-Tuned ResNet18
-데이터 기준: CIFAR-10
-클래스 수  : 10
-</pre></div>
-<h4>6) 데이터 구조 확인</h4>
-<p><code>state_dict()</code>는 다음과 같은 Dictionary(딕셔너리, 키와 값의 묶음)입니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Key
-→ 계층과 파라미터 이름
-
-Value
-→ 실제 Tensor(텐서, 다차원 수치 배열)
-</code></pre></div>
-<p>저장 전 기준 출력은 다음과 같습니다.</p>
-<div class="math-block" role="math" aria-label="\mathbf{y}_{ref}=f_{\theta}(\mathbf{x})"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>&#x1D432;</mi><mrow><mi>r</mi><mi>e</mi><mi>f</mi></mrow></msub><mo>&#x0003D;</mo><msub><mi>f</mi><mrow><mi>&#x003B8;</mi></mrow></msub><mo stretchy="false">&#x00028;</mo><mi>&#x1D431;</mi><mo stretchy="false">&#x00029;</mo></mrow></math></div>
-<ul>
-<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x1D431;</mi></mrow></math>: 기준 입력</li>
-<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>f</mi><mrow><mi>&#x003B8;</mi></mrow></msub></mrow></math>: 가중치 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x003B8;</mi></mrow></math>를 가진 모델</li>
-<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>&#x1D432;</mi><mrow><mi>r</mi><mi>e</mi><mi>f</mi></mrow></msub></mrow></math>: 저장 전 모델의 기준 출력</li>
-</ul>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_1_model_save_load_inference.ipynb · 코드 셀 8 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>model_state = model.state_dict()
-
-print(&quot;state_dict 항목 수:&quot;, len(model_state))
-
-print(&quot;\n앞쪽 8개 항목&quot;)
-
-for index, (name, tensor) in enumerate(model_state.items()):
-    print(f&quot;{name:35s} → {tuple(tensor.shape)}&quot;)
-    if index == 7:
-        break
-
-sample_input = torch.randn(1, 3, 224, 224, device=device)
-
 with torch.inference_mode():
-    reference_output = model(sample_input)
+    x = model.conv1(x)
+    print(&quot;\nconv1  :&quot;, x.shape)
 
-print(&quot;\n입력 Shape:&quot;, tuple(sample_input.shape))
+    x = model.relu(model.bn1(x))
+    x = model.maxpool(x)
 
-print(&quot;출력 Shape:&quot;, tuple(reference_output.shape))
+    x = model.layer1(x)
+    print(&quot;layer1 :&quot;, x.shape)
 
-print(&quot;예측 클래스:&quot;, reference_output.argmax(dim=1).tolist())
+    x = model.layer2(x)
+    print(&quot;layer2 :&quot;, x.shape)
+
+    x = model.layer3(x)
+    print(&quot;layer3 :&quot;, x.shape)
+
+    x = model.layer4(x)
+    print(&quot;layer4 :&quot;, x.shape)
+
+    x = model.avgpool(x)
+    print(&quot;avgpool:&quot;, x.shape)
+
+    x = torch.flatten(x, 1)
+    print(&quot;flatten:&quot;, x.shape)
+
+    logits = model.fc(x)
+    print(&quot;logits :&quot;, logits.shape)
+
+parameter_count = sum(parameter.numel() for parameter in model.parameters())
+
+print(f&quot;\n전체 파라미터: {parameter_count:,}개&quot;)
 </code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 8</span></div><pre>state_dict 항목 수: 122
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 13 · 원본 실행 기록</span></div><pre>===== layer1[0] =====
+BasicBlock(
+  (conv1): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+  (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+  (relu): ReLU(inplace=True)
+  (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+  (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+)
+Downsample: None
 
-앞쪽 8개 항목
-conv1.weight                        → (64, 3, 7, 7)
-bn1.weight                          → (64,)
-bn1.bias                            → (64,)
-bn1.running_mean                    → (64,)
-bn1.running_var                     → (64,)
-bn1.num_batches_tracked             → ()
-layer1.0.conv1.weight               → (64, 64, 3, 3)
-layer1.0.bn1.weight                 → (64,)
+===== layer2[0] =====
+BasicBlock(
+  (conv1): Conv2d(64, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+  (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+  (relu): ReLU(inplace=True)
+  (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+  (bn2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+  (downsample): Sequential(
+    (0): Conv2d(64, 128, kernel_size=(1, 1), stride=(2, 2), bias=False)
+    (1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+  )
+)
+Downsample: Sequential(
+  (0): Conv2d(64, 128, kernel_size=(1, 1), stride=(2, 2), bias=False)
+  (1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+)
 
-입력 Shape: (1, 3, 224, 224)
-출력 Shape: (1, 10)
-예측 클래스: [4]
+conv1  : torch.Size([2, 64, 32, 32])
+layer1 : torch.Size([2, 64, 32, 32])
+layer2 : torch.Size([2, 128, 16, 16])
+layer3 : torch.Size([2, 256, 8, 8])
+layer4 : torch.Size([2, 512, 4, 4])
+avgpool: torch.Size([2, 512, 1, 1])
+flatten: torch.Size([2, 512])
+logits : torch.Size([2, 10])
+
+전체 파라미터: 11,173,962개
 </pre></div>
-<h4>7) 모델 저장</h4>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>torch.save(model.state_dict(), &quot;model_weights.pth&quot;)
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>잔차 블록 구조와 층별 출력 모양을 확인합니다.</p>
+<ul>
+<li><code>layer1[0]</code> — 입력과 출력 크기가 같아 입력을 그대로 더합니다(<code>downsample</code>이 <code>None</code>).</li>
+<li><code>layer2[0]</code> — 크기를 절반으로 줄이고 채널을 늘리므로, 더하기 전에 입력도 <code>downsample</code>(1×1 합성곱)으로 모양을 맞춥니다.</li>
+<li>크기 32 → 32 → 16 → 8 → 4로 줄고, <code>avgpool</code>이 4×4를 평균 내 512개 특징을 만듭니다. 전체 파라미터는 약 1,117만 개입니다.</li>
+<li><code>torch.inference_mode()</code> — <code>no_grad()</code>보다 더 가볍게 추론만 하는 모드입니다.</li>
+</ul>
+</div>
+<h4>12) 학습 함수 정의</h4>
+<p>모델은 각 클래스의 Logit(로짓, 정규화되지 않은 원시 점수)을 출력합니다.</p>
+<p><code>nn.CrossEntropyLoss()</code>는 Logit과 정답 클래스 번호를 받아 다중분류 손실을 계산합니다. 모델 출력에 Softmax(소프트맥스, 점수를 확률로 변환하는 함수)를 미리 적용하지 않습니다.</p>
+<div class="math-block" role="math" aria-label="L=-\frac{1}{N}\sum_{i=1}^{N}\log p_{i,y_i}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>L</mi><mo>&#x0003D;</mo><mo>&#x02212;</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>N</mi></mrow></mfrac><munderover><mo>&#x02211;</mo><mrow><mi>i</mi><mo>&#x0003D;</mo><mn>1</mn></mrow><mrow><mi>N</mi></mrow></munderover><mi>log</mi><msub><mi>p</mi><mrow><mi>i</mi><mo>&#x0002C;</mo><msub><mi>y</mi><mi>i</mi></msub></mrow></msub></mrow></math></div>
+<ul>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>N</mi></mrow></math>: 미니배치의 이미지 수</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>y</mi><mi>i</mi></msub></mrow></math>: <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>i</mi></mrow></math>번째 이미지의 실제 클래스</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>p</mi><mrow><mi>i</mi><mo>&#x0002C;</mo><msub><mi>y</mi><mi>i</mi></msub></mrow></msub></mrow></math>: 실제 클래스에 대한 예측 확률</li>
+</ul>
+<p>정확도는 전체 이미지 중 정답을 맞힌 비율입니다.</p>
+<div class="math-block" role="math" aria-label="\text{Accuracy}
+=\frac{\text{Correct Predictions}}{\text{Total Samples}}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>Accuracy</mtext><mo>&#x0003D;</mo><mfrac><mrow><mtext>Correct&#x000A0;Predictions</mtext></mrow><mrow><mtext>Total&#x000A0;Samples</mtext></mrow></mfrac></mrow></math></div>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>model.train()
+→ Forward
+→ Loss 계산
+→ 기울기 초기화
+→ Backpropagation
+→ 가중치 갱신
 </code></pre></div>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>checkpoint = {
- &quot;model_state_dict&quot;: model.state_dict(),
- &quot;number_of_classes&quot;: num_classes,
- &quot;class_names&quot;: class_names,
- &quot;preprocessing&quot;: {...},
-}
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>model.eval()
+→ torch.inference_mode()
+→ Forward
+→ Loss·Accuracy 계산
 </code></pre></div>
-<p>Checkpoint에는 모델을 다시 학습하지 않고 추론하기 위해 필요한 정보를 함께 넣습니다.</p>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_1_model_save_load_inference.ipynb · 코드 셀 9 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>output_dir = MODEL_DIR / &quot;ch06_1_pytorch_deployment&quot;
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 14 · 미검증</span></div><pre class="src"><code>def train_one_epoch(model, data_loader, loss_function, optimizer):
+    model.train()
 
-output_dir.mkdir(exist_ok=True)
+    total_loss = 0.0
+    total_correct = 0
+    total_samples = 0
 
-state_dict_path = output_dir / &quot;resnet18_state_dict.pth&quot;
+    for images, labels in data_loader:
+        images = images.to(device)
+        labels = labels.to(device)
 
-checkpoint_path = output_dir / &quot;resnet18_inference_checkpoint.pt&quot;
+        optimizer.zero_grad()
 
-torch.save(model.state_dict(), state_dict_path)
+        logits = model(images)
+        loss = loss_function(logits, labels)
 
-checkpoint = {
-    &quot;model_name&quot;: &quot;resnet18&quot;,
-    &quot;model_description&quot;: model_description,
-    &quot;dataset_name&quot;: dataset_name,
-    &quot;number_of_classes&quot;: num_classes,
-    &quot;class_names&quot;: class_names,
-    &quot;model_state_dict&quot;: model.state_dict(),
-    &quot;input_shape&quot;: [1, 3, 224, 224],
-    &quot;input_dtype&quot;: &quot;float32&quot;,
-    &quot;tensor_layout&quot;: &quot;NCHW&quot;,
-    &quot;preprocessing&quot;: {
-        &quot;resize&quot;: 256,
-        &quot;center_crop&quot;: 224,
-        &quot;mean&quot;: [0.485, 0.456, 0.406],
-        &quot;std&quot;: [0.229, 0.224, 0.225],
-    },
-}
+        loss.backward()
+        optimizer.step()
 
-torch.save(checkpoint, checkpoint_path)
+        batch_size = labels.size(0)
+        total_loss += loss.item() * batch_size
+        total_correct += (logits.argmax(dim=1) == labels).sum().item()
+        total_samples += batch_size
 
-print(&quot;가중치 파일    :&quot;, state_dict_path)
+    average_loss = total_loss / total_samples
+    accuracy = total_correct / total_samples
 
-print(&quot;Checkpoint 파일:&quot;, checkpoint_path)
+    return average_loss, accuracy
 </code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 9</span></div><pre>가중치 파일    : models/ch06_1_pytorch_deployment/resnet18_state_dict.pth
-Checkpoint 파일: models/ch06_1_pytorch_deployment/resnet18_inference_checkpoint.pt
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>한 에폭 학습 함수입니다. 손실 함수와 Optimizer를 인자로 받습니다.</p>
+</div>
+<h4>13) 평가 함수 정의</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 15 · 미검증</span></div><pre class="src"><code>def evaluate(model, data_loader, loss_function):
+    model.eval()
+
+    total_loss = 0.0
+    total_correct = 0
+    total_samples = 0
+
+    with torch.inference_mode():
+        for images, labels in data_loader:
+            images = images.to(device)
+            labels = labels.to(device)
+
+            logits = model(images)
+            loss = loss_function(logits, labels)
+
+            batch_size = labels.size(0)
+            total_loss += loss.item() * batch_size
+            total_correct += (logits.argmax(dim=1) == labels).sum().item()
+            total_samples += batch_size
+
+    average_loss = total_loss / total_samples
+    accuracy = total_correct / total_samples
+
+    return average_loss, accuracy
+</code></pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>평가 함수입니다. <code>inference_mode</code>에서 평균 손실과 정확도를 계산합니다.</p>
+</div>
+<h4>14) Loss·Optimizer·Scheduler 설정</h4>
+<ul>
+<li><code>nn.CrossEntropyLoss()</code></li>
+<li>다중분류 문제에 사용</li>
+<li>모델은 10개 클래스의 Logit을 출력</li>
+</ul>
+<p>SGD(에스지디, 확률적 경사하강법)에 Momentum(모멘텀, 이전 이동 방향 활용)과 Weight Decay(웨이트 디케이, 가중치 감쇠)를 적용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>SGD
++ Momentum
++ Weight Decay
+</code></pre></div>
+<p><code>CosineAnnealingLR</code>(코사인 어닐링 러닝 레이트, 코사인 곡선형 학습률 조정기)은 Epoch가 진행될수록 학습률을 부드럽게 낮춥니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 16 · 미검증</span></div><pre class="src"><code>loss_function = nn.CrossEntropyLoss()
+
+optimizer = torch.optim.SGD(
+    model.parameters(),
+    lr=LEARNING_RATE,
+    momentum=MOMENTUM,
+    weight_decay=WEIGHT_DECAY,
+)
+
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+    optimizer,
+    T_max=EPOCHS,
+    eta_min=1e-4,
+)
+
+BEST_MODEL_PATH = MODEL_DIR / &quot;ch05_1_best_cifar10_resnet18.pt&quot;
+
+print(&quot;손실함수:&quot;, loss_function)
+
+print(&quot;Optimizer:&quot;, optimizer.__class__.__name__)
+
+print(&quot;Scheduler:&quot;, scheduler.__class__.__name__)
+
+print(&quot;저장 경로:&quot;, BEST_MODEL_PATH)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 16 · 원본 실행 기록</span></div><pre>손실함수: CrossEntropyLoss()
+Optimizer: SGD
+Scheduler: CosineAnnealingLR
+저장 경로: models/ch05_5_best_cifar10_resnet18.pt
 </pre></div>
-<h4>8) 모델 복원</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>1. Checkpoint를 CPU로 불러오기
-2. 저장된 클래스 수 확인
-3. 같은 모델 구조 생성
-4. load_state_dict()로 가중치 적용
-5. model.eval()로 추론 모드 전환
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>손실 함수, Optimizer, 학습률 스케줄러를 준비합니다.</p>
+<ul>
+<li><code>CosineAnnealingLR(T_max=EPOCHS, eta_min=1e-4)</code> — 학습률을 코사인 곡선처럼 0.1에서 0.0001까지 부드럽게 낮춥니다.</li>
+</ul>
+</div>
+<h4>15) 학습 기록과 최적 모델 준비</h4>
+<p>각 Epoch(에포크, 전체 훈련 데이터 1회 학습)에서 다음 값을 기록합니다.</p>
+<ul>
+<li>훈련 손실</li>
+<li>훈련 정확도</li>
+<li>검증 손실</li>
+<li>검증 정확도</li>
+<li>학습률</li>
+</ul>
+<p>검증 정확도가 가장 높아질 때 체크포인트를 저장합니다.</p>
+<blockquote>
+<p><strong>시험 데이터는 모델 선택에 사용하지 않습니다.</strong></p>
+</blockquote>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 17 · 미검증</span></div><pre class="src"><code>history = {
+    &quot;train_loss&quot;: [],
+    &quot;train_accuracy&quot;: [],
+    &quot;validation_loss&quot;: [],
+    &quot;validation_accuracy&quot;: [],
+    &quot;learning_rate&quot;: [],
+}
+
+best_validation_accuracy = 0.0
+
+best_epoch = 0
+
+epochs_without_improvement = 0
+
+start_time = time.time()
 </code></pre></div>
-<p><code>map_location=&quot;cpu&quot;</code>를 사용하면 GPU에서 저장한 Tensor도 먼저 CPU로 불러올 수 있습니다.</p>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_1_model_save_load_inference.ipynb · 코드 셀 10 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>loaded_checkpoint = torch.load(
-    checkpoint_path,
-    map_location=&quot;cpu&quot;,
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>학습 기록과 최고 성능, 개선 없는 에폭 수, 시작 시각을 준비합니다.</p>
+</div>
+<h4>16) 모델 학습과 최고 모델 저장</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 18 · 미검증</span></div><pre class="src"><code>for epoch in range(EPOCHS):
+    current_lr = optimizer.param_groups[0][&quot;lr&quot;]
+
+    train_loss, train_accuracy = train_one_epoch(
+        model, train_loader, loss_function, optimizer
+    )
+
+    validation_loss, validation_accuracy = evaluate(
+        model, validation_loader, loss_function
+    )
+
+    history[&quot;train_loss&quot;].append(train_loss)
+    history[&quot;train_accuracy&quot;].append(train_accuracy)
+    history[&quot;validation_loss&quot;].append(validation_loss)
+    history[&quot;validation_accuracy&quot;].append(validation_accuracy)
+    history[&quot;learning_rate&quot;].append(current_lr)
+
+    if validation_accuracy &gt; best_validation_accuracy:
+        best_validation_accuracy = validation_accuracy
+        best_epoch = epoch + 1
+        epochs_without_improvement = 0
+
+        checkpoint = {
+            &quot;model_name&quot;: &quot;cifar10_resnet18&quot;,
+            &quot;model_state_dict&quot;: model.state_dict(),
+            &quot;num_classes&quot;: 10,
+            &quot;class_names&quot;: class_names,
+            &quot;cifar10_mean&quot;: CIFAR10_MEAN,
+            &quot;cifar10_std&quot;: CIFAR10_STD,
+            &quot;best_epoch&quot;: best_epoch,
+            &quot;best_validation_accuracy&quot;: best_validation_accuracy,
+        }
+
+        torch.save(checkpoint, BEST_MODEL_PATH)
+    else:
+        epochs_without_improvement += 1
+
+    scheduler.step()
+
+    print(
+        f&quot;Epoch {epoch + 1:02d}/{EPOCHS} | &quot;
+        f&quot;Train Loss {train_loss:.4f} | &quot;
+        f&quot;Train Acc {train_accuracy * 100:.2f}% | &quot;
+        f&quot;Val Loss {validation_loss:.4f} | &quot;
+        f&quot;Val Acc {validation_accuracy * 100:.2f}% | &quot;
+        f&quot;LR {current_lr:.6f}&quot;
+    )
+
+    if epochs_without_improvement &gt;= PATIENCE:
+        print(f&quot;Early Stopping: {PATIENCE}개 Epoch 동안 성능 개선 없음&quot;)
+        break
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 18 · 원본 실행 기록</span></div><pre>Epoch 01/3 | Train Loss 3.4618 | Train Acc 11.48% | Val Loss 2.4061 | Val Acc 14.80% | LR 0.100000
+Epoch 02/3 | Train Loss 2.2561 | Train Acc 15.02% | Val Loss 2.2595 | Val Acc 18.50% | LR 0.075025
+Epoch 03/3 | Train Loss 2.1182 | Train Acc 18.76% | Val Loss 2.1085 | Val Acc 21.40% | LR 0.025075
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>에폭마다 학습·검증하고, 검증 정확도가 최고일 때만 Checkpoint 파일로 바로 저장합니다.</p>
+<ul>
+<li><code>scheduler.step()</code> — 에폭이 끝날 때마다 학습률을 다음 값으로 바꿉니다.</li>
+<li><code>PATIENCE</code> 에폭 동안 개선이 없으면 조기 종료합니다.</li>
+</ul>
+</div>
+<h4>17) 최고 모델 불러오기</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 19 · 미검증</span></div><pre class="src"><code>best_checkpoint = torch.load(
+    BEST_MODEL_PATH,
+    map_location=device,
     weights_only=True,
 )
 
-restored_model = create_resnet18(
-    num_classes=int(loaded_checkpoint[&quot;number_of_classes&quot;])
+model.load_state_dict(best_checkpoint[&quot;model_state_dict&quot;])
+
+model.to(device)
+
+elapsed_minutes = (time.time() - start_time) / 60
+
+print(&quot;\n최고 검증 Epoch:&quot;, best_epoch)
+
+print(f&quot;최고 검증 정확도: {best_validation_accuracy * 100:.2f}%&quot;)
+
+print(f&quot;전체 학습 시간: {elapsed_minutes:.2f}분&quot;)
+
+print(&quot;최고 모델 저장:&quot;, BEST_MODEL_PATH)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 19 · 원본 실행 기록</span></div><pre>
+최고 검증 Epoch: 3
+최고 검증 정확도: 21.40%
+전체 학습 시간: 0.16분
+최고 모델 저장: models/ch05_5_best_cifar10_resnet18.pt
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>저장해 둔 최고 성능 Checkpoint를 불러와 모델에 넣고, 최고 검증 에폭·정확도와 전체 학습 시간을 출력합니다.</p>
+</div>
+<h4>18) 학습 곡선 시각화</h4>
+<ul>
+<li><p>훈련 손실과 검증 손실이 함께 감소하면 안정적인 학습</p>
+</li>
+<li><p>훈련 손실만 감소하고 검증 손실이 증가하면 과적합 가능성</p>
+</li>
+<li><p>훈련 정확도와 검증 정확도의 차이가 작으면 일반화가 양호</p>
+</li>
+<li><p>두 정확도의 차이가 계속 커지면 과적합 가능성</p>
+</li>
+</ul>
+<p>Cosine Annealing(코사인 어닐링)은 학습률을 갑자기 낮추지 않고 부드럽게 감소시킵니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 20 · 미검증</span></div><pre class="src"><code>epochs_completed = len(history[&quot;train_loss&quot;])
+
+epoch_axis = range(1, epochs_completed + 1)
+
+plt.figure(figsize=(7, 4))
+
+plt.plot(epoch_axis, history[&quot;train_loss&quot;], label=&quot;Train&quot;)
+
+plt.plot(epoch_axis, history[&quot;validation_loss&quot;], label=&quot;Validation&quot;)
+
+plt.xlabel(&quot;Epoch&quot;)
+
+plt.ylabel(&quot;Loss&quot;)
+
+plt.title(&quot;CIFAR-10 ResNet18 Loss&quot;)
+
+plt.legend()
+
+plt.tight_layout()
+
+plt.show()
+
+plt.figure(figsize=(7, 4))
+
+plt.plot(epoch_axis, history[&quot;train_accuracy&quot;], label=&quot;Train&quot;)
+
+plt.plot(epoch_axis, history[&quot;validation_accuracy&quot;], label=&quot;Validation&quot;)
+
+plt.xlabel(&quot;Epoch&quot;)
+
+plt.ylabel(&quot;Accuracy&quot;)
+
+plt.title(&quot;CIFAR-10 ResNet18 Accuracy&quot;)
+
+plt.legend()
+
+plt.tight_layout()
+
+plt.show()
+
+plt.figure(figsize=(7, 4))
+
+plt.plot(epoch_axis, history[&quot;learning_rate&quot;])
+
+plt.xlabel(&quot;Epoch&quot;)
+
+plt.ylabel(&quot;Learning Rate&quot;)
+
+plt.title(&quot;Cosine Learning Rate Schedule&quot;)
+
+plt.tight_layout()
+
+plt.show()
+</code></pre></div>
+<p><img src="img/ch05_1_c20_0.png" alt="ch05_1 CIFAR-10 ResNet18 학습과 평가 — 코드 셀 20 출력 그림" /></p>
+<p><img src="img/ch05_1_c20_1.png" alt="ch05_1 CIFAR-10 ResNet18 학습과 평가 — 코드 셀 20 출력 그림" /></p>
+<p><img src="img/ch05_1_c20_2.png" alt="ch05_1 CIFAR-10 ResNet18 학습과 평가 — 코드 셀 20 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>손실, 정확도, 학습률 변화를 그래프 세 장으로 그립니다. 학습률 그래프에서 코사인 곡선 모양을 확인합니다.</p>
+</div>
+<h4>19) 테스트 평가와 예측 수집</h4>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Train Set
+→ 가중치 학습
+
+Validation Set
+→ 최고 모델 선택
+
+Test Set
+→ 최종 일반화 성능 평가
+</code></pre></div>
+<p>시험 데이터 전체에서 다음 값을 수집합니다.</p>
+<ul>
+<li>실제 클래스</li>
+<li>예측 클래스</li>
+<li>예측 확률</li>
+<li>화면 표시용 이미지</li>
+</ul>
+<p><code>torch.softmax()</code>는 결과를 분석할 때만 Logit을 확률로 변환합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 21 · 미검증</span></div><pre class="src"><code>test_loss, test_accuracy = evaluate(model, test_loader, loss_function)
+
+print(f&quot;시험 손실: {test_loss:.4f}&quot;)
+
+print(f&quot;시험 정확도: {test_accuracy * 100:.2f}%&quot;)
+
+def collect_predictions(model, data_loader):
+    model.eval()
+
+    all_images = []
+    all_labels = []
+    all_predictions = []
+    all_confidences = []
+
+    with torch.inference_mode():
+        for images, labels in data_loader:
+            logits = model(images.to(device))
+            probabilities = torch.softmax(logits, dim=1)
+            confidences, predictions = probabilities.max(dim=1)
+
+            all_images.append(images.cpu())
+            all_labels.append(labels.cpu())
+            all_predictions.append(predictions.cpu())
+            all_confidences.append(confidences.cpu())
+
+    return (
+        torch.cat(all_images),
+        torch.cat(all_labels),
+        torch.cat(all_predictions),
+        torch.cat(all_confidences),
+    )
+
+test_images, test_labels, test_predictions, test_confidences = (
+    collect_predictions(model, test_loader)
 )
 
-restored_model.load_state_dict(
-    loaded_checkpoint[&quot;model_state_dict&quot;]
+print(&quot;예측 이미지 수:&quot;, len(test_predictions))
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 21 · 원본 실행 기록</span></div><pre>시험 손실: 2.0745
+시험 정확도: 21.65%
+예측 이미지 수: 2000
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>테스트 데이터로 평가하고, 전체 예측·확신도를 모으는 함수를 만들어 실행합니다.</p>
+</div>
+<h4>20) Confusion Matrix 준비</h4>
+<p>Confusion Matrix(컨퓨전 매트릭스, 혼동행렬)는 실제 클래스와 예측 클래스의 관계를 나타냅니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>행 → 실제 클래스
+열 → 예측 클래스
+</code></pre></div>
+<ul>
+<li>대각선: 올바르게 분류한 이미지 수</li>
+<li>대각선 이외: 다른 클래스로 잘못 분류한 이미지 수</li>
+</ul>
+<p>클래스별 정확도는 다음과 같습니다.</p>
+<div class="math-block" role="math" aria-label="\text{Class Accuracy}_k
+=\frac{\text{Class }k\text{ Correct}}{\text{Class }k\text{ Total}}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mtext>Class&#x000A0;Accuracy</mtext><mi>k</mi></msub><mo>&#x0003D;</mo><mfrac><mrow><mtext>Class&#x000A0;</mtext><mi>k</mi><mtext>&#x000A0;Correct</mtext></mrow><mrow><mtext>Class&#x000A0;</mtext><mi>k</mi><mtext>&#x000A0;Total</mtext></mrow></mfrac></mrow></math></div>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 22 · 미검증</span></div><pre class="src"><code>def build_confusion_matrix(true_labels, predicted_labels, num_classes=10):
+    matrix = torch.zeros(num_classes, num_classes, dtype=torch.int64)
+
+    for true_label, predicted_label in zip(true_labels, predicted_labels):
+        matrix[true_label, predicted_label] += 1
+
+    return matrix
+</code></pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>정답·예측 목록으로 혼동행렬을 만드는 함수입니다.</p>
+</div>
+<h4>21) Confusion Matrix 시각화</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 23 · 미검증</span></div><pre class="src"><code>confusion_matrix = build_confusion_matrix(test_labels, test_predictions)
+
+plt.figure(figsize=(9, 8))
+
+plt.imshow(confusion_matrix.numpy())
+
+plt.colorbar()
+
+plt.xticks(range(10), class_names, rotation=45, ha=&quot;right&quot;)
+
+plt.yticks(range(10), class_names)
+
+plt.xlabel(&quot;Predicted Class&quot;)
+
+plt.ylabel(&quot;True Class&quot;)
+
+plt.title(&quot;CIFAR-10 ResNet18 Confusion Matrix&quot;)
+
+for row in range(10):
+    for column in range(10):
+        plt.text(
+            column,
+            row,
+            confusion_matrix[row, column].item(),
+            ha=&quot;center&quot;,
+            va=&quot;center&quot;,
+            fontsize=7,
+        )
+
+plt.tight_layout()
+
+plt.show()
+
+class_correct = confusion_matrix.diag()
+
+class_total = confusion_matrix.sum(dim=1)
+
+class_accuracy = class_correct.float() / class_total.clamp_min(1)
+
+print(&quot;===== 클래스별 정확도 =====&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 23 · 원본 실행 기록</span></div><pre>===== 클래스별 정확도 =====
+</pre></div>
+<p><img src="img/ch05_1_c23_0.png" alt="ch05_1 CIFAR-10 ResNet18 학습과 평가 — 코드 셀 23 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>혼동행렬을 그리고 클래스별 정확도를 계산합니다.</p>
+<ul>
+<li><code>.clamp_min(1)</code> — 해당 클래스 데이터가 0개여도 0으로 나누지 않게 합니다.</li>
+</ul>
+</div>
+<h4>22) 클래스별 정확도 확인</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 24 · 미검증</span></div><pre class="src"><code>for index, accuracy in enumerate(class_accuracy):
+    print(f&quot;{class_names_ko[index]:4s}: {accuracy.item() * 100:6.2f}%&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 24 · 원본 실행 기록</span></div><pre>비행기 :  40.31%
+자동차 :   0.51%
+새   :   0.51%
+고양이 :   0.00%
+사슴  :  20.20%
+개   :  24.32%
+개구리 :  35.19%
+말   :   5.70%
+배   :  26.27%
+트럭  :  60.59%
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>클래스별 정확도를 백분율로 출력합니다.</p>
+</div>
+<h4>23) 클래스별 정확도 그래프와 주요 혼동</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 25 · 미검증</span></div><pre class="src"><code>plt.figure(figsize=(11, 5))
+
+plt.bar(class_names, class_accuracy.numpy() * 100)
+
+plt.xticks(rotation=45, ha=&quot;right&quot;)
+
+plt.ylabel(&quot;Class Accuracy (%)&quot;)
+
+plt.title(&quot;CIFAR-10 ResNet18 Class Accuracy&quot;)
+
+plt.tight_layout()
+
+plt.show()
+
+confusion_errors = confusion_matrix.clone()
+
+confusion_errors.fill_diagonal_(0)
+
+flat_index = confusion_errors.argmax().item()
+
+true_index = flat_index // 10
+
+predicted_index = flat_index % 10
+
+print(
+    &quot;가장 많이 혼동한 방향:&quot;,
+    f&quot;{class_names_ko[true_index]} → {class_names_ko[predicted_index]}&quot;,
 )
+
+print(&quot;혼동 이미지 수:&quot;, confusion_errors[true_index, predicted_index].item())
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 25 · 원본 실행 기록</span></div><pre>가장 많이 혼동한 방향: 자동차 → 트럭
+혼동 이미지 수: 110
+</pre></div>
+<p><img src="img/ch05_1_c25_0.png" alt="ch05_1 CIFAR-10 ResNet18 학습과 평가 — 코드 셀 25 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>클래스별 정확도를 막대그래프로 그리고, 가장 많이 헷갈린 실제→예측 방향을 찾습니다.</p>
+</div>
+<h4>24) 테스트 예측 결과 시각화</h4>
+<p>예측 이미지에서 다음 정보를 함께 확인합니다.</p>
+<ul>
+<li>실제 클래스</li>
+<li>예측 클래스</li>
+<li>예측 확률</li>
+</ul>
+<p>정답 여부뿐 아니라 모델이 얼마나 확신했는지도 확인합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 26 · 미검증</span></div><pre class="src"><code>num_examples = min(20, len(test_images))
+
+plt.figure(figsize=(14, 10))
+
+for index in range(num_examples):
+    image = denormalize_image(test_images[index]).permute(1, 2, 0)
+    true_label = test_labels[index].item()
+    predicted_label = test_predictions[index].item()
+    confidence = test_confidences[index].item()
+
+    plt.subplot(4, 5, index + 1)
+    plt.imshow(image)
+    plt.title(
+        f&quot;True: {class_names[true_label]}\n&quot;
+        f&quot;Pred: {class_names[predicted_label]}\n&quot;
+        f&quot;{confidence * 100:.1f}%&quot;,
+        fontsize=8,
+    )
+    plt.axis(&quot;off&quot;)
+
+plt.tight_layout()
+
+plt.show()
+</code></pre></div>
+<p><img src="img/ch05_1_c26_0.png" alt="ch05_1 CIFAR-10 ResNet18 학습과 평가 — 코드 셀 26 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>테스트 이미지 20장의 정답·예측·확신도를 4×5 격자로 표시합니다.</p>
+</div>
+<h4>25) 확신도가 높은 오답</h4>
+<p>오답 이미지를 직접 확인하면 숫자만으로는 알기 어려운 문제를 발견할 수 있습니다.</p>
+<ul>
+<li>객체가 작거나 흐린 이미지</li>
+<li>배경과 객체의 색상이 비슷한 이미지</li>
+<li>클래스 사이의 외형이 비슷한 이미지</li>
+<li>모델이 높은 확률로 잘못 판단한 이미지</li>
+</ul>
+<p>특히 높은 확률로 틀린 이미지는 모델이 잘못된 특징을 강하게 학습했을 가능성을 보여줍니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 27 · 미검증</span></div><pre class="src"><code>incorrect_indices = torch.where(test_predictions != test_labels)[0]
+
+if len(incorrect_indices) &gt; 0:
+    # 확신도가 높은 오답부터 정렬
+    error_confidences = test_confidences[incorrect_indices]
+    order = torch.argsort(error_confidences, descending=True)
+    selected_indices = incorrect_indices[order]
+
+    num_errors = min(24, len(selected_indices))
+    plt.figure(figsize=(14, 12))
+
+    for index in range(num_errors):
+        data_index = selected_indices[index].item()
+
+        image = denormalize_image(test_images[data_index]).permute(1, 2, 0)
+        true_label = test_labels[data_index].item()
+        predicted_label = test_predictions[data_index].item()
+        confidence = test_confidences[data_index].item()
+
+        plt.subplot(4, 6, index + 1)
+        plt.imshow(image)
+        plt.title(
+            f&quot;{class_names[true_label]} → {class_names[predicted_label]}\n&quot;
+            f&quot;{confidence * 100:.1f}%&quot;,
+            fontsize=8,
+        )
+        plt.axis(&quot;off&quot;)
+
+    plt.tight_layout()
+    plt.show()
+
+print(&quot;전체 오답 수:&quot;, len(incorrect_indices))
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 27 · 원본 실행 기록</span></div><pre>전체 오답 수: 1567
+</pre></div>
+<p><img src="img/ch05_1_c27_0.png" alt="ch05_1 CIFAR-10 ResNet18 학습과 평가 — 코드 셀 27 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>확신도가 높은 오답부터 정렬해 최대 24장을 표시합니다.</p>
+<ul>
+<li><code>torch.argsort(..., descending=True)</code> — 확신도가 큰 순서의 인덱스.</li>
+<li>자신 있게 틀린 사례는 비슷한 클래스, 작은 물체, 흐린 이미지처럼 데이터 자체가 어려운 경우가 많습니다.</li>
+</ul>
+</div>
+<h4>26) 저장 모델 복원 확인</h4>
+<p>체크포인트에는 모델 가중치와 실습에 필요한 설정을 함께 저장했습니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>같은 ResNet18 구조 생성
+→ 체크포인트 불러오기
+→ model_state_dict 적용
+→ model.eval()
+→ 예측
+</code></pre></div>
+<p><code>weights_only=True</code>를 사용하여 텐서와 단순 설정값으로 구성된 체크포인트를 안전한 방식으로 불러옵니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 셀 28 · 미검증</span></div><pre class="src"><code>loaded_checkpoint = torch.load(
+    BEST_MODEL_PATH,
+    map_location=device,
+    weights_only=True,
+)
+
+restored_model = create_cifar10_resnet18(
+    num_classes=loaded_checkpoint[&quot;num_classes&quot;]
+).to(device)
+
+restored_model.load_state_dict(loaded_checkpoint[&quot;model_state_dict&quot;])
 
 restored_model.eval()
 
-print(&quot;복원 장치   :&quot;, next(restored_model.parameters()).device)
-
-print(&quot;출력 클래스 :&quot;, restored_model.fc.out_features)
-
-print(&quot;학습 모드   :&quot;, restored_model.training)
-</code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 10</span></div><pre>복원 장치   : cpu
-출력 클래스 : 10
-학습 모드   : False
-</pre></div>
-<h4>9) 저장·복원 결과 비교</h4>
-<p>복원한 모델 출력:</p>
-<div class="math-block" role="math" aria-label="\mathbf{y}_{load}=f_{\hat{\theta}}(\mathbf{x})"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>&#x1D432;</mi><mrow><mi>l</mi><mi>o</mi><mi>a</mi><mi>d</mi></mrow></msub><mo>&#x0003D;</mo><msub><mi>f</mi><mrow><mover accent="true"><mrow><mi>&#x003B8;</mi></mrow><mo>&#x0005E;</mo></mover></mrow></msub><mo stretchy="false">&#x00028;</mo><mi>&#x1D431;</mi><mo stretchy="false">&#x00029;</mo></mrow></math></div>
-<p>최대 절대 오차:</p>
-<div class="math-block" role="math" aria-label="E_{\max}
-=
-\max_i
-\left|
-y_{ref,i}-y_{load,i}
-\right|"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>E</mi><mrow><mo>max</mo></mrow></msub><mo>&#x0003D;</mo><msub><mo>max</mo><mi>i</mi></msub><mrow><mo stretchy="true" fence="true" form="prefix">&#x0007C;</mo><msub><mi>y</mi><mrow><mi>r</mi><mi>e</mi><mi>f</mi><mo>&#x0002C;</mo><mi>i</mi></mrow></msub><mo>&#x02212;</mo><msub><mi>y</mi><mrow><mi>l</mi><mi>o</mi><mi>a</mi><mi>d</mi><mo>&#x0002C;</mo><mi>i</mi></mrow></msub><mo stretchy="true" fence="true" form="postfix">&#x0007C;</mo></mrow></mrow></math></div>
-<p>가중치가 정확히 복원되면 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>E</mi><mrow><mo>max</mo></mrow></msub></mrow></math>는 0 또는 매우 작은 값입니다.</p>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_1_model_save_load_inference.ipynb · 코드 셀 11 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code># 검증용 입력을 CPU로 이동합니다.
-cpu_input = sample_input.detach().cpu()
-
-# 원본 모델과 동일한 구조의 CPU 모델을 만듭니다.
-reference_model_cpu = create_resnet18(
-    num_classes=num_classes
-)
-
-# 저장 직전 원본 모델의 가중치를 CPU 모델에 복사합니다.
-reference_model_cpu.load_state_dict(
-    model.state_dict()
-)
-
-reference_model_cpu.eval()
-
-# 원본 가중치와 복원 가중치를 
-# 동일한 CPU 환경에서 각각 추론합니다.
-with torch.inference_mode():
-    reference_cpu = reference_model_cpu(cpu_input)
-    restored_output = restored_model(cpu_input)
-
-# 두 결과의 최대 차이를 확인합니다.
-max_error = (
-    reference_cpu - restored_output
-).abs().max().item()
-
-# 같은 장치에서 동일한 가중치로 계산했으므로
-# 엄격한 기준으로 비교할 수 있습니다.
-torch.testing.assert_close(
-    reference_cpu,
-    restored_output,
-    rtol=1e-5,
-    atol=1e-6,
-)
-
-print(f&quot;최대 절대 오차: {max_error:.8f}&quot;)
-print(&quot;저장·복원 검증: 통과&quot;)
-</code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 11</span></div><pre>최대 절대 오차: 0.00000000
-저장·복원 검증: 통과
-</pre></div>
-<h4>10) 추론 함수 정의</h4>
-<ul>
-<li><p>Dropout(드롭아웃, 일부 뉴런을 임시로 끄는 정규화)을 추론 방식으로 전환합니다.</p>
-</li>
-<li><p>BatchNorm의 이동 평균과 이동 분산을 사용합니다.</p>
-</li>
-<li><p>Gradient(그래디언트, 기울기) 계산을 중지합니다.</p>
-</li>
-<li><p>추론에 필요하지 않은 계산 그래프 생성을 줄입니다.</p>
-</li>
-</ul>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>model.eval()
+sample_images, sample_labels = next(iter(test_loader))
 
 with torch.inference_mode():
- output = model(input_tensor)
+    logits = restored_model(sample_images.to(device))
+    predictions = logits.argmax(dim=1).cpu()
+
+correct_count = (predictions == sample_labels).sum().item()
+
+print(&quot;저장 모델:&quot;, loaded_checkpoint[&quot;model_name&quot;])
+
+print(&quot;최고 Epoch:&quot;, loaded_checkpoint[&quot;best_epoch&quot;])
+
+print(
+    &quot;최고 검증 정확도:&quot;,
+    f&quot;{loaded_checkpoint['best_validation_accuracy'] * 100:.2f}%&quot;,
+)
+
+print(&quot;첫 미니배치 정답 수:&quot;, correct_count, &quot;/&quot;, len(sample_labels))
 </code></pre></div>
-<p>두 기능은 역할이 다르므로 추론할 때 함께 사용합니다.</p>
-<p>분류 모델은 Logit(로짓, 확률 변환 전 점수)을 출력합니다.</p>
-<div class="math-block" role="math" aria-label="p_i
-=
-\frac{e^{z_i}}
-{\sum_{j=1}^{C}e^{z_j}}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>p</mi><mi>i</mi></msub><mo>&#x0003D;</mo><mfrac><mrow><msup><mi>e</mi><mrow><msub><mi>z</mi><mi>i</mi></msub></mrow></msup></mrow><mrow><msubsup><mo>&#x02211;</mo><mrow><mi>j</mi><mo>&#x0003D;</mo><mn>1</mn></mrow><mrow><mi>C</mi></mrow></msubsup><msup><mi>e</mi><mrow><msub><mi>z</mi><mi>j</mi></msub></mrow></msup></mrow></mfrac></mrow></math></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 28 · 원본 실행 기록</span></div><pre>저장 모델: cifar10_resnet18
+최고 Epoch: 3
+최고 검증 정확도: 21.40%
+첫 미니배치 정답 수: 25 / 128
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>저장된 Checkpoint로 새 모델을 만들어 복원하고, 테스트 첫 배치를 예측해 복원이 잘 되었는지 확인합니다.</p>
+</div>
+<h3>핵심 정리</h3>
 <ul>
-<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>z</mi><mi>i</mi></msub></mrow></math>: <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>i</mi></mrow></math>번째 클래스의 Logit</li>
-<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>p</mi><mi>i</mi></msub></mrow></math>: <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>i</mi></mrow></math>번째 클래스의 예측 확률</li>
-<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>C</mi></mrow></math>: 전체 클래스 수</li>
+<li><code>resnet18(weights=None)</code>은 사전학습 없이 CIFAR-10으로 처음부터 학습합니다.</li>
+<li>32×32 입력에 맞게 첫 합성곱 계층을 조정하고 초기 MaxPool을 제거합니다.</li>
+<li>Residual 연결은 <code>y = F(x) + x</code>이며 shape가 다르면 Downsample로 맞춥니다.</li>
 </ul>
-<p>단일 이미지는 <code>(C, H, W)</code>, 배치 이미지는 <code>(N, C, H, W)</code> Shape를 사용합니다.</p>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_1_model_save_load_inference.ipynb · 코드 셀 12 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def predict(model, input_tensor, class_names, device, top_k=5):
-    model = model.to(device).eval()
-
-    if input_tensor.ndim == 3:
-        input_tensor = input_tensor.unsqueeze(0)
-
-    input_tensor = input_tensor.to(device)
-
-    with torch.inference_mode():
-        logits = model(input_tensor)
-        probabilities = torch.softmax(logits, dim=1)
-        top_probs, top_indices = probabilities.topk(
-            k=min(top_k, probabilities.shape[1]),
-            dim=1,
-        )
-
-    batch_results = []
-
-    for sample_probs, sample_indices in zip(
-        top_probs.cpu(), top_indices.cpu()
-    ):
-        sample_results = []
-
-        for probability, class_index in zip(
-            sample_probs, sample_indices
-        ):
-            index = int(class_index)
-            sample_results.append({
-                &quot;class_index&quot;: index,
-                &quot;class_name&quot;: class_names[index],
-                &quot;probability&quot;: float(probability),
-            })
-
-        batch_results.append(sample_results)
-
-    return batch_results
-</code></pre></div>
-<h4>11) 단일 입력 추론</h4>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_1_model_save_load_inference.ipynb · 코드 셀 13 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>single_results = predict(
-    restored_model,
-    cpu_input[0],
-    loaded_checkpoint[&quot;class_names&quot;],
-    device,
-    top_k=5,
-)[0]
-
-print(&quot;===== 단일 Tensor Top-5 =====&quot;)
-</code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 13</span></div><pre>===== 단일 Tensor Top-5 =====
-</pre></div>
-<h4>12) Top-5 결과 출력</h4>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_1_model_save_load_inference.ipynb · 코드 셀 14 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>for rank, result in enumerate(single_results, start=1):
-    print(
-        f&quot;{rank}. {result['class_name']}&quot;
-        f&quot; - {result['probability'] * 100:.2f}%&quot;
-    )
-</code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 14</span></div><pre>1. deer - 49.80%
-2. bird - 21.60%
-3. airplane - 14.71%
-4. frog - 7.91%
-5. ship - 2.70%
-</pre></div>
-<h4>13) 배치 입력 추론</h4>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_1_model_save_load_inference.ipynb · 코드 셀 15 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>batch_input = torch.randn(4, 3, 224, 224)
-
-batch_results = predict(
-    restored_model,
-    batch_input,
-    loaded_checkpoint[&quot;class_names&quot;],
-    device,
-    top_k=1,
-)
-
-print(&quot;\n===== 배치 Tensor Top-1 =====&quot;)
-</code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 15</span></div><pre>
-===== 배치 Tensor Top-1 =====
-</pre></div>
-<h4>14) 배치 결과 출력</h4>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_1_model_save_load_inference.ipynb · 코드 셀 16 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>for index, result in enumerate(batch_results):
-    prediction = result[0]
-    print(
-        f&quot;{index}: {prediction['class_name']}&quot;
-        f&quot; - {prediction['probability'] * 100:.2f}%&quot;
-    )
-</code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 16</span></div><pre>0: deer - 60.31%
-1: deer - 53.80%
-2: deer - 55.22%
-3: deer - 52.94%
-</pre></div>
-<h4>15) 결과 시각화</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>이미지 열기
-→ RGB 변환
-→ Resize·Crop·Normalize
-→ Batch 차원 추가
-→ 모델 추론
-→ Top-k 결과 출력
-</code></pre></div>
-<p>ImageNet 사전학습 ResNet18은 <code>ResNet18_Weights.DEFAULT.transforms()</code>가 제공하는 전처리를 사용합니다.</p>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_1_model_save_load_inference.ipynb · 코드 셀 17 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>IMAGE_PATH = None
-
-if IMAGE_PATH is not None:
-    image = Image.open(IMAGE_PATH).convert(&quot;RGB&quot;)
-    image_tensor = preprocess(image)
-
-    image_results = predict(
-        restored_model,
-        image_tensor,
-        loaded_checkpoint[&quot;class_names&quot;],
-        device,
-        top_k=5,
-    )[0]
-
-    plt.figure(figsize=(6, 6))
-    plt.imshow(image)
-    plt.axis(&quot;off&quot;)
-    plt.title(IMAGE_PATH.name)
-    plt.show()
-
-    print(&quot;===== 실제 이미지 Top-5 =====&quot;)
-    for rank, result in enumerate(image_results, start=1):
-        print(
-            f&quot;{rank}. {result['class_name']}&quot;
-            f&quot; - {result['probability'] * 100:.2f}%&quot;
-        )
-else:
-    print(&quot;IMAGE_PATH에 이미지 파일 경로를 지정하면 실행됩니다.&quot;)
-</code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 17</span></div><pre>IMAGE_PATH에 이미지 파일 경로를 지정하면 실행됩니다.
-</pre></div>
-<h4>16) 평균 추론 시간 측정</h4>
-<div class="math-block" role="math" aria-label="T_{latency}
-=
-\frac{t_{end}-t_{start}}{N}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>T</mi><mrow><mi>l</mi><mi>a</mi><mi>t</mi><mi>e</mi><mi>n</mi><mi>c</mi><mi>y</mi></mrow></msub><mo>&#x0003D;</mo><mfrac><mrow><msub><mi>t</mi><mrow><mi>e</mi><mi>n</mi><mi>d</mi></mrow></msub><mo>&#x02212;</mo><msub><mi>t</mi><mrow><mi>s</mi><mi>t</mi><mi>a</mi><mi>r</mi><mi>t</mi></mrow></msub></mrow><mrow><mi>N</mi></mrow></mfrac></mrow></math></div>
-<ul>
-<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>N</mi></mrow></math>: 반복 추론 횟수</li>
-<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>T</mi><mrow><mi>l</mi><mi>a</mi><mi>t</mi><mi>e</mi><mi>n</mi><mi>c</mi><mi>y</mi></mrow></msub></mrow></math>: 한 번 추론하는 데 걸리는 평균 시간</li>
-</ul>
-<p>GPU에서는 연산이 비동기로 실행될 수 있으므로 측정 전후에 동기화합니다.</p>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_1_model_save_load_inference.ipynb · 코드 셀 18 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def measure_latency(model, input_tensor, device, warmup=5, repeat=20):
-    model = model.to(device).eval()
-    input_tensor = input_tensor.to(device)
-
-    with torch.inference_mode():
-        for _ in range(warmup):
-            model(input_tensor)
-
-        if device.type == &quot;cuda&quot;:
-            torch.cuda.synchronize()
-
-        start = time.perf_counter()
-
-        for _ in range(repeat):
-            model(input_tensor)
-
-        if device.type == &quot;cuda&quot;:
-            torch.cuda.synchronize()
-
-    return (time.perf_counter() - start) / repeat
-
-timing_input = torch.randn(1, 3, 224, 224)
-
-average_seconds = measure_latency(
-    restored_model,
-    timing_input,
-    device,
-)
-
-print(&quot;측정 장치      :&quot;, device)
-
-print(f&quot;평균 추론 시간: {average_seconds * 1000:.3f} ms&quot;)
-</code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 18</span></div><pre>측정 장치      : cuda
-평균 추론 시간: 2.047 ms
-</pre></div>
-<h4>17) 배포 파일 생성</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>model checkpoint
-→ 모델 가중치와 기본 정보
-
-inference_config.json
-→ 입력 Shape와 전처리 규칙
-
-class_names.json
-→ 출력 Index와 클래스 이름의 대응
-
-sample_input.pt
-→ 기준 입력
-
-reference_output.pt
-→ 기준 출력
-
-inference_example.py
-→ 독립 실행 예제
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_1_model_save_load_inference.ipynb · 코드 셀 19 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>config = {
-    &quot;model_name&quot;: &quot;resnet18&quot;,
-    &quot;runtime&quot;: &quot;PyTorch&quot;,
-    &quot;input_shape&quot;: [1, 3, 224, 224],
-    &quot;input_dtype&quot;: &quot;float32&quot;,
-    &quot;tensor_layout&quot;: &quot;NCHW&quot;,
-    &quot;output_type&quot;: &quot;logits&quot;,
-    &quot;number_of_classes&quot;: num_classes,
-    &quot;preprocessing&quot;: checkpoint[&quot;preprocessing&quot;],
-}
-
-(output_dir / &quot;inference_config.json&quot;).write_text(
-    json.dumps(config, ensure_ascii=False, indent=2),
-    encoding=&quot;utf-8&quot;,
-)
-
-(output_dir / &quot;class_names.json&quot;).write_text(
-    json.dumps(class_names, ensure_ascii=False, indent=2),
-    encoding=&quot;utf-8&quot;,
-)
-
-saved_input = cpu_input[:1]
-
-with torch.inference_mode():
-    saved_output = restored_model.cpu()(saved_input)
-
-torch.save(saved_input, output_dir / &quot;sample_input.pt&quot;)
-
-torch.save(saved_output, output_dir / &quot;reference_output.pt&quot;)
-
-inference_script = 'import torch\nimport torch.nn as nn\nfrom pathlib import Path\nfrom torchvision.models import resnet18\n\nbase_dir = Path(__file__).resolve().parent\n\ndevice = torch.device(\n    &quot;cuda&quot; if torch.cuda.is_available() else &quot;cpu&quot;\n)\n\ncheckpoint = torch.load(\n    base_dir / &quot;resnet18_inference_checkpoint.pt&quot;,\n    map_location=&quot;cpu&quot;,\n    weights_only=True,\n)\n\nnum_classes = int(checkpoint[&quot;number_of_classes&quot;])\n\nmodel = resnet18(weights=None)\n\nif num_classes != 1000:\n    model.fc = nn.Linear(model.fc.in_features, num_classes)\n\nmodel.load_state_dict(checkpoint[&quot;model_state_dict&quot;])\nmodel = model.to(device).eval()\n\ninput_tensor = torch.load(\n    base_dir / &quot;sample_input.pt&quot;,\n    map_location=device,\n    weights_only=True,\n)\n\nwith torch.inference_mode():\n    logits = model(input_tensor)\n    probabilities = torch.softmax(logits, dim=1)\n    confidence, prediction = probabilities.max(dim=1)\n\nclass_names = checkpoint[&quot;class_names&quot;]\nprediction_index = int(prediction.item())\n\nprint(&quot;Prediction:&quot;, class_names[prediction_index])\nprint(&quot;Confidence:&quot;, f&quot;{float(confidence.item()) * 100:.2f}%&quot;)\n'
-
-(output_dir / &quot;inference_example.py&quot;).write_text(
-    inference_script,
-    encoding=&quot;utf-8&quot;,
-)
-
-print(&quot;배포 파일 저장 완료&quot;)
-</code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 19</span></div><pre>배포 파일 저장 완료
-</pre></div>
-<h4>18) 배포 폴더 확인과 ZIP 생성</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>ch06_1_pytorch_deployment/
-├─ resnet18_state_dict.pth
-├─ resnet18_inference_checkpoint.pt
-├─ inference_config.json
-├─ class_names.json
-├─ sample_input.pt
-├─ reference_output.pt
-└─ inference_example.py
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_1_model_save_load_inference.ipynb · 코드 셀 20 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>print(&quot;===== 배포 폴더 =====&quot;)
-
-for file_path in sorted(output_dir.iterdir()):
-    size_kb = file_path.stat().st_size / 1024
-    print(f&quot;{file_path.name:40s} {size_kb:10.1f} KB&quot;)
-
-zip_path = shutil.make_archive(
-    base_name=str(output_dir),
-    format=&quot;zip&quot;,
-    root_dir=output_dir,
-)
-
-print(&quot;\nZIP 파일:&quot;, zip_path)
-</code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 20</span></div><pre>===== 배포 폴더 =====
-class_names.json                                0.1 KB
-inference_config.json                           0.4 KB
-inference_example.py                            1.1 KB
-reference_output.pt                             1.6 KB
-resnet18_inference_checkpoint.pt            43759.1 KB
-resnet18_state_dict.pth                     43757.1 KB
-sample_input.pt                               589.6 KB
-
-ZIP 파일: ~/lab_jupyter/lab_ML_DL_2/models/ch06_1_pytorch_deployment.zip
-</pre></div>
-</section><section class="section" id="s04"><h2><span class="num">04</span>ch06_2 PyTorch ONNX 내보내기와 Runtime 추론</h2><p>노트북: <code>notebooks/ch06_2_onnx_export_runtime_inference.ipynb</code> · 원본 파일: <code>ch06_2_PyTorch_ONNX_Export_Runtime_Inference.ipynb</code> · 상태: 원본 · 실행 기록 있음 · 재실행 미검증</p>
+</section><section class="section" id="s04"><h2><span class="num">04</span>ch05_2 ResNet18 전이학습</h2><p>실습 노트북 <code>notebooks/ch05_2_resnet18_transfer_learning.ipynb</code></p>
 <h3>개요</h3>
 <ul>
-<li>PyTorch Model(파이토치 모델), ONNX Model(오닉스 모델), ONNX Runtime을 구분합니다.</li>
-<li><code>ONNXProgram</code>(오닉스 프로그램, 변환된 ONNX 모델 객체)을 파일로 저장합니다.</li>
+<li>사전학습된 ResNet18을 불러옵니다.</li>
+<li>Feature Extraction(피처 익스트랙션, 특징 추출)으로 <code>fc</code>만 학습합니다.</li>
 </ul>
 <h3>공통 설정</h3>
 <p>데이터·모델·이미지 폴더 위치를 지정합니다.</p>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_2_onnx_export_runtime_inference.ipynb · 코드 셀 1 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code># ONNX 변환과 실행에 필요한 패키지 설치 : 설치 또는 최신 버전으로 업그레이드
-%pip install -U onnx onnxscript onnxruntime
-
-# 우분투 터미널(컨트롤 + 알트 + t) 인 경우에는
-# 설치 또는 최신 버전으로 업그레이드
-#python -m pip install -U onnx onnxscript onnxruntime
-</code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 1</span></div><pre>Requirement already satisfied: onnx in ~/lab_jupyter/.venv/lib/python3.12/site-packages (1.22.0)
-Requirement already satisfied: onnxscript in ~/lab_jupyter/.venv/lib/python3.12/site-packages (0.7.1)
-Requirement already satisfied: onnxruntime in ~/lab_jupyter/.venv/lib/python3.12/site-packages (1.29.0)
-Requirement already satisfied: numpy&gt;=1.23.2 in ~/lab_jupyter/.venv/lib/python3.12/site-packages (from onnx) (2.5.2)
-Requirement already satisfied: protobuf&gt;=4.25.1 in ~/lab_jupyter/.venv/lib/python3.12/site-packages (from onnx) (7.36.0)
-Requirement already satisfied: typing_extensions&gt;=4.15.0 in ~/lab_jupyter/.venv/lib/python3.12/site-packages (from onnx) (4.16.0)
-Requirement already satisfied: ml_dtypes&gt;=0.5.4 in ~/lab_jupyter/.venv/lib/python3.12/site-packages (from onnx) (0.6.0)
-Requirement already satisfied: onnx_ir&lt;2,&gt;=0.1.16 in ~/lab_jupyter/.venv/lib/python3.12/site-packages (from onnxscript) (1.0.0)
-Requirement already satisfied: packaging in ~/lab_jupyter/.venv/lib/python3.12/site-packages (from onnxscript) (26.3)
-Requirement already satisfied: sympy&gt;=1.13 in ~/lab_jupyter/.venv/lib/python3.12/site-packages (from onnx_ir&lt;2,&gt;=0.1.16-&gt;onnxscript) (1.14.0)
-Requirement already satisfied: flatbuffers in ~/lab_jupyter/.venv/lib/python3.12/site-packages (from onnxruntime) (25.12.19)
-Requirement already satisfied: mpmath&lt;1.4,&gt;=1.1.0 in ~/lab_jupyter/.venv/lib/python3.12/site-packages (from sympy&gt;=1.13-&gt;onnx_ir&lt;2,&gt;=0.1.16-&gt;onnxscript) (1.3.0)
-Note: you may need to restart the kernel to use updated packages.
-</pre></div>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_2_onnx_export_runtime_inference.ipynb · 코드 셀 2 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code># ONNX 관련 패키지 설치 확인
-import onnx
-import onnxscript
-import onnxruntime
-
-print(&quot;ONNX       :&quot;, onnx.__version__)
-print(&quot;ONNXScript :&quot;, onnxscript.__version__)
-print(&quot;ONNXRuntime:&quot;, onnxruntime.__version__)
-</code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 2</span></div><pre>ONNX       : 1.22.0
-ONNXScript : 0.7.1
-ONNXRuntime: 1.29.0
-</pre></div>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_2_onnx_export_runtime_inference.ipynb · 코드 셀 3 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>from pathlib import Path
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 1 · 미검증</span></div><pre class="src"><code>from pathlib import Path
 
 DATA_DIR = Path(&quot;data&quot;)
 MODEL_DIR = Path(&quot;models&quot;)
@@ -1561,459 +2025,1017 @@ print(&quot;데이터 폴더:&quot;, DATA_DIR)
 print(&quot;모델 폴더  :&quot;, MODEL_DIR)
 print(&quot;이미지 폴더:&quot;, PNG_DIR)
 </code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 3</span></div><pre>데이터 폴더: data
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 1 · 원본 실행 기록</span></div><pre>데이터 폴더: data
 모델 폴더  : models
 이미지 폴더: png
 </pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>데이터·모델·이미지를 저장할 폴더를 만듭니다.</p>
+</div>
 <h3>공통 import</h3>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_2_onnx_export_runtime_inference.ipynb · 코드 셀 4 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>from pathlib import Path
-from urllib.request import urlretrieve
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 2 · 미검증</span></div><pre class="src"><code>import copy
+import random
+import time
+from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
-import onnx
-import onnxruntime as ort
 import torch
-from PIL import Image
-from torchvision.models import resnet18, ResNet18_Weights
+import torch.nn as nn
+from torch.utils.data import DataLoader, Subset
+from torchvision import datasets, transforms
+from torchvision.models import ResNet18_Weights, resnet18
+from torchvision.transforms import InterpolationMode
 </code></pre></div>
-<h4>1) 전체 흐름</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>사전학습 ResNet18 준비
-→ 실제 이미지 전처리
-→ PyTorch 기준 출력 생성
-→ ONNX 변환
-→ ONNX 파일 저장
-→ 모델 구조 검사
-→ ONNX Runtime Session 생성
-→ NumPy 입력으로 추론
-→ PyTorch 출력과 비교
-→ Top-5 결과 비교
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>.pth 또는 .pt
-→ PyTorch Runtime
-→ PC 직접 추론
-
-.onnx
-→ ONNX Runtime
-→ PyTorch와 분리된 추론
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>전이학습에 필요한 라이브러리를 불러옵니다.</p>
+<ul>
+<li><code>ResNet18_Weights</code> — ImageNet으로 미리 학습한 가중치와 그에 맞는 전처리 정보를 함께 제공합니다.</li>
+</ul>
+</div>
+<h4>1) 난수 시드와 실행 장치</h4>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>ImageNet 사전학습 ResNet18
+→ CIFAR-10용 fc 교체
+→ 1단계: fc만 학습
+→ 2단계: layer4 + fc 미세조정
+→ 시험 성능 비교
+→ 혼동행렬과 오답 분석
+→ 모델 저장·복원
 </code></pre></div>
 <table>
 <thead>
 <tr>
-  <th>구분</th>
-  <th>역할</th>
+  <th>단계</th>
+  <th>학습 범위</th>
+  <th>목적</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-  <td>PyTorch Model</td>
-  <td>Python에서 정의하고 학습한 신경망</td>
+  <td>Feature Extraction</td>
+  <td><code>fc</code></td>
+  <td>기존 특징을 그대로 사용하여 빠르게 분류</td>
 </tr>
 <tr>
-  <td>ONNX Exporter(오닉스 익스포터)</td>
-  <td>PyTorch 계산 그래프를 ONNX로 변환</td>
-</tr>
-<tr>
-  <td>ONNX Model</td>
-  <td>계산 그래프와 가중치를 저장한 교환 형식</td>
-</tr>
-<tr>
-  <td>ONNX Runtime</td>
-  <td>ONNX 모델을 읽고 추론하는 실행 엔진</td>
-</tr>
-<tr>
-  <td>Execution Provider(이그제큐션 프로바이더)</td>
-  <td>CPU·GPU·NPU 등 실제 실행 장치와 연결</td>
+  <td>Fine-Tuning</td>
+  <td><code>layer4 + fc</code></td>
+  <td>고급 특징을 CIFAR-10에 맞게 조정</td>
 </tr>
 </tbody>
 </table>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>PyTorch Model
-→ ONNX Exporter
-→ model.onnx
-→ ONNX Runtime
-→ CPU·GPU·가속기
+<p>ResNet18의 앞쪽 계층은 선, 경계, 색상처럼 여러 이미지에 공통으로 나타나는 특징을 학습합니다. 뒤쪽 계층은 사물의 형태처럼 더 복잡한 특징을 학습합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력 이미지
+→ 앞쪽 계층: 선·경계·색상
+→ 중간 계층: 질감·부분 형태
+→ 뒤쪽 계층: 복잡한 객체 특징
+→ fc: 최종 클래스 분류
 </code></pre></div>
-<p>ONNX 파일을 생성했다고 해서 자동으로 추론되는 것은 아닙니다. ONNX 파일을 읽고 실행하는 Runtime이 필요합니다.</p>
-<p>코랩에서는 다음 세 패키지만 준비하면 됩니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>onnx
-→ ONNX 파일 읽기와 구조 검사
+<div class="math-block" role="math" aria-label="\mathbf{z}=f_{\theta}(\mathbf{x})"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>&#x1D433;</mi><mo>&#x0003D;</mo><msub><mi>f</mi><mrow><mi>&#x003B8;</mi></mrow></msub><mo stretchy="false">&#x00028;</mo><mi>&#x1D431;</mi><mo stretchy="false">&#x00029;</mo></mrow></math></div>
+<div class="math-block" role="math" aria-label="\hat{\mathbf{y}}=g_{\phi}(\mathbf{z})"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mover accent="true"><mrow><mi>&#x1D432;</mi></mrow><mo>&#x0005E;</mo></mover><mo>&#x0003D;</mo><msub><mi>g</mi><mrow><mi>&#x003D5;</mi></mrow></msub><mo stretchy="false">&#x00028;</mo><mi>&#x1D433;</mi><mo stretchy="false">&#x00029;</mo></mrow></math></div>
+<ul>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>f</mi><mrow><mi>&#x003B8;</mi></mrow></msub></mrow></math>: 사전학습된 특징 추출부</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>g</mi><mrow><mi>&#x003D5;</mi></mrow></msub></mrow></math>: 새로 교체한 분류층</li>
+<li>Feature Extraction에서는 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x003B8;</mi></mrow></math>를 고정하고 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x003D5;</mi></mrow></math>만 학습합니다.</li>
+</ul>
+<div class="math-block" role="math" aria-label="(\theta_{4},\phi)
+\leftarrow
+(\theta_{4},\phi)
+-\eta\nabla_{(\theta_{4},\phi)}\mathcal{L}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mo stretchy="false">&#x00028;</mo><msub><mi>&#x003B8;</mi><mrow><mn>4</mn></mrow></msub><mo>&#x0002C;</mo><mi>&#x003D5;</mi><mo stretchy="false">&#x00029;</mo><mo>&#x02190;</mo><mo stretchy="false">&#x00028;</mo><msub><mi>&#x003B8;</mi><mrow><mn>4</mn></mrow></msub><mo>&#x0002C;</mo><mi>&#x003D5;</mi><mo stretchy="false">&#x00029;</mo><mo>&#x02212;</mo><mi>&#x003B7;</mi><msub><mo>&#x02207;</mo><mrow><mo stretchy="false">&#x00028;</mo><msub><mi>&#x003B8;</mi><mrow><mn>4</mn></mrow></msub><mo>&#x0002C;</mo><mi>&#x003D5;</mi><mo stretchy="false">&#x00029;</mo></mrow></msub><mi>&#x02112;</mi></mrow></math></div>
+<ul>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>&#x003B8;</mi><mrow><mn>4</mn></mrow></msub></mrow></math>: <code>layer4</code>의 가중치</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x003D5;</mi></mrow></math>: <code>fc</code>의 가중치</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x003B7;</mi></mrow></math>: Learning Rate(러닝 레이트, 학습률)</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x02112;</mi></mrow></math>: 손실함수</li>
+</ul>
+<p>Fine-Tuning에서는 뒤쪽 특징 추출부와 분류층을 함께 조금씩 조정합니다.</p>
+<p>코랩에서 위에서부터 순서대로 실행합니다. GPU(지피유, 그래픽 처리 장치)가 있으면 자동으로 사용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 3 · 미검증</span></div><pre class="src"><code>SEED = 42
 
-onnxscript
-→ 현재 PyTorch ONNX 변환 지원
+random.seed(SEED)
 
-onnxruntime
-→ ONNX 모델 추론
+np.random.seed(SEED)
+
+torch.manual_seed(SEED)
+
+if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(SEED)
+
+device = torch.device(&quot;cuda&quot; if torch.cuda.is_available() else &quot;cpu&quot;)
+
+print(&quot;PyTorch 버전:&quot;, torch.__version__)
+
+print(&quot;실행 장치:&quot;, device)
 </code></pre></div>
-<p>CPU 실습에서는 <code>onnxruntime</code>을 사용합니다. GPU 실행은 환경에 맞는 별도 ONNX Runtime GPU 패키지가 필요하므로 이번 기본 실습에서는 다루지 않습니다.</p>
-<h4>2) 실행 장치 확인</h4>
-<p>변환과 결과 비교를 단순하게 하기 위해 PyTorch와 ONNX Runtime 모두 CPU를 사용합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>PyTorch 기준 추론
-→ CPU
-
-ONNX 변환
-→ CPU
-
-ONNX Runtime 추론
-→ CPUExecutionProvider
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_2_onnx_export_runtime_inference.ipynb · 코드 셀 5 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>device = torch.device(&quot;cpu&quot;)
-
-print(&quot;PyTorch 버전     :&quot;, torch.__version__)
-
-print(&quot;ONNX 버전        :&quot;, onnx.__version__)
-
-print(&quot;ONNX Runtime 버전:&quot;, ort.__version__)
-
-print(&quot;실행 장치        :&quot;, device)
-</code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 5</span></div><pre>PyTorch 버전     : 2.13.0+cu130
-ONNX 버전        : 1.22.0
-ONNX Runtime 버전: 1.29.0
-실행 장치        : cpu
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 3 · 원본 실행 기록</span></div><pre>PyTorch 버전: 2.13.0+cu130
+실행 장치: cuda
 </pre></div>
-<h4>3) 모델 구성</h4>
-<p>ImageNet(이미지넷, 대규모 이미지 분류 데이터셋)으로 사전학습된 ResNet18을 사용합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>ResNet18_Weights.DEFAULT
-→ 사전학습 가중치
-→ 권장 전처리
-→ ImageNet 1,000개 클래스 이름
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>난수 시드를 모두 고정하고 실행 장치를 정합니다.</p>
+</div>
+<h4>2) 실습 설정</h4>
+<ul>
+<li><code>QUICK_RUN = True</code>: 적은 데이터와 Epoch(에포크, 전체 데이터 반복 횟수)로 전체 흐름을 빠르게 확인합니다.</li>
+<li><code>QUICK_RUN = False</code>: 전체 데이터로 학습합니다.</li>
+<li>CIFAR-10 원본 이미지는 32×32이지만, 사전학습 ResNet18의 입력 규격에 맞춰 224×224로 확대합니다.</li>
+</ul>
+<blockquote>
+<p>빠른 실행 결과는 기능 확인용입니다. 최종 성능 비교에는 전체 학습을 사용합니다.</p>
+</blockquote>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 4 · 미검증</span></div><pre class="src"><code>QUICK_RUN = True
+
+BATCH_SIZE = 64
+
+FEATURE_EPOCHS = 1 if QUICK_RUN else 4
+
+FINE_TUNING_EPOCHS = 1 if QUICK_RUN else 6
+
+FEATURE_LR = 1e-3
+
+BACKBONE_LR = 1e-4
+
+FC_LR = 5e-4
+
+VALIDATION_SIZE = 5_000
+
+NUMBER_OF_WORKERS = 2
+
+print(&quot;Quick Run:&quot;, QUICK_RUN)
+
+print(&quot;Feature Extraction Epoch:&quot;, FEATURE_EPOCHS)
+
+print(&quot;Fine-Tuning Epoch:&quot;, FINE_TUNING_EPOCHS)
 </code></pre></div>
-<p>입력 전처리 흐름:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>PIL Image
-→ Resize·Center Crop
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 4 · 원본 실행 기록</span></div><pre>Quick Run: True
+Feature Extraction Epoch: 1
+Fine-Tuning Epoch: 1
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>두 단계 학습 설정입니다.</p>
+<ul>
+<li>1단계 Feature Extraction: 마지막 층만 학습, 학습률 <code>1e-3</code>.</li>
+<li>2단계 Fine-Tuning: 마지막 블록(<code>layer4</code>)은 작은 학습률 <code>1e-4</code>, 출력층은 <code>5e-4</code>.</li>
+<li><code>QUICK_RUN = True</code>이면 단계마다 1 에폭만 실행합니다.</li>
+</ul>
+</div>
+<h4>3) 데이터 전처리 설정</h4>
+<p><code>ResNet18_Weights.DEFAULT</code>는 TorchVision(토치비전, 이미지 처리용 PyTorch 라이브러리)의 권장 사전학습 가중치를 선택합니다.</p>
+<p>평가 데이터에는 <code>weights.transforms()</code>를 그대로 사용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Resize
+→ Center Crop
 → Tensor 변환
-→ Normalize
-→ [3, 224, 224]
-→ Batch 차원 추가
-→ [1, 3, 224, 224]
+→ ImageNet 평균·표준편차 정규화
 </code></pre></div>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_2_onnx_export_runtime_inference.ipynb · 코드 셀 6 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>weights = ResNet18_Weights.DEFAULT
-preprocess = weights.transforms()
-class_names = list(weights.meta[&quot;categories&quot;])
+<p>훈련 데이터에는 좌우 반전과 무작위 자르기를 추가합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 5 · 미검증</span></div><pre class="src"><code>weights = ResNet18_Weights.DEFAULT
 
-try:
-    model = resnet18(weights=weights).to(device).eval()
-    model_source = &quot;ImageNet pretrained&quot;
-except Exception:
-    model = resnet18(weights=None).to(device).eval()
-    model_source = &quot;random initialized&quot;
-    print(&quot;사전학습 가중치를 받을 수 없어 미학습 ResNet18을 사용합니다.&quot;)
+evaluation_transform = weights.transforms()
 
-image_url = &quot;https://github.com/pytorch/hub/raw/master/images/dog.jpg&quot;
-image_path = PNG_DIR / &quot;dog.jpg&quot;
+IMAGENET_MEAN = (0.485, 0.456, 0.406)
 
-try:
-    if not image_path.exists():
-        urlretrieve(image_url, image_path)
-    image = Image.open(image_path).convert(&quot;RGB&quot;)
-except Exception:
-    image = Image.new(&quot;RGB&quot;, (224, 224), color=(128, 128, 128))
-    print(&quot;예제 이미지를 받을 수 없어 회색 테스트 이미지를 사용합니다.&quot;)
+IMAGENET_STD = (0.229, 0.224, 0.225)
 
-input_tensor = preprocess(image).unsqueeze(0).to(device)
+train_transform = transforms.Compose([
+    transforms.RandomResizedCrop(
+        224,
+        scale=(0.7, 1.0),
+        interpolation=InterpolationMode.BILINEAR,
+        antialias=True,
+    ),
+    transforms.RandomHorizontalFlip(),
+    transforms.ToTensor(),
+    transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD),
+])
 
-print(&quot;모델 기준      :&quot;, model_source)
-print(&quot;모델           :&quot;, model.__class__.__name__)
-print(&quot;클래스 수      :&quot;, len(class_names))
-print(&quot;원본 이미지 크기:&quot;, image.size)
-print(&quot;입력 Shape     :&quot;, tuple(input_tensor.shape))
-print(&quot;입력 Dtype     :&quot;, input_tensor.dtype)
+print(&quot;사전학습 가중치:&quot;, weights)
 
-plt.figure(figsize=(5, 5))
-plt.imshow(image)
-plt.axis(&quot;off&quot;)
-plt.title(&quot;Inference Image&quot;)
+print(&quot;평가 전처리:&quot;)
+
+print(evaluation_transform)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 5 · 원본 실행 기록</span></div><pre>사전학습 가중치: ResNet18_Weights.IMAGENET1K_V1
+평가 전처리:
+ImageClassification(
+    crop_size=[224]
+    resize_size=[256]
+    mean=[0.485, 0.456, 0.406]
+    std=[0.229, 0.224, 0.225]
+    interpolation=InterpolationMode.BILINEAR
+)
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>사전학습 가중치에 맞는 전처리를 준비합니다.</p>
+<ul>
+<li><code>weights.transforms()</code> — 평가용 전처리(크기 조정 → 가운데 224×224 자르기 → ImageNet 정규화).</li>
+<li>학습용은 <code>RandomResizedCrop(224, scale=(0.7, 1.0))</code>로 원본의 70~100% 영역을 무작위로 잘라 224×224로 키우고 좌우 뒤집기를 더합니다.</li>
+<li>32×32 CIFAR-10 이미지를 224×224로 키우는 이유는, 사전학습 모델이 그 크기에서 학습되었기 때문입니다.</li>
+</ul>
+</div>
+<h4>4) CIFAR-10 데이터 준비</h4>
+<p>공식 훈련 데이터 50,000개를 훈련용과 검증용으로 나눕니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>훈련 데이터 45,000개
+검증 데이터 5,000개
+시험 데이터 10,000개
+</code></pre></div>
+<p>훈련 데이터만 무작위 증강을 적용하고, 검증·시험 데이터에는 평가용 전처리를 적용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 6 · 미검증</span></div><pre class="src"><code>train_source = datasets.CIFAR10(
+    root=str(DATA_DIR / &quot;torchvision&quot;),
+    train=True,
+    download=True,
+    transform=train_transform,
+)
+
+validation_source = datasets.CIFAR10(
+    root=str(DATA_DIR / &quot;torchvision&quot;),
+    train=True,
+    download=False,
+    transform=evaluation_transform,
+)
+
+test_dataset = datasets.CIFAR10(
+    root=str(DATA_DIR / &quot;torchvision&quot;),
+    train=False,
+    download=True,
+    transform=evaluation_transform,
+)
+
+generator = torch.Generator().manual_seed(SEED)
+
+indices = torch.randperm(len(train_source), generator=generator).tolist()
+
+train_indices = indices[:-VALIDATION_SIZE]
+
+validation_indices = indices[-VALIDATION_SIZE:]
+</code></pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>학습용·평가용 변환으로 CIFAR-10을 불러오고, 같은 인덱스로 학습·검증을 나눕니다.</p>
+</div>
+<h4>5) 빠른 실행용 데이터 축소</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 7 · 미검증</span></div><pre class="src"><code>if QUICK_RUN:
+    train_indices = train_indices[:3_000]
+    validation_indices = validation_indices[:1_000]
+    test_dataset = Subset(test_dataset, range(1_000))
+</code></pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p><code>QUICK_RUN</code>이면 학습 3,000 / 검증 1,000 / 테스트 1,000장만 씁니다.</p>
+</div>
+<h4>6) 학습·검증 Subset 만들기</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 8 · 미검증</span></div><pre class="src"><code>train_dataset = Subset(train_source, train_indices)
+
+validation_dataset = Subset(validation_source, validation_indices)
+</code></pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>인덱스 목록으로 학습·검증 <code>Subset</code>을 만듭니다.</p>
+</div>
+<h4>7) DataLoader 생성 함수</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 9 · 미검증</span></div><pre class="src"><code>def make_loader(dataset, shuffle):
+    return DataLoader(
+        dataset,
+        batch_size=BATCH_SIZE,
+        shuffle=shuffle,
+        num_workers=NUMBER_OF_WORKERS,
+        pin_memory=torch.cuda.is_available(),
+    )
+</code></pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>DataLoader를 만드는 함수입니다.</p>
+</div>
+<h4>8) DataLoader 준비</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 10 · 미검증</span></div><pre class="src"><code>train_loader = make_loader(train_dataset, shuffle=True)
+
+validation_loader = make_loader(validation_dataset, shuffle=False)
+
+test_loader = make_loader(test_dataset, shuffle=False)
+
+class_names = [
+    &quot;airplane&quot;, &quot;automobile&quot;, &quot;bird&quot;, &quot;cat&quot;, &quot;deer&quot;,
+    &quot;dog&quot;, &quot;frog&quot;, &quot;horse&quot;, &quot;ship&quot;, &quot;truck&quot;,
+]
+
+class_names_ko = [
+    &quot;비행기&quot;, &quot;자동차&quot;, &quot;새&quot;, &quot;고양이&quot;, &quot;사슴&quot;,
+    &quot;개&quot;, &quot;개구리&quot;, &quot;말&quot;, &quot;배&quot;, &quot;트럭&quot;,
+]
+
+print(&quot;훈련 데이터:&quot;, len(train_dataset))
+
+print(&quot;검증 데이터:&quot;, len(validation_dataset))
+
+print(&quot;시험 데이터:&quot;, len(test_dataset))
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 10 · 원본 실행 기록</span></div><pre>훈련 데이터: 3000
+검증 데이터: 1000
+시험 데이터: 1000
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>학습·검증·테스트 DataLoader와 클래스 이름을 준비합니다.</p>
+</div>
+<h4>9) 배치 데이터 확인</h4>
+<p>정규화된 이미지를 화면에 표시하려면 다음 순서로 원래 범위에 가깝게 되돌립니다.</p>
+<div class="math-block" role="math" aria-label="\mathbf{x}_{\mathrm{display}}
+=
+\mathbf{x}_{\mathrm{normalized}}\boldsymbol{\sigma}
++
+\boldsymbol{\mu}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>&#x1D431;</mi><mrow><mrow><mi mathvariant="normal">d</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">y</mi></mrow></mrow></msub><mo>&#x0003D;</mo><msub><mi>&#x1D431;</mi><mrow><mrow><mi mathvariant="normal">n</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">z</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow></mrow></msub><mrow><mi mathvariant="bold-italic">&#x003C3;</mi></mrow><mo>&#x0002B;</mo><mrow><mi mathvariant="bold-italic">&#x003BC;</mi></mrow></mrow></math></div>
+<ul>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mrow><mi mathvariant="bold-italic">&#x003BC;</mi></mrow></mrow></math>: ImageNet 평균</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mrow><mi mathvariant="bold-italic">&#x003C3;</mi></mrow></mrow></math>: ImageNet 표준편차</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 11 · 미검증</span></div><pre class="src"><code>def denormalize(image):
+    mean = torch.tensor(IMAGENET_MEAN).view(3, 1, 1)
+    std = torch.tensor(IMAGENET_STD).view(3, 1, 1)
+    return (image.cpu() * std + mean).clamp(0, 1)
+
+sample_images, sample_labels = next(iter(train_loader))
+
+print(&quot;미니배치 Shape:&quot;, sample_images.shape)
+
+plt.figure(figsize=(12, 6))
+
+for index in range(8):
+    image = denormalize(sample_images[index]).permute(1, 2, 0)
+    label = sample_labels[index].item()
+
+    plt.subplot(2, 4, index + 1)
+    plt.imshow(image)
+    plt.title(f&quot;{class_names_ko[label]}\n({class_names[label]})&quot;)
+    plt.axis(&quot;off&quot;)
+
+plt.tight_layout()
+
 plt.show()
 </code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 6</span></div><pre>모델 기준      : ImageNet pretrained
-모델           : ResNet
-클래스 수      : 1000
-원본 이미지 크기: (1546, 1213)
-입력 Shape     : (1, 3, 224, 224)
-입력 Dtype     : torch.float32
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 11 · 원본 실행 기록</span></div><pre>미니배치 Shape: torch.Size([64, 3, 224, 224])
 </pre></div>
-<p>출력 그림 — 원본 노트북 기록 · 코드 셀 6:</p>
-<p><img src="img/ch06_2_c06_0.png" alt="ch06_2 PyTorch ONNX 내보내기와 Runtime 추론 — 코드 셀 6 출력 그림" /></p>
-<h4>4) 데이터 구조 확인</h4>
-<p>변환 전 PyTorch 출력은 ONNX 결과를 판단하는 기준입니다.</p>
-<div class="math-block" role="math" aria-label="\mathbf{y}_{PT}=f_{\theta}(\mathbf{x})"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>&#x1D432;</mi><mrow><mi>P</mi><mi>T</mi></mrow></msub><mo>&#x0003D;</mo><msub><mi>f</mi><mrow><mi>&#x003B8;</mi></mrow></msub><mo stretchy="false">&#x00028;</mo><mi>&#x1D431;</mi><mo stretchy="false">&#x00029;</mo></mrow></math></div>
+<p><img src="img/ch05_2_c11_0.png" alt="ch05_2 ResNet18 전이학습 — 코드 셀 11 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>ImageNet 정규화를 되돌리는 함수를 만들고, 224×224로 키운 학습 이미지 8장을 표시합니다. 미니배치 모양은 <code>[64, 3, 224, 224]</code>입니다.</p>
+</div>
+<h4>10) 모델 구성</h4>
+<p>기존 ResNet18은 ImageNet 1,000개 클래스를 출력합니다. 마지막 <code>fc</code>를 CIFAR-10의 10개 클래스로 교체합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>기존 fc: 512 → 1,000
+새로운 fc: 512 → 10
+</code></pre></div>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 12 · 미검증</span></div><pre class="src"><code>def create_resnet18(number_of_classes=10, pretrained=True):
+    selected_weights = weights if pretrained else None
+    model = resnet18(weights=selected_weights)
+
+    input_features = model.fc.in_features
+    model.fc = nn.Linear(input_features, number_of_classes)
+
+    return model
+
+def count_trainable_parameters(model):
+    return sum(
+        parameter.numel()
+        for parameter in model.parameters()
+        if parameter.requires_grad
+    )
+
+model = create_resnet18().to(device)
+
+dummy_input = torch.randn(2, 3, 224, 224, device=device)
+
+model.eval()
+
+with torch.inference_mode():
+    dummy_output = model(dummy_input)
+
+print(&quot;입력 Shape:&quot;, dummy_input.shape)
+
+print(&quot;출력 Shape:&quot;, dummy_output.shape)
+
+print(&quot;교체된 출력층:&quot;, model.fc)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 12 · 원본 실행 기록</span></div><pre>입력 Shape: torch.Size([2, 3, 224, 224])
+출력 Shape: torch.Size([2, 10])
+교체된 출력층: Linear(in_features=512, out_features=10, bias=True)
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>사전학습 ResNet18을 불러와 <strong>출력층만</strong> CIFAR-10용으로 바꿉니다.</p>
 <ul>
-<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x1D431;</mi></mrow></math>: 전처리된 입력 이미지</li>
-<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>f</mi><mrow><mi>&#x003B8;</mi></mrow></msub></mrow></math>: 학습된 가중치 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x003B8;</mi></mrow></math>를 가진 ResNet18</li>
-<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>&#x1D432;</mi><mrow><mi>P</mi><mi>T</mi></mrow></msub></mrow></math>: PyTorch가 출력한 Logit(로짓, 확률 변환 전 점수)</li>
+<li>원래 <code>model.fc</code>는 ImageNet 1,000개 클래스용 <code>Linear(512, 1000)</code>입니다.</li>
+<li><code>nn.Linear(512, 10)</code>으로 교체하면 앞부분(특징 추출기)은 그대로 쓰고 분류만 새로 배웁니다.</li>
+<li>학습 가능한 파라미터 수를 세는 함수도 함께 만듭니다.</li>
 </ul>
-<p>같은 입력을 ONNX Runtime에도 넣은 뒤 두 Logit을 비교합니다.</p>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_2_onnx_export_runtime_inference.ipynb · 코드 셀 7 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>with torch.inference_mode():
-    pytorch_logits = model(input_tensor)
-    pytorch_probabilities = torch.softmax(pytorch_logits, dim=1)
-
-print(&quot;PyTorch 출력 Shape:&quot;, tuple(pytorch_logits.shape))
-
-print(&quot;PyTorch Top-1 Index:&quot;, int(pytorch_logits.argmax(dim=1).item()))
+</div>
+<h4>11) 1단계: Feature Extraction 설정</h4>
+<p>Backbone(백본, 핵심 특징 추출 신경망)은 동결하고 새 <code>fc</code>만 학습합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>conv1 ~ layer4: 동결
+fc: 학습
 </code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 7</span></div><pre>PyTorch 출력 Shape: (1, 1000)
-PyTorch Top-1 Index: 258
+<p><code>requires_grad=False</code>인 파라미터는 역전파에서 갱신되지 않습니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 13 · 미검증</span></div><pre class="src"><code>model.requires_grad_(False)
+
+model.fc.requires_grad_(True)
+
+feature_parameter_count = count_trainable_parameters(model)
+
+print(&quot;학습 가능한 파라미터:&quot;, f&quot;{feature_parameter_count:,}개&quot;)
+
+print(&quot;학습 대상:&quot;, model.fc)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 13 · 원본 실행 기록</span></div><pre>학습 가능한 파라미터: 5,130개
+학습 대상: Linear(in_features=512, out_features=10, bias=True)
 </pre></div>
-<h4>5) ONNX 모델 내보내기</h4>
-<p>현재 PyTorch에서는 <code>torch.export</code> 기반 ONNX Exporter를 사용합니다.</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>onnx_program = torch.onnx.export(
- model,
- (input_tensor,),
- input_names=[&quot;input&quot;],
- output_names=[&quot;logits&quot;],
- dynamo=True,
-)
-</code></pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>1단계 설정: 모든 파라미터를 고정하고 출력층만 학습 가능하게 합니다.</p>
 <ul>
-<li><code>model</code>: 변환할 PyTorch 모델</li>
-<li><code>(input_tensor,)</code>: 모델 구조를 분석할 Example Input(이그잼플 인풋, 예제 입력)</li>
-<li><code>input_names</code>: ONNX 입력 이름</li>
-<li><code>output_names</code>: ONNX 출력 이름</li>
-<li><code>dynamo=True</code>: 현재 권장되는 <code>torch.export</code> 기반 변환 방식</li>
+<li><code>model.requires_grad_(False)</code> — 모델 전체의 기울기 계산을 끕니다.</li>
+<li><code>model.fc.requires_grad_(True)</code> — 출력층만 다시 켭니다. 학습 파라미터는 5,130개뿐입니다.</li>
 </ul>
-<p>현재 버전에서는 <code>dynamo=True</code>가 기본값이지만, 학습 목적상 명시적으로 적습니다.</p>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_2_onnx_export_runtime_inference.ipynb · 코드 셀 8 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>onnx_path = MODEL_DIR / &quot;resnet18_imagenet.onnx&quot;
-
-onnx_program = torch.onnx.export(
-    model,
-    (input_tensor,),
-    input_names=[&quot;input&quot;],
-    output_names=[&quot;logits&quot;],
-    dynamo=True,
-)
-
-onnx_program.save(
-    onnx_path,
-    external_data=False,
-)
-
-print(&quot;ONNX 파일:&quot;, onnx_path)
-
-print(f&quot;파일 크기: {onnx_path.stat().st_size / 1024**2:.2f} MB&quot;)
-</code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 8</span></div><pre>[torch.onnx] Obtain model graph for `ResNet([...]` with `torch.export.export(..., strict=False)`...
-[torch.onnx] Obtain model graph for `ResNet([...]` with `torch.export.export(..., strict=False)`... ✅
-[torch.onnx] Run decompositions...
-[torch.onnx] Run decompositions... ✅
-[torch.onnx] Translate the graph into ONNX...
-[torch.onnx] Translate the graph into ONNX... ✅
-[torch.onnx] Optimize the ONNX graph...
-[torch.onnx] Optimize the ONNX graph... ✅
-ONNX 파일: models/resnet18_imagenet.onnx
-파일 크기: 44.66 MB
-</pre></div>
-<h4>6) ONNX 모델 검사</h4>
-<p>ONNX 파일 생성 후에는 두 단계를 확인합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>구조 검사
-onnx.checker.check_model()
-
-실행 정보 확인
-InferenceSession.get_inputs()
-InferenceSession.get_outputs()
-InferenceSession.get_providers()
-</code></pre></div>
-<p>구조 검사를 통과했다는 것은 ONNX 그래프가 형식적으로 올바르다는 뜻입니다. PyTorch와 같은 값을 출력하는지는 별도로 비교해야 합니다.</p>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_2_onnx_export_runtime_inference.ipynb · 코드 셀 9 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>onnx_model = onnx.load(onnx_path)
-
-onnx.checker.check_model(onnx_model)
-
-session = ort.InferenceSession(
-    str(onnx_path),
-    providers=[&quot;CPUExecutionProvider&quot;],
-)
-
-session_input = session.get_inputs()[0]
-
-session_output = session.get_outputs()[0]
-
-opset_version = onnx_model.opset_import[0].version
-
-print(&quot;ONNX 구조 검사: 통과&quot;)
-
-print(&quot;Node 수        :&quot;, len(onnx_model.graph.node))
-
-print(&quot;Opset 버전     :&quot;, opset_version)
-
-print(&quot;사용 Provider  :&quot;, session.get_providers())
-
-print(&quot;입력 이름·Shape :&quot;, session_input.name, session_input.shape)
-
-print(&quot;출력 이름·Shape :&quot;, session_output.name, session_output.shape)
-</code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 9</span></div><pre>ONNX 구조 검사: 통과
-Node 수        : 49
-Opset 버전     : 20
-사용 Provider  : ['CPUExecutionProvider']
-입력 이름·Shape : input [1, 3, 224, 224]
-출력 이름·Shape : logits [1, 1000]
-</pre></div>
-<h4>7) ONNX Runtime 추론</h4>
-<p>ONNX Runtime의 Python API는 NumPy(넘파이, 수치 배열 라이브러리) 배열을 입력으로 받습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>PyTorch Tensor
-→ CPU로 이동
-→ NumPy 배열 변환
-→ float32 확인
-→ ONNX Runtime 입력
-</code></pre></div>
-<div class="math-block" role="math" aria-label="\mathbf{y}_{ORT}=g_{\theta}(\mathbf{x})"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>&#x1D432;</mi><mrow><mi>O</mi><mi>R</mi><mi>T</mi></mrow></msub><mo>&#x0003D;</mo><msub><mi>g</mi><mrow><mi>&#x003B8;</mi></mrow></msub><mo stretchy="false">&#x00028;</mo><mi>&#x1D431;</mi><mo stretchy="false">&#x00029;</mo></mrow></math></div>
-<ul>
-<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>g</mi><mrow><mi>&#x003B8;</mi></mrow></msub></mrow></math>: ONNX Runtime이 실행하는 변환 모델</li>
-<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>&#x1D432;</mi><mrow><mi>O</mi><mi>R</mi><mi>T</mi></mrow></msub></mrow></math>: ONNX Runtime 출력</li>
-</ul>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_2_onnx_export_runtime_inference.ipynb · 코드 셀 10 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>input_array = input_tensor.detach().cpu().numpy().astype(np.float32)
-
-onnx_logits = session.run(
-    None,
-    {session_input.name: input_array},
-)[0]
-
-print(&quot;ONNX 출력 Type :&quot;, type(onnx_logits))
-
-print(&quot;ONNX 출력 Shape:&quot;, onnx_logits.shape)
-
-print(&quot;ONNX Top-1 Index:&quot;, int(onnx_logits.argmax(axis=1)[0]))
-</code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 10</span></div><pre>ONNX 출력 Type : &lt;class 'numpy.ndarray'&gt;
-ONNX 출력 Shape: (1, 1000)
-ONNX Top-1 Index: 258
-</pre></div>
-<h4>8) PyTorch·ONNX 출력 비교</h4>
-<p>최대 절대 오차:</p>
-<div class="math-block" role="math" aria-label="E_{\max}
+</div>
+<h4>12) Loss 함수 설정</h4>
+<p>다중분류에서는 Cross Entropy Loss(크로스 엔트로피 로스, 다중분류 손실함수)를 사용합니다.</p>
+<div class="math-block" role="math" aria-label="\mathcal{L}
 =
-\max_i
-\left|
-y_{PT,i}-y_{ORT,i}
-\right|"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>E</mi><mrow><mo>max</mo></mrow></msub><mo>&#x0003D;</mo><msub><mo>max</mo><mi>i</mi></msub><mrow><mo stretchy="true" fence="true" form="prefix">&#x0007C;</mo><msub><mi>y</mi><mrow><mi>P</mi><mi>T</mi><mo>&#x0002C;</mo><mi>i</mi></mrow></msub><mo>&#x02212;</mo><msub><mi>y</mi><mrow><mi>O</mi><mi>R</mi><mi>T</mi><mo>&#x0002C;</mo><mi>i</mi></mrow></msub><mo stretchy="true" fence="true" form="postfix">&#x0007C;</mo></mrow></mrow></math></div>
-<p>평균 절대 오차:</p>
-<div class="math-block" role="math" aria-label="E_{\mathrm{mean}}
-=
-\frac{1}{C}
-\sum_{i=1}^{C}
-\left|
-y_{PT,i}-y_{ORT,i}
-\right|"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>E</mi><mrow><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi></mrow></mrow></msub><mo>&#x0003D;</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>C</mi></mrow></mfrac><munderover><mo>&#x02211;</mo><mrow><mi>i</mi><mo>&#x0003D;</mo><mn>1</mn></mrow><mrow><mi>C</mi></mrow></munderover><mrow><mo stretchy="true" fence="true" form="prefix">&#x0007C;</mo><msub><mi>y</mi><mrow><mi>P</mi><mi>T</mi><mo>&#x0002C;</mo><mi>i</mi></mrow></msub><mo>&#x02212;</mo><msub><mi>y</mi><mrow><mi>O</mi><mi>R</mi><mi>T</mi><mo>&#x0002C;</mo><mi>i</mi></mrow></msub><mo stretchy="true" fence="true" form="postfix">&#x0007C;</mo></mrow></mrow></math></div>
+-\frac{1}{N}
+\sum_{i=1}^{N}
+\log p_{i,y_i}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>&#x02112;</mi><mo>&#x0003D;</mo><mo>&#x02212;</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>N</mi></mrow></mfrac><munderover><mo>&#x02211;</mo><mrow><mi>i</mi><mo>&#x0003D;</mo><mn>1</mn></mrow><mrow><mi>N</mi></mrow></munderover><mi>log</mi><msub><mi>p</mi><mrow><mi>i</mi><mo>&#x0002C;</mo><msub><mi>y</mi><mi>i</mi></msub></mrow></msub></mrow></math></div>
 <ul>
-<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>C</mi></mrow></math>: 전체 클래스 수</li>
-<li>값이 작을수록 두 Runtime의 출력이 가깝습니다.</li>
-<li>부동소수점 연산 순서가 달라 매우 작은 오차는 발생할 수 있습니다.</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>N</mi></mrow></math>: 미니배치 이미지 수</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>p</mi><mrow><mi>i</mi><mo>&#x0002C;</mo><msub><mi>y</mi><mi>i</mi></msub></mrow></msub></mrow></math>: <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>i</mi></mrow></math>번째 이미지의 정답 클래스 확률</li>
 </ul>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_2_onnx_export_runtime_inference.ipynb · 코드 셀 11 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>pytorch_output = pytorch_logits.detach().cpu().numpy()
-
-absolute_error = np.abs(pytorch_output - onnx_logits)
-
-max_error = absolute_error.max()
-
-mean_error = absolute_error.mean()
-
-np.testing.assert_allclose(
-    pytorch_output,
-    onnx_logits,
-    rtol=1e-4,
-    atol=1e-5,
-)
-
-print(f&quot;최대 절대 오차: {max_error:.8f}&quot;)
-
-print(f&quot;평균 절대 오차: {mean_error:.8f}&quot;)
-
-print(&quot;PyTorch ↔ ONNX 출력 검증: 통과&quot;)
+<p>동결된 Batch Normalization(배치 노멀라이제이션, 미니배치 정규화) 계층은 평가 모드로 유지하여 기존 평균과 분산이 바뀌지 않도록 합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 14 · 미검증</span></div><pre class="src"><code>loss_function = nn.CrossEntropyLoss()
 </code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 11</span></div><pre>최대 절대 오차: 0.00001526
-평균 절대 오차: 0.00000193
-PyTorch ↔ ONNX 출력 검증: 통과
-</pre></div>
-<h4>9) Top-5 결과 비교</h4>
-<p>분류 모델의 Logit을 Softmax(소프트맥스, 여러 클래스 점수를 확률로 변환하는 함수)로 변환합니다.</p>
-<div class="math-block" role="math" aria-label="p_i
-=
-\frac{e^{z_i}}
-{\sum_{j=1}^{C}e^{z_j}}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>p</mi><mi>i</mi></msub><mo>&#x0003D;</mo><mfrac><mrow><msup><mi>e</mi><mrow><msub><mi>z</mi><mi>i</mi></msub></mrow></msup></mrow><mrow><msubsup><mo>&#x02211;</mo><mrow><mi>j</mi><mo>&#x0003D;</mo><mn>1</mn></mrow><mrow><mi>C</mi></mrow></msubsup><msup><mi>e</mi><mrow><msub><mi>z</mi><mi>j</mi></msub></mrow></msup></mrow></mfrac></mrow></math></div>
-<p>PyTorch와 ONNX Runtime의 Top-5 클래스 순서와 확률을 비교합니다.</p>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch06_2_onnx_export_runtime_inference.ipynb · 코드 셀 12 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def print_top5(title, logits, class_names):
-    probabilities = torch.softmax(torch.as_tensor(logits), dim=1)
-    top_probs, top_indices = probabilities.topk(5, dim=1)
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>다중분류 손실 함수를 정의합니다.</p>
+</div>
+<h4>13) BatchNorm 학습 모드 설정</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 15 · 미검증</span></div><pre class="src"><code>def set_training_mode(model):
+    model.train()
 
-    print(title)
-    for rank, (probability, class_index) in enumerate(
-        zip(top_probs[0], top_indices[0]),
-        start=1,
-    ):
-        index = int(class_index)
-        print(
-            f&quot;{rank}. {class_names[index]:25s}&quot;
-            f&quot; - {float(probability) * 100:6.2f}%&quot;
+    # 동결된 BatchNorm의 평균과 분산은 변경하지 않습니다.
+    for module in model.modules():
+        if isinstance(module, nn.BatchNorm2d):
+            if not module.weight.requires_grad:
+                module.eval()
+</code></pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>학습 모드로 바꾸되, 고정된 BatchNorm 층은 평가 모드로 남겨 두는 함수입니다.</p>
+<ul>
+<li>BatchNorm은 학습 모드에서 배치마다 평균·분산 통계를 갱신합니다. 가중치를 고정한 층의 통계까지 바뀌면 사전학습 효과가 흐려지므로 막아 둡니다.</li>
+</ul>
+</div>
+<h4>14) 학습 함수 정의</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 16 · 미검증</span></div><pre class="src"><code>def run_one_epoch(model, data_loader, optimizer=None):
+    is_training = optimizer is not None
+
+    if is_training:
+        set_training_mode(model)
+    else:
+        model.eval()
+
+    total_loss = 0.0
+    total_correct = 0
+    total_samples = 0
+
+    context = torch.enable_grad() if is_training else torch.inference_mode()
+
+    with context:
+        for images, labels in data_loader:
+            images = images.to(device)
+            labels = labels.to(device)
+
+            if is_training:
+                optimizer.zero_grad()
+
+            logits = model(images)
+            loss = loss_function(logits, labels)
+
+            if is_training:
+                loss.backward()
+                optimizer.step()
+
+            predictions = logits.argmax(dim=1)
+            batch_size = labels.size(0)
+
+            total_loss += loss.item() * batch_size
+            total_correct += (predictions == labels).sum().item()
+            total_samples += batch_size
+
+    average_loss = total_loss / total_samples
+    accuracy = total_correct / total_samples
+
+    return average_loss, accuracy
+</code></pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>Optimizer를 주면 학습, 주지 않으면 평가를 하는 한 에폭 함수입니다. 학습과 평가 코드를 하나로 합쳐 중복을 줄였습니다.</p>
+</div>
+<h4>15) 단계별 학습 함수</h4>
+<p>같은 학습 함수를 Feature Extraction과 Fine-Tuning에 재사용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>훈련 1 Epoch
+→ 검증
+→ 최고 검증 정확도 확인
+→ 최고 모델 상태 보관
+</code></pre></div>
+<p>복잡한 Scheduler(스케줄러, 학습률 자동 변경)와 Early Stopping(얼리 스토핑, 조기 종료)은 제외하고 전이학습의 핵심 흐름에 집중합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 17 · 미검증</span></div><pre class="src"><code>def fit(model, train_loader, validation_loader, optimizer, epochs, phase_name):
+    history = {
+        &quot;train_loss&quot;: [],
+        &quot;train_accuracy&quot;: [],
+        &quot;validation_loss&quot;: [],
+        &quot;validation_accuracy&quot;: [],
+    }
+
+    best_accuracy = 0.0
+    best_state = copy.deepcopy(model.state_dict())
+    start_time = time.time()
+
+    for epoch in range(1, epochs + 1):
+        train_loss, train_accuracy = run_one_epoch(
+            model,
+            train_loader,
+            optimizer,
         )
 
-    return top_indices
+        validation_loss, validation_accuracy = run_one_epoch(
+            model,
+            validation_loader,
+        )
 
-pytorch_top5 = print_top5(
-    &quot;===== PyTorch Top-5 =====&quot;,
-    pytorch_logits.detach().cpu(),
-    class_names,
-)
+        history[&quot;train_loss&quot;].append(train_loss)
+        history[&quot;train_accuracy&quot;].append(train_accuracy)
+        history[&quot;validation_loss&quot;].append(validation_loss)
+        history[&quot;validation_accuracy&quot;].append(validation_accuracy)
 
-print()
+        if validation_accuracy &gt; best_accuracy:
+            best_accuracy = validation_accuracy
+            best_state = copy.deepcopy(model.state_dict())
 
-onnx_top5 = print_top5(
-    &quot;===== ONNX Runtime Top-5 =====&quot;,
-    onnx_logits,
-    class_names,
-)
+        print(
+            f&quot;[{phase_name}] Epoch {epoch}/{epochs} | &quot;
+            f&quot;Train Acc {train_accuracy * 100:.2f}% | &quot;
+            f&quot;Val Acc {validation_accuracy * 100:.2f}%&quot;
+        )
 
-print()
+    elapsed_time = time.time() - start_time
 
-print(&quot;Top-5 순서 일치:&quot;, torch.equal(pytorch_top5, onnx_top5))
+    return history, best_state, best_accuracy, elapsed_time
 </code></pre></div>
-<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 12</span></div><pre>===== PyTorch Top-5 =====
-1. Samoyed                   -  88.46%
-2. Arctic fox                -   4.58%
-3. white wolf                -   4.43%
-4. Pomeranian                -   0.56%
-5. Great Pyrenees            -   0.47%
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>지정한 에폭만큼 학습·검증을 반복하고, 기록과 최고 검증 정확도의 가중치, 학습 시간을 돌려주는 함수입니다.</p>
+</div>
+<h4>16) 1단계 학습 실행</h4>
+<p>새 <code>fc</code>만 Optimizer(옵티마이저, 가중치 갱신 알고리즘)에 전달합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>학습 대상
+model.fc.parameters()
+</code></pre></div>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 18 · 미검증</span></div><pre class="src"><code>feature_optimizer = torch.optim.Adam(
+    model.fc.parameters(),
+    lr=FEATURE_LR,
+)
 
-===== ONNX Runtime Top-5 =====
-1. Samoyed                   -  88.46%
-2. Arctic fox                -   4.58%
-3. white wolf                -   4.43%
-4. Pomeranian                -   0.56%
-5. Great Pyrenees            -   0.47%
+(
+    feature_history,
+    feature_best_state,
+    feature_best_accuracy,
+    feature_time,
+) = fit(
+    model,
+    train_loader,
+    validation_loader,
+    feature_optimizer,
+    FEATURE_EPOCHS,
+    &quot;Feature Extraction&quot;,
+)
 
-Top-5 순서 일치: True
+print()
+
+print(&quot;최고 검증 정확도:&quot;, f&quot;{feature_best_accuracy * 100:.2f}%&quot;)
+
+print(&quot;학습 시간:&quot;, f&quot;{feature_time / 60:.2f}분&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 18 · 원본 실행 기록</span></div><pre>[Feature Extraction] Epoch 1/1 | Train Acc 49.33% | Val Acc 69.00%
+
+최고 검증 정확도: 69.00%
+학습 시간: 0.06분
 </pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>1단계 Feature Extraction을 실행합니다. Optimizer에는 <code>model.fc.parameters()</code>만 넘깁니다.</p>
+</div>
+<h4>17) 1단계 학습 곡선</h4>
+<p>Loss(로스, 손실값)는 낮아지고 Accuracy(애큐러시, 정확도)는 높아지는지 확인합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 19 · 미검증</span></div><pre class="src"><code>def plot_history(history, title):
+    epochs = range(1, len(history[&quot;train_loss&quot;]) + 1)
+
+    plt.figure(figsize=(7, 4))
+    plt.plot(epochs, history[&quot;train_loss&quot;], label=&quot;Train&quot;)
+    plt.plot(epochs, history[&quot;validation_loss&quot;], label=&quot;Validation&quot;)
+    plt.xlabel(&quot;Epoch&quot;)
+    plt.ylabel(&quot;Loss&quot;)
+    plt.title(f&quot;{title} Loss&quot;)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+    plt.figure(figsize=(7, 4))
+    plt.plot(epochs, history[&quot;train_accuracy&quot;], label=&quot;Train&quot;)
+    plt.plot(epochs, history[&quot;validation_accuracy&quot;], label=&quot;Validation&quot;)
+    plt.xlabel(&quot;Epoch&quot;)
+    plt.ylabel(&quot;Accuracy&quot;)
+    plt.title(f&quot;{title} Accuracy&quot;)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+plot_history(feature_history, &quot;Feature Extraction&quot;)
+</code></pre></div>
+<p><img src="img/ch05_2_c19_0.png" alt="ch05_2 ResNet18 전이학습 — 코드 셀 19 출력 그림" /></p>
+<p><img src="img/ch05_2_c19_1.png" alt="ch05_2 ResNet18 전이학습 — 코드 셀 19 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>학습 기록을 손실·정확도 그래프로 그리는 함수를 만들고 1단계 결과를 그립니다.</p>
+</div>
+<h4>18) 2단계: Fine-Tuning 설정</h4>
+<p>Feature Extraction에서 가장 좋았던 상태를 불러옵니다. 그다음 <code>layer4</code>와 <code>fc</code>만 학습 가능하게 설정합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>conv1 ~ layer3: 동결 유지
+layer4: 작은 학습률로 미세조정
+fc: 조금 큰 학습률로 학습
+</code></pre></div>
+<p>사전학습 특징이 급격하게 바뀌지 않도록 <code>layer4</code>에는 작은 학습률을 적용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 20 · 미검증</span></div><pre class="src"><code>model.load_state_dict(feature_best_state)
+
+model.layer4.requires_grad_(True)
+
+model.fc.requires_grad_(True)
+
+fine_tuning_parameter_count = count_trainable_parameters(model)
+
+print(&quot;Feature Extraction 파라미터:&quot;, f&quot;{feature_parameter_count:,}개&quot;)
+
+print(&quot;Fine-Tuning 파라미터:&quot;, f&quot;{fine_tuning_parameter_count:,}개&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 20 · 원본 실행 기록</span></div><pre>Feature Extraction 파라미터: 5,130개
+Fine-Tuning 파라미터: 8,398,858개
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>2단계 준비: 1단계 최고 가중치를 불러온 뒤 <code>layer4</code>의 고정도 풉니다. 학습 파라미터가 출력층만일 때보다 크게 늘어납니다(약 840만 개).</p>
+</div>
+<h4>19) 2단계 학습 실행</h4>
+<p>Parameter Group(파라미터 그룹, 서로 다른 학습률을 적용하는 변수 묶음)을 사용합니다.</p>
+<ul>
+<li><code>layer4</code>: 작은 학습률</li>
+<li><code>fc</code>: 조금 큰 학습률</li>
+</ul>
+<p>코드는 짧지만, 사전학습 계층과 새 분류층을 서로 다른 속도로 학습한다는 중요한 의미가 있습니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 21 · 미검증</span></div><pre class="src"><code>fine_tuning_optimizer = torch.optim.Adam([
+    {
+        &quot;params&quot;: model.layer4.parameters(),
+        &quot;lr&quot;: BACKBONE_LR,
+    },
+    {
+        &quot;params&quot;: model.fc.parameters(),
+        &quot;lr&quot;: FC_LR,
+    },
+])
+
+(
+    fine_history,
+    fine_best_state,
+    fine_best_accuracy,
+    fine_time,
+) = fit(
+    model,
+    train_loader,
+    validation_loader,
+    fine_tuning_optimizer,
+    FINE_TUNING_EPOCHS,
+    &quot;Fine-Tuning&quot;,
+)
+
+print()
+
+print(&quot;최고 검증 정확도:&quot;, f&quot;{fine_best_accuracy * 100:.2f}%&quot;)
+
+print(&quot;학습 시간:&quot;, f&quot;{fine_time / 60:.2f}분&quot;)
+
+plot_history(fine_history, &quot;Fine-Tuning&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 21 · 원본 실행 기록</span></div><pre>[Fine-Tuning] Epoch 1/1 | Train Acc 79.83% | Val Acc 84.00%
+
+최고 검증 정확도: 84.00%
+학습 시간: 0.06분
+</pre></div>
+<p><img src="img/ch05_2_c21_0.png" alt="ch05_2 ResNet18 전이학습 — 코드 셀 21 출력 그림" /></p>
+<p><img src="img/ch05_2_c21_1.png" alt="ch05_2 ResNet18 전이학습 — 코드 셀 21 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>2단계 Fine-Tuning을 실행합니다.</p>
+<ul>
+<li>Optimizer에 <strong>파라미터 그룹</strong>을 두 개 넘겨, 사전학습된 <code>layer4</code>는 작은 학습률로 조금만, 새 출력층은 더 큰 학습률로 고칩니다.</li>
+</ul>
+</div>
+<h4>20) 두 단계 테스트 비교</h4>
+<p>검증 정확도가 가장 높았던 Feature Extraction 모델과 Fine-Tuning 모델을 같은 시험 데이터로 평가합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 22 · 미검증</span></div><pre class="src"><code>model.load_state_dict(feature_best_state)
+
+feature_test_loss, feature_test_accuracy = run_one_epoch(
+    model,
+    test_loader,
+)
+
+model.load_state_dict(fine_best_state)
+
+fine_test_loss, fine_test_accuracy = run_one_epoch(
+    model,
+    test_loader,
+)
+
+print(f&quot;{'방법':&lt;22} {'학습 파라미터':&gt;14} {'시험 정확도':&gt;12} {'학습 시간':&gt;12}&quot;)
+
+print(&quot;-&quot; * 66)
+
+print(
+    f&quot;{'Feature Extraction':&lt;22} &quot;
+    f&quot;{feature_parameter_count:&gt;14,} &quot;
+    f&quot;{feature_test_accuracy * 100:&gt;11.2f}% &quot;
+    f&quot;{feature_time / 60:&gt;10.2f}분&quot;
+)
+
+print(
+    f&quot;{'Fine-Tuning':&lt;22} &quot;
+    f&quot;{fine_tuning_parameter_count:&gt;14,} &quot;
+    f&quot;{fine_test_accuracy * 100:&gt;11.2f}% &quot;
+    f&quot;{fine_time / 60:&gt;10.2f}분&quot;
+)
+
+methods = [&quot;Feature Extraction&quot;, &quot;Fine-Tuning&quot;]
+
+accuracies = [feature_test_accuracy * 100, fine_test_accuracy * 100]
+
+plt.figure(figsize=(7, 4))
+
+plt.bar(methods, accuracies)
+
+plt.ylabel(&quot;Test Accuracy (%)&quot;)
+
+plt.title(&quot;Transfer Learning Accuracy Comparison&quot;)
+
+plt.tight_layout()
+
+plt.show()
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 22 · 원본 실행 기록</span></div><pre>방법                            학습 파라미터       시험 정확도        학습 시간
+------------------------------------------------------------------
+Feature Extraction              5,130       68.20%       0.06분
+Fine-Tuning                 8,398,858       84.20%       0.06분
+</pre></div>
+<p><img src="img/ch05_2_c22_0.png" alt="ch05_2 ResNet18 전이학습 — 코드 셀 22 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>두 단계의 최고 가중치를 차례로 불러와 테스트 정확도를 비교하고, 학습 파라미터 수·정확도·시간을 표와 막대그래프로 정리합니다.</p>
+</div>
+<h4>21) 예측 결과 수집 함수</h4>
+<p>Fine-Tuning 최고 모델을 사용하여 다음 정보를 수집합니다.</p>
+<ul>
+<li>실제 클래스</li>
+<li>예측 클래스</li>
+<li>예측 확률</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 23 · 미검증</span></div><pre class="src"><code>model.load_state_dict(fine_best_state)
+
+model.eval()
+
+def collect_predictions(model, data_loader):
+    all_labels = []
+    all_predictions = []
+    all_confidences = []
+
+    with torch.inference_mode():
+        for images, labels in data_loader:
+            logits = model(images.to(device))
+            probabilities = torch.softmax(logits, dim=1)
+
+            confidences, predictions = probabilities.max(dim=1)
+
+            all_labels.append(labels)
+            all_predictions.append(predictions.cpu())
+            all_confidences.append(confidences.cpu())
+
+    return (
+        torch.cat(all_labels),
+        torch.cat(all_predictions),
+        torch.cat(all_confidences),
+    )
+
+test_labels, test_predictions, test_confidences = collect_predictions(
+    model,
+    test_loader,
+)
+
+print(&quot;수집한 예측 수:&quot;, len(test_predictions))
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 23 · 원본 실행 기록</span></div><pre>수집한 예측 수: 1000
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>Fine-Tuning 최고 가중치로 테스트 예측과 확신도를 모읍니다.</p>
+</div>
+<h4>22) Confusion Matrix 준비</h4>
+<p>Confusion Matrix(컨퓨전 매트릭스, 혼동행렬)는 실제 클래스와 예측 클래스의 관계를 보여줍니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>대각선: 올바른 예측
+대각선 밖: 서로 혼동한 예측
+</code></pre></div>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 24 · 미검증</span></div><pre class="src"><code>def make_confusion_matrix(labels, predictions, number_of_classes=10):
+    matrix = torch.zeros(
+        number_of_classes,
+        number_of_classes,
+        dtype=torch.int64,
+    )
+
+    for true_label, predicted_label in zip(labels, predictions):
+        matrix[true_label, predicted_label] += 1
+
+    return matrix
+</code></pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>혼동행렬을 만드는 함수입니다.</p>
+</div>
+<h4>23) Confusion Matrix 시각화</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 25 · 미검증</span></div><pre class="src"><code>confusion_matrix = make_confusion_matrix(
+    test_labels,
+    test_predictions,
+)
+
+plt.figure(figsize=(9, 8))
+
+plt.imshow(confusion_matrix.numpy())
+
+plt.colorbar()
+
+plt.xticks(range(10), class_names, rotation=45, ha=&quot;right&quot;)
+
+plt.yticks(range(10), class_names)
+
+plt.xlabel(&quot;Predicted Class&quot;)
+
+plt.ylabel(&quot;True Class&quot;)
+
+plt.title(&quot;Fine-Tuned ResNet18 Confusion Matrix&quot;)
+
+for row in range(10):
+    for column in range(10):
+        plt.text(
+            column,
+            row,
+            confusion_matrix[row, column].item(),
+            ha=&quot;center&quot;,
+            va=&quot;center&quot;,
+            fontsize=7,
+        )
+
+plt.tight_layout()
+
+plt.show()
+
+print(&quot;클래스별 정확도&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 25 · 원본 실행 기록</span></div><pre>클래스별 정확도
+</pre></div>
+<p><img src="img/ch05_2_c25_0.png" alt="ch05_2 ResNet18 전이학습 — 코드 셀 25 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>Fine-Tuning 모델의 혼동행렬을 그립니다.</p>
+</div>
+<h4>24) 클래스별 정확도 확인</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 26 · 미검증</span></div><pre class="src"><code>for class_index, class_name in enumerate(class_names):
+    total = confusion_matrix[class_index].sum().item()
+    correct = confusion_matrix[class_index, class_index].item()
+    accuracy = correct / total if total &gt; 0 else 0
+
+    print(f&quot;{class_name:10s}: {accuracy * 100:6.2f}%&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 26 · 원본 실행 기록</span></div><pre>airplane  :  73.79%
+automobile:  92.13%
+bird      :  79.00%
+cat       :  68.93%
+deer      :  76.67%
+dog       :  83.72%
+frog      :  96.43%
+horse     :  87.25%
+ship      :  96.23%
+truck     :  86.24%
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>혼동행렬의 행에서 클래스별 정확도를 계산해 출력합니다.</p>
+</div>
+<h4>25) 오분류 데이터 확인</h4>
+<p>모델이 높은 확률로 틀린 이미지를 확인하면 어떤 특징을 잘못 사용했는지 추정할 수 있습니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 27 · 미검증</span></div><pre class="src"><code>wrong_indices = torch.where(
+    test_predictions != test_labels
+)[0]
+
+if len(wrong_indices) == 0:
+    print(&quot;오답이 없습니다.&quot;)
+else:
+    # 높은 확률의 오답부터 확인합니다.
+    wrong_confidences = test_confidences[wrong_indices]
+    order = torch.argsort(wrong_confidences, descending=True)
+    selected_indices = wrong_indices[order][:12]
+
+    plt.figure(figsize=(12, 9))
+
+    for plot_index, dataset_index in enumerate(selected_indices):
+        image, true_label = test_dataset[dataset_index.item()]
+        predicted_label = test_predictions[dataset_index].item()
+        confidence = test_confidences[dataset_index].item()
+
+        plt.subplot(3, 4, plot_index + 1)
+        plt.imshow(denormalize(image).permute(1, 2, 0))
+        plt.title(
+            f&quot;True: {class_names[true_label]}\n&quot;
+            f&quot;Pred: {class_names[predicted_label]}\n&quot;
+            f&quot;{confidence * 100:.1f}%&quot;
+        )
+        plt.axis(&quot;off&quot;)
+
+    plt.tight_layout()
+    plt.show()
+</code></pre></div>
+<p><img src="img/ch05_2_c27_0.png" alt="ch05_2 ResNet18 전이학습 — 코드 셀 27 출력 그림" /></p>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>확신도가 높은 오답부터 12장을 표시합니다. 이미지는 데이터셋에서 다시 꺼내 원래 색으로 되돌려 보여 줍니다.</p>
+</div>
+<h4>26) Checkpoint 저장과 복원</h4>
+<p>가중치만 저장하면 구조와 데이터가 분리되어 관리가 쉽습니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>모델 구조 생성
+→ 저장된 state_dict 불러오기
+→ 평가 모드 설정
+</code></pre></div>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 셀 28 · 미검증</span></div><pre class="src"><code>MODEL_PATH = MODEL_DIR / &quot;ch05_2_best_resnet18_transfer_learning.pt&quot;
+
+checkpoint = {
+    &quot;model_name&quot;: &quot;resnet18_transfer_learning&quot;,
+    &quot;number_of_classes&quot;: 10,
+    &quot;class_names&quot;: class_names,
+    &quot;model_state_dict&quot;: fine_best_state,
+    &quot;validation_accuracy&quot;: fine_best_accuracy,
+    &quot;test_accuracy&quot;: fine_test_accuracy,
+}
+
+torch.save(checkpoint, MODEL_PATH)
+
+restored_model = create_resnet18(
+    number_of_classes=10,
+    pretrained=False,
+).to(device)
+
+saved_checkpoint = torch.load(
+    MODEL_PATH,
+    map_location=device,
+    weights_only=True,
+)
+
+restored_model.load_state_dict(
+    saved_checkpoint[&quot;model_state_dict&quot;]
+)
+
+restored_model.eval()
+
+with torch.inference_mode():
+    restored_output = restored_model(dummy_input)
+
+print(&quot;저장 경로:&quot;, MODEL_PATH)
+print(&quot;저장 클래스 수:&quot;, saved_checkpoint[&quot;number_of_classes&quot;])
+print(&quot;복원 모델 출력 Shape:&quot;, restored_output.shape)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 셀 28 · 원본 실행 기록</span></div><pre>저장 경로: models/ch05_6_best_resnet18_transfer_learning.pt
+저장 클래스 수: 10
+복원 모델 출력 Shape: torch.Size([2, 10])
+</pre></div>
+<div class="explain"><p class="box-title">코드 풀이</p>
+<p>Fine-Tuning 최고 가중치를 Checkpoint로 저장하고, 사전학습 가중치 없이(<code>pretrained=False</code>) 만든 모델에 불러와 복원을 확인합니다. 복원에 필요한 것은 저장한 가중치뿐입니다.</p>
+</div>
+<h3>핵심 정리</h3>
+<ul>
+<li>Feature Extraction은 Backbone을 동결하고 새 <code>fc</code>만 학습합니다.</li>
+<li>Fine-Tuning은 <code>layer4</code>와 <code>fc</code>를 함께 학습해 특징을 데이터에 맞춥니다.</li>
+<li>Fine-Tuning은 작은 학습률로 필요한 경우에 적용합니다.</li>
+</ul>
 </section><section class="section" id="s05"><h2><span class="num">05</span>검증</h2><table>
 <thead>
 <tr>
   <th>노트북</th>
-  <th>원본 실행 기록</th>
-  <th>이번 정리에서 재실행</th>
-  <th>모델 파일 이름 대응</th>
+  <th>실행 기록</th>
+  <th>재실행</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-  <td>ch06_1</td>
+  <td>ch05_1</td>
   <td>있음</td>
   <td>미검증</td>
-  <td>통과</td>
 </tr>
 <tr>
-  <td>ch06_2</td>
+  <td>ch05_2</td>
   <td>있음</td>
   <td>미검증</td>
-  <td>해당 없음</td>
 </tr>
 </tbody>
 </table>
 <ul>
-<li>이 페이지의 실행 결과와 그림은 <strong>원본 노트북에 저장된 기록</strong>이며, 이번 정리 과정에서 다시 실행하지 않았습니다(재실행 미검증).</li>
-<li>모델 파일 이름 대응: 모델을 저장·불러오는 노트북은 파일 이름의 장 번호를 새 순번으로 함께 바꾸고, 저장하는 노트북과 불러오는 노트북의 이름이 같은지 스크립트로 확인했습니다(통과). 모델 파일을 쓰지 않는 노트북은 해당 없음입니다.</li>
-<li>노트북 안의 설명·코드·출력 순서는 원본을 그대로 따릅니다(STANDARD 8절: 코드·이미지·절 순서 임의 변경 금지).</li>
-<li>실행 결과 안에 찍힌 모델 저장 경로(예: <code>models/ch04_5_best_...</code>)는 원본 실행 당시의 옛 순번입니다. 코드는 새 순번으로 바꿨으므로 다시 실행하면 새 이름으로 저장됩니다.</li>
+<li>페이지의 실행 결과와 그림은 원본 노트북에 저장된 실행 기록이며, 다시 실행해 확인하지는 않았습니다(미검증).</li>
+<li>실행 결과에 보이는 모델 파일 경로(예: <code>models/ch04_5_best_...</code>)는 원본을 실행할 당시의 이름입니다. 코드는 이 교재의 장 번호에 맞춰 두었으므로 다시 실행하면 새 이름으로 저장됩니다.</li>
 </ul>
-<p><strong>완료 기준:</strong> 노트북을 순서대로 실행해 오류 없이 끝나고, 손실 감소와 평가 지표가 원본 기록과 비슷한 범위로 나오는지 확인합니다.</p>
+<p><strong>완료 기준:</strong> 노트북을 순서대로 실행해 오류 없이 끝나고, 손실 감소와 평가 지표가 페이지의 기록과 비슷한 범위로 나오면 됩니다.</p>
 </section><div class="chapter-links" id="chapter-links"></div></main></div>
-<footer class="footer">PyTorch 딥러닝 실습 · v02  · 실습 결과는 실제 환경에서 검증</footer>
-<script>window.COURSE={"title": "PyTorch 딥러닝 실습", "short_title": "DEEP LEARNING", "home_label": "전체 학습 안내서", "chapters": [{"id": "ch01", "number": 1, "title": "심층 신경망 이진분류", "file": "ch01_dnn_binary_classification_v02.html"}, {"id": "ch02", "number": 2, "title": "MNIST MLP", "file": "ch02_mnist_mlp_v02.html"}, {"id": "ch03", "number": 3, "title": "Fashion-MNIST MLP", "file": "ch03_fashion_mnist_mlp_v02.html"}, {"id": "ch04", "number": 4, "title": "CNN", "file": "ch04_cnn_v02.html"}, {"id": "ch05", "number": 5, "title": "ResNet18·전이학습", "file": "ch05_resnet_transfer_learning_v02.html"}, {"id": "ch06", "number": 6, "title": "모델 저장·ONNX", "file": "ch06_model_deployment_v02.html"}, {"id": "ch07", "number": 7, "title": "CNN→YOLO 위치 추정", "file": "ch07_single_object_localization_v02.html"}]};</script><script>/*
+<footer class="footer">PyTorch 딥러닝 실습 · v03  · 실습 결과는 실제 환경에서 검증</footer>
+<script>window.COURSE={"title": "PyTorch 딥러닝 실습", "short_title": "DEEP LEARNING", "home_label": "전체 학습 안내서", "chapters": [{"id": "ch01", "number": 1, "title": "심층 신경망 이진분류", "file": "ch01_dnn_binary_classification_v03.html"}, {"id": "ch02", "number": 2, "title": "MNIST MLP", "file": "ch02_mnist_mlp_v03.html"}, {"id": "ch03", "number": 3, "title": "Fashion-MNIST MLP", "file": "ch03_fashion_mnist_mlp_v03.html"}, {"id": "ch04", "number": 4, "title": "CNN", "file": "ch04_cnn_v03.html"}, {"id": "ch05", "number": 5, "title": "ResNet18·전이학습", "file": "ch05_resnet_transfer_learning_v03.html"}, {"id": "ch06", "number": 6, "title": "모델 저장·ONNX", "file": "ch06_model_deployment_v03.html"}, {"id": "ch07", "number": 7, "title": "CNN→YOLO 위치 추정", "file": "ch07_single_object_localization_v03.html"}]};</script><script>/*
  * 교육용 HTML 공통 동작 — 유지보수용 원본 (STANDARD 4·10.3·10.4)
  * 페이지 본문은 바꾸지 않고 탐색·이전/다음·모바일 메뉴·코드 복사만 덧붙인다.
  * 입력: 페이지의 window.COURSE (tools/guide/build_guides.py가 실제 존재하는 장만 넣음),

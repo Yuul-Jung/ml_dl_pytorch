@@ -91,6 +91,13 @@ def enhance_blocks(content):
     content = render_math(content)
     # (추가) 한글 조사 앞에서 닫히지 않는 굵은 글씨 표시(⟪b⟫)를 <strong>으로 바꾼다
     content = content.replace('⟪b⟫', '<strong>').replace('⟪/b⟫', '</strong>')
+    # (추가) 풀이·안내 상자: <p>⟪box:제목⟫</p> … <p>⟪/box⟫</p> 를 상자로 감싼다(코드 풀이는 .explain, 그 밖은 .note)
+    def box_open(m):
+        title = m.group(1)
+        kind = 'explain' if title == '코드 풀이' else 'note insight'
+        return f'<div class="{kind}"><p class="box-title">{title}</p>'
+    content = re.sub(r'<p>⟪box:(.*?)⟫</p>', box_open, content)
+    content = content.replace('<p>⟪/box⟫</p>', '</div>')
     code_re = r'<p>코드 박스: (.*?)</p>\s*<pre><code(?: class="language-([^\"]+)")?>(.*?)</code></pre>'
     content = re.sub(code_re,
         lambda m: '<div class="codeblock"><div class="codebar"><span>' + (m.group(2) or 'text').upper()

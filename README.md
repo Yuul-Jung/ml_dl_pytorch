@@ -26,7 +26,7 @@ ML_DL_pytorch/
 │   ├── course.json            ← 과정 제목·장 목록·버전
 │   ├── content/chNN.md        ← 장별 학습 안내서 원고
 │   ├── assets/ · build.py     ← rule_md 공통 디자인·생성기 사본
-│   └── dist/                  ← 생성된 HTML (index.html, chNN_주제_v02.html, img/)
+│   └── dist/                  ← 생성된 HTML (index.html, chNN_주제_v03.html, img/)
 └── deep_learning/
     ├── README.md
     ├── notebooks/             ← chNN_K_주제.ipynb, heart.csv, png/dog.jpg
@@ -37,7 +37,7 @@ ML_DL_pytorch/
 ## 순번 규칙
 
 - 노트북: `chNN_K_주제.ipynb` — `NN`은 과정 안의 장 번호, `K`는 장 안의 실습 순번입니다. 두 과정은 각각 01장부터 시작합니다.
-- 학습 안내서: `chNN_주제_vNN.html` (현재 v02, 내용을 고치면 STANDARD 6절에 따라 버전을 올림) — 장 하나가 HTML 한 페이지이며, 장 안의 노트북은 `chNN_K` 절로 들어갑니다.
+- 학습 안내서: `chNN_주제_vNN.html` (현재 v03, 내용을 고치면 STANDARD 6절에 따라 버전을 올림) — 장 하나가 HTML 한 페이지이며, 장 안의 노트북은 `chNN_K` 절로 들어갑니다.
 - 딥러닝 노트북은 원본 번호(`ch03_2_..._DNN`, `ch04_1` ~ `ch07_2`)에서 새 번호로 바뀌었습니다. 노트북 제목과 **모델 저장·불러오기 파일 이름**(예: `ch04_5_best_fashion_mnist_mlp` → `ch03_1_best_fashion_mnist_mlp`)도 같은 번호로 함께 바꿔, 앞 노트북이 저장한 모델을 뒤 노트북이 그대로 찾을 수 있습니다. 전체 대응표는 각 과정 README에 있습니다.
 
 ## 실행 방법
@@ -66,7 +66,7 @@ jupyter notebook
 # 원고(content/*.md)나 course.json을 고친 뒤 과정 폴더에서 생성
 python -m pip install mistune latex2mathml   # 수식은 빌드 때 MathML로 변환
 cd machine_learning
-python build.py        # dist/index.html, dist/chNN_*_v02.html 생성
+python build.py        # dist/index.html, dist/chNN_*_v03.html 생성
 ```
 
 GitHub Pages는 **main 브랜치 루트**로 게시합니다.
@@ -92,6 +92,7 @@ GitHub Pages는 **main 브랜치 루트**로 게시합니다.
 - 노트북 그림 폭 제한, 좁은 화면에서 긴 파일명 줄바꿈·넓은 표 가로 스크롤
 - 수식(`$...$`, `$$...$$`, `\[...\]`)은 빌드할 때 `latex2mathml`로 MathML로 바꿔 브라우저가 수식으로 표시 (JavaScript·외부 수식 라이브러리 불필요)
 - 한글 조사 바로 앞에서 닫히지 않는 굵은 글씨(`**무엇인가?**에`)를 굵게 표시되도록 보정
+- 코드 박스마다 바로 아래에 **코드 풀이** 상자(그 코드가 하는 일, 처음 보는 함수·인자의 뜻)를 두고, 장 첫 절에 **쉽게 이해하기**·**꼭 기억할 점** 상자를 둠
 
 ## 검증 상태
 
@@ -101,6 +102,8 @@ GitHub Pages는 **main 브랜치 루트**로 게시합니다.
 | 원본에 실행 결과가 없는 노트북 | 미검증 | 머신러닝 `ch01_1`~`ch01_3`, `ch03_5` |
 | 원본 실행 기록의 오류 | 실패 | 딥러닝 `ch03_2` 원본 기록에 `FileNotFoundError`(앞 노트북의 모델 파일 없이 실행). `ch03_1`을 먼저 실행하면 해결되는 순서 문제로, 코드는 바꾸지 않았습니다. |
 | 순번 변경 후 모델 파일 이름 대응 | 통과 | 딥러닝 노트북 13건의 저장·불러오기 이름이 같은 번호를 가리키는지 스크립트로 확인 |
+| 코드 풀이 | 통과 | 코드 셀 553개 중 534개에 풀이를 붙임. 딥러닝 `ch07_1`은 원저자의 풀이 문단이 코드마다 이미 있어 그대로 둠 |
+| 원본 소제목 바로잡기 | 통과 | 딥러닝 노트북 12개에서 코드 내용과 맞지 않던 소제목(예: 정확도 계산 코드 위의 `모델 구성`)을 내용에 맞게 고침. 코드·순서는 그대로 |
 | HTML 생성 | 통과 | 두 과정 `build.py` 실행, HTML 13개 생성, 수식 변환 실패 0개 |
 | Markdown 깨짐 검사 | 통과 | 전체 13쪽 본문에서 코드·수식 밖에 남은 `$`, LaTeX 명령, `**`, 원시 태그, 표 구분선, 코드 울타리, 이미지 문법이 0건 (Chromium 자동 검사) |
 | 화면 폭 1366·390px 가로 넘침, 이미지 깨짐 | 통과 | Chromium(Playwright)로 전체 페이지 점검. 넓은 표는 표 안에서 가로 스크롤 |

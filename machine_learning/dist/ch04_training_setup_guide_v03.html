@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="NumPy 배열 → PyTorch Tensor → 연산 → 자동 미분"><title>제01장 · Tensor 기초 · PyTorch 머신러닝 기초</title>
+<meta name="description" content="Target 형태 → 출력층 → Loss → Optimizer → Metric"><title>제04장 · 학습 설정 선택 기준 · PyTorch 머신러닝 기초</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>/*
@@ -618,6 +618,41 @@ pre code {
   overflow-wrap: anywhere;
 }
 
+/* (추가) 코드 풀이 상자: 코드·실행 결과 바로 아래에서 무엇을 하는 코드인지 풀어 씁니다. */
+.explain {
+  margin: -6px 0 22px;
+  padding: 12px 16px 4px;
+  background: #fbfbf9;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  font-size: 0.93rem;
+}
+.explain p,
+.explain ul {
+  margin: 0 0 9px;
+}
+.explain ul {
+  padding-left: 1.2em;
+}
+.explain li {
+  margin: 3px 0;
+}
+.box-title {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin: 0 0 6px !important;
+}
+.note.insight p:last-child,
+.note.insight ul:last-child {
+  margin-bottom: 0;
+}
+.note.insight ul {
+  margin: 0;
+  padding-left: 1.2em;
+}
+
 /* (추가) 수식(MathML): 블록 수식은 가운데 정렬, 넓으면 가로 스크롤 */
 .math-block {
   margin: 14px 0;
@@ -758,740 +793,1287 @@ math {
     grid-template-columns: 1fr;
   }
 }
-</style></head><body data-chapter="ch01">
+</style></head><body data-chapter="ch04">
 <button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button><div class="shade" id="shade"></div>
-<header class="hero"><div class="hero-inner"><p class="kicker">MACHINE LEARNING · CHAPTER 01</p><h1>제01장 · Tensor 기초</h1><p>NumPy 배열 → PyTorch Tensor → 연산 → 자동 미분</p><div class="chips"><span class="chip">NumPy</span><span class="chip">Tensor</span><span class="chip">Autograd</span></div></div></header>
-<div class="wrap"><nav class="toc" id="course-nav" aria-label="장과 절 탐색"></nav><main class="content" id="main-content"><section class="section" id="s00"><h2><span class="num">00</span>배경 개념</h2><p>머신러닝 모델은 입력·가중치·출력을 모두 <strong>다차원 배열</strong>로 다룹니다. NumPy(넘파이, 수치 계산 라이브러리)의 <code>ndarray</code>와 PyTorch(파이토치, 딥러닝 프레임워크)의 <code>Tensor</code>(텐서, 다차원 배열)는 모양(<code>shape</code>)·자료형(<code>dtype</code>)·인덱싱 규칙이 거의 같아서, 먼저 두 도구를 같은 예제로 비교합니다.</p>
-<p>Tensor는 NumPy 배열과 달리 <strong>장치(<code>device</code>, CPU/GPU) 이동</strong>과 <strong>Autograd(오토그래드, 자동 미분)</strong>를 지원합니다. 이 두 기능이 다음 장의 경사하강법 학습을 가능하게 합니다.</p>
-</section><section class="section" id="s01"><h2><span class="num">01</span>전체 실습 흐름</h2><p>개념 흐름도 — 이 장 노트북의 공통 학습 절차 (개념도, 이름은 실제 코드 기준):</p>
-<div class="flow" role="list" aria-label="개념 흐름도"><div class="step"><code>np.array()</code> NumPy 배열 생성</div><div class="down" aria-hidden="true">↓</div><div class="step"><code>torch.from_numpy()</code> · <code>torch.tensor()</code> Tensor 변환</div><div class="down" aria-hidden="true">↓</div><div class="step"><code>reshape</code> · <code>torch.cat()</code> · <code>torch.stack()</code> 모양 바꾸기·합치기</div><div class="down" aria-hidden="true">↓</div><div class="step"><code>requires_grad=True</code> → <code>backward()</code> 자동 미분</div><div class="down" aria-hidden="true">↓</div><div class="step"><code>.to(device)</code> CPU/GPU 장치 이동</div></div>
-<p>노트북별 실습 순서:</p>
-<ol>
-<li><strong>ch01_1</strong> NumPy와 PyTorch — NumPy와 PyTorch의 역할 비교, 원소별 곱셈(<code>*</code>)과 행렬곱(<code>@</code>) 구분, 자동 미분 맛보기</li>
-<li><strong>ch01_2</strong> NumPy 배열과 PyTorch Tensor 이해하기 — Scalar·Vector·Matrix, 인덱싱·Boolean Mask·Broadcasting, NumPy → Tensor 변환</li>
-<li><strong>ch01_3</strong> PyTorch Tensor 연산 — Tensor 생성 함수, 메모리 공유, CPU/GPU 선택, <code>reshape</code>·<code>cat</code>·<code>stack</code></li>
-</ol>
-<p>노트북 파일(<code>notebooks/</code> 폴더):</p>
+<header class="hero"><div class="hero-inner"><p class="kicker">MACHINE LEARNING · CHAPTER 04</p><h1>제04장 · 학습 설정 선택 기준</h1><p>Target 형태 → 출력층 → Loss → Optimizer → Metric</p><div class="chips"><span class="chip">Loss</span><span class="chip">Optimizer</span><span class="chip">Metric</span><span class="chip">Validation</span></div></div></header>
+<div class="wrap"><nav class="toc" id="course-nav" aria-label="장과 절 탐색"></nav><main class="content" id="main-content"><section class="section" id="s00"><h2><span class="num">00</span>이 장의 자료</h2><p>1~3장에서 직접 만들어 본 모델들을 돌아보며, 새 문제를 만났을 때 <strong>출력층 → 손실 함수 → Optimizer → 평가 지표</strong>를 어떤 순서로 고르는지 정리한 장입니다. 처음에는 아래 흐름도와 각 절의 표를 먼저 훑어보고, 실습 중 설정이 헷갈릴 때마다 다시 찾아보는 참고서로 쓰면 좋습니다.</p>
 <ul>
-<li><strong>ch01_1</strong> <code>ch01_1_numpy_torch.ipynb</code> (원본 <code>ch01_1_numpy_torch.ipynb</code>)</li>
-<li><strong>ch01_2</strong> <code>ch01_2_numpy_and_tensor.ipynb</code> (원본 <code>ch01_2_numpy_and_tensor.ipynb</code>)</li>
-<li><strong>ch01_3</strong> <code>ch01_3_tensor_operations.ipynb</code> (원본 <code>ch01_3_tensor_operations.ipynb</code>)</li>
+<li>문서 원본: <code>guide/ml_dl_training_setup_guide.md</code></li>
+<li>발표 자료: <code>guide/slides/</code> (테크트리 원본·수정본·도식화본)</li>
 </ul>
-</section><section class="section" id="s02"><h2><span class="num">02</span>환경 확인</h2><ul>
-<li>필요 환경: Python 3, <code>numpy</code>, <code>torch</code></li>
-<li>Google Colab 또는 로컬 Jupyter에서 <code>notebooks/</code> 폴더를 작업 폴더로 열고 순서대로 실행합니다.</li>
-</ul>
-<div class="codeblock"><div class="codebar"><span>BASH · Ubuntu 터미널 · 예시 명령 · 미검증</span></div><pre class="src"><code># 필요한 패키지 설치 (로컬 실행 시)
-python -m pip install torch torchvision numpy pandas scikit-learn matplotlib
+<div class="note insight"><p class="box-title">쉽게 이해하기</p>
+<p>학습 설정은 '정답이 어떻게 생겼는가'에서 거꾸로 정합니다. 정답이 숫자 하나면 회귀, 0/1이면 이진분류, 여러 클래스 중 하나면 다중분류입니다. 문제 유형이 정해지면 출력층 크기와 손실 함수는 거의 자동으로 따라오고, Optimizer와 학습률은 검증 결과를 보며 조정합니다.</p>
+</div>
+<p>개념 흐름도 — 원본 문서 0절의 결정 순서 (개념도):</p>
+<div class="flow" role="list" aria-label="개념 흐름도"><div class="step">정답 Target 형태 확인</div><div class="down" aria-hidden="true">↓</div><div class="step">문제 유형 판단 (회귀·이진·다중·다중레이블)</div><div class="down" aria-hidden="true">↓</div><div class="step">출력층 노드 수·Logit 형태</div><div class="down" aria-hidden="true">↓</div><div class="step">Loss Function(손실함수)</div><div class="down" aria-hidden="true">↓</div><div class="step">Optimizer(최적화 알고리즘)</div><div class="down" aria-hidden="true">↓</div><div class="step">Learning Rate · Batch Size · Epoch</div><div class="down" aria-hidden="true">↓</div><div class="step">Validation(검증)으로 학습 상태 판단</div><div class="down" aria-hidden="true">↓</div><div class="step">Metric(평가 지표)</div></div>
+</section><section class="section" id="s01"><h2><span class="num">01</span>0. 가장 중요한 원칙</h2><p>머신러닝·딥러닝에서 설정을 결정하는 순서는 다음과 같다.</p>
+<blockquote>
+<p><strong>모델 종류보다 먼저 정답 Target(타깃)의 형태를 본다.</strong></p>
+</blockquote>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>문제 정의
+   ↓
+정답 Target 형태
+   ↓
+모델의 최종 출력 형태
+   ↓
+출력층
+   ↓
+Loss Function(손실함수)
+   ↓
+Optimizer(옵티마이저, 최적화 알고리즘)
+   ↓
+Learning Rate / Batch Size / Epoch
+   ↓
+Validation
+   ↓
+Metric(평가 지표)
 </code></pre></div>
-</section><section class="section" id="s03"><h2><span class="num">03</span>ch01_1 NumPy와 PyTorch</h2><p>노트북: <code>notebooks/ch01_1_numpy_torch.ipynb</code> · 원본 파일: <code>ch01_1_numpy_torch.ipynb</code> · 상태: 원본 · 실행 기록 없음 · 미검증</p>
-<p>NumPy(넘파이, 수치 계산 라이브러리)와 PyTorch(파이토치, 딥러닝 프레임워크)의 기본 사용법을 같은 예제로 비교합니다.</p>
-<h3>개요</h3>
+<p>즉,</p>
 <ul>
-<li>NumPy의 <code>ndarray</code>(엔디에레이, 다차원 배열)와 PyTorch의 <code>Tensor</code>(텐서, 다차원 배열)를 구분합니다.</li>
-<li>PyTorch의 <code>Autograd</code>(오토그래드, 자동 미분)를 간단히 확인합니다.</li>
+<li>MLP냐 CNN이냐가 먼저가 아니다.</li>
+<li><strong>회귀인지, 이진분류인지, 다중분류인지가 먼저다.</strong></li>
+<li>같은 다중분류라면 MLP와 CNN 모두 마지막 부분은 거의 동일하다.</li>
 </ul>
-<h3>1. NumPy와 PyTorch의 역할</h3>
+<p>예:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>MNIST + MLP
+MNIST + CNN
+       ↓
+둘 다 10개 중 하나를 맞히는 다중분류
+       ↓
+출력 10개 Logit
+       ↓
+CrossEntropyLoss
+</code></pre></div>
+</section><section class="section" id="s02"><h2><span class="num">02</span>1. 문제 유형부터 판별</h2><h3>1.1 Regression(리그레션, 회귀)</h3>
+<p>정답이 연속적인 실수이다.</p>
+<p>예:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력
+집 크기, 방 개수, 위치
+        ↓
+모델
+        ↓
+예측값
+35000.5
+        ↓
+실제값
+36000.0
+</code></pre></div>
+<p>대표 손실함수:</p>
+<ul>
+<li><code>nn.MSELoss()</code></li>
+<li><code>nn.L1Loss()</code></li>
+</ul>
+<p>구조:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력 → 모델 → 실수 출력 → 실제 실수값 → MSE/L1
+</code></pre></div>
+<h3>1.2 Binary Classification(바이너리 클래시피케이션, 이진분류)</h3>
+<p>정답이 두 가지 중 하나이다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>0 : 정상
+1 : 이상
+</code></pre></div>
+<p>일반적인 PyTorch 구조:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력
+ ↓
+모델
+ ↓
+Logit 1개
+ ↓
+BCEWithLogitsLoss
+ ↓
+학습
+</code></pre></div>
+<p>추론할 때:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Logit
+ ↓
+Sigmoid
+ ↓
+확률
+ ↓
+0.5 기준
+ ↓
+0 또는 1
+</code></pre></div>
+<h3>1.3 Multi-class Classification(멀티 클래스 클래시피케이션, 다중분류)</h3>
+<p>여러 클래스 중 <strong>정확히 하나</strong>를 선택한다.</p>
+<p>MNIST라면:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>0 1 2 3 4 5 6 7 8 9
+          ↑
+      하나만 정답
+</code></pre></div>
+<p>10개 클래스라면:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력
+ ↓
+모델
+ ↓
+10개 Logit
+ ↓
+CrossEntropyLoss
+ ↓
+정답 클래스 번호
+</code></pre></div>
+<p>Target 예:</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>y = torch.tensor([3, 7, 1], dtype=torch.long)
+</code></pre></div>
+<h3>1.4 Multi-label Classification(멀티 레이블 클래시피케이션, 다중레이블 분류)</h3>
+<p>한 데이터가 여러 클래스를 동시에 가질 수 있다.</p>
+<p>예:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>사진 1장
+
+사람       1
+자동차     1
+강아지     0
+신호등     1
+</code></pre></div>
+<p>각 클래스가 서로 독립적인 이진분류라고 생각하면 쉽다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>출력 C개 Logit
+ ↓
+각 Logit에 독립적인 Sigmoid
+ ↓
+BCEWithLogitsLoss
+</code></pre></div>
+<h3>1.5 Image Classification(이미지 분류)</h3>
+<p>중요한 점:</p>
+<blockquote>
+<p><strong>이미지 분류는 손실함수 자체를 결정하는 문제 유형이 아니다.</strong></p>
+</blockquote>
+<p>이미지는 <strong>입력 데이터의 종류</strong>이다.</p>
+<p>예:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>이미지 → CNN → 고양이/강아지
+</code></pre></div>
+<p>이면 이진분류이고,</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>이미지 → CNN → 숫자 0~9
+</code></pre></div>
+<p>이면 다중분류이다.</p>
+<p>따라서:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>이미지라는 사실
+      ↓
+CNN 등의 모델 구조 선택에 영향
+
+정답이 몇 종류인가
+      ↓
+Loss 선택에 영향
+</code></pre></div>
+<h3>1.6 Sequence Prediction(시퀀스 프리딕션, 순차 데이터 예측)</h3>
+<p>RNN/LSTM/Transformer에서 사용한다.</p>
+<p>하지만 Loss는 역시 <strong>예측 대상</strong>에 따라 달라진다.</p>
+<p>예:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>주가 예측
+→ 실수 예측
+→ MSELoss
+</code></pre></div>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>문장 감정 긍정/부정
+→ 이진분류
+→ BCEWithLogitsLoss
+</code></pre></div>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>다음 단어 예측
+→ 수만 개 단어 중 하나
+→ CrossEntropyLoss
+</code></pre></div>
+<p>따라서:</p>
+<blockquote>
+<p>RNN/LSTM/Transformer라고 특정 Loss를 사용하는 것이 아니다.</p>
+</blockquote>
+<h3>1.7 Reconstruction(리컨스트럭션, 입력 복원)</h3>
+<p>Autoencoder(오토인코더, 입력 복원 신경망)의 대표 문제이다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>원본 x
+ ↓
+Encoder
+ ↓
+압축 표현
+ ↓
+Decoder
+ ↓
+복원 x̂
+</code></pre></div>
+<p>목표:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>x̂ ≈ x
+</code></pre></div>
+<p>연속적인 픽셀값을 복원한다면:</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>nn.MSELoss()
+</code></pre></div>
+<p>또는</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>nn.L1Loss()
+</code></pre></div>
+<p>를 사용할 수 있다.</p>
+<p>0~1 이진적인 값을 확률적으로 복원하는 문제라면 BCE 계열도 사용할 수 있다.</p>
+<p>즉 Autoencoder 역시 Loss가 하나로 고정되는 것은 아니다.</p>
+</section><section class="section" id="s03"><h2><span class="num">03</span>2. 출력층 결정</h2><p>핵심 표는 다음과 같다.</p>
 <table>
 <thead>
 <tr>
-  <th>구분</th>
-  <th>NumPy</th>
-  <th>PyTorch</th>
+  <th>문제</th>
+  <th style="text-align:right">출력 노드</th>
+  <th>최종 출력</th>
+  <th>모델 내부 Activation</th>
+  <th>대표 Loss</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-  <td>핵심 자료형</td>
-  <td><code>ndarray</code></td>
-  <td><code>Tensor</code></td>
+  <td>회귀</td>
+  <td style="text-align:right">예측값 개수</td>
+  <td>실수</td>
+  <td>보통 없음</td>
+  <td>MSELoss</td>
 </tr>
 <tr>
-  <td>주요 목적</td>
-  <td>수치 계산, 데이터 처리</td>
-  <td>딥러닝 모델 작성과 학습</td>
-</tr>
-<tr>
-  <td>자동 미분</td>
-  <td>지원하지 않음</td>
-  <td>지원</td>
-</tr>
-<tr>
-  <td>GPU 연산</td>
-  <td>기본적으로 CPU 중심</td>
-  <td>GPU 연산 지원</td>
-</tr>
-<tr>
-  <td>기본 문법</td>
-  <td>배열 중심</td>
-  <td>NumPy와 매우 유사</td>
-</tr>
-</tbody>
-</table>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_numpy_torch.ipynb · 코드 셀 1 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>import numpy as np
-import torch
-
-print(&quot;NumPy version :&quot;, np.__version__)
-print(&quot;PyTorch version:&quot;, torch.__version__)
-</code></pre></div>
-<h3>2. 배열과 텐서 만들기</h3>
-<ul>
-<li><code>dtype</code>(디타입, 데이터 자료형)은 숫자를 저장하는 방식을 나타냅니다.</li>
-<li>딥러닝에서는 일반적으로 <code>float32</code>(플로트 서티투, 32비트 실수형)를 많이 사용합니다.</li>
-<li>두 자료형은 겉모습이 비슷하지만 서로 다른 라이브러리의 객체입니다.</li>
-</ul>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_numpy_torch.ipynb · 코드 셀 2 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code># 같은 데이터를 NumPy 배열과 PyTorch 텐서로 만듭니다.
-numbers = [1, 2, 3, 4]
-
-np_array = np.array(numbers, dtype=np.float32)
-torch_tensor = torch.tensor(numbers, dtype=torch.float32)
-
-print(&quot;NumPy 배열 :&quot;, np_array)
-print(&quot;PyTorch 텐서:&quot;, torch_tensor)
-
-print(&quot;NumPy 자료형 :&quot;, np_array.dtype)
-print(&quot;PyTorch 자료형:&quot;, torch_tensor.dtype)
-</code></pre></div>
-<h3>3. 기본 연산 비교</h3>
-<p><code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>는 기본적으로 <strong>원소별 연산</strong>입니다.</p>
-<blockquote>
-<p><strong>원소별 연산은 각 원소에 같은 계산을 적용합니다.</strong></p>
-</blockquote>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_numpy_torch.ipynb · 코드 셀 3 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code># 두 라이브러리의 기본 연산 문법은 거의 같습니다.
-print(&quot;[NumPy]&quot;)
-print(&quot;더하기 :&quot;, np_array + 10)
-print(&quot;곱하기 :&quot;, np_array * 2)
-print(&quot;합계   :&quot;, np_array.sum())
-print(&quot;평균   :&quot;, np_array.mean())
-
-print(&quot;\n[PyTorch]&quot;)
-print(&quot;더하기 :&quot;, torch_tensor + 10)
-print(&quot;곱하기 :&quot;, torch_tensor * 2)
-print(&quot;합계   :&quot;, torch_tensor.sum())
-print(&quot;평균   :&quot;, torch_tensor.mean())
-</code></pre></div>
-<h3>4. Shape, 인덱싱, Reshape</h3>
-<ul>
-<li><code>shape</code>(셰이프, 데이터 모양)의 <code>(2, 3)</code>은 <strong>2행 3열</strong>을 의미합니다.</li>
-<li>인덱스는 <code>0</code>부터 시작합니다.</li>
-<li><code>reshape</code>는 데이터의 값과 개수는 유지하고 모양만 바꿉니다.</li>
-<li>원소가 6개이므로 <code>(3, 2)</code>, <code>(1, 6)</code>, <code>(6, 1)</code> 등으로 변경할 수 있습니다.</li>
-</ul>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_numpy_torch.ipynb · 코드 셀 4 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code># 2행 3열 데이터
-data = [[1, 2, 3],
-        [4, 5, 6]]
-
-np_matrix = np.array(data)
-torch_matrix = torch.tensor(data)
-
-print(&quot;NumPy shape :&quot;, np_matrix.shape)
-print(&quot;PyTorch shape:&quot;, torch_matrix.shape)
-
-# 첫 번째 행, 두 번째 열의 값
-print(&quot;NumPy 값 :&quot;, np_matrix[0, 1])
-print(&quot;PyTorch 값:&quot;, torch_matrix[0, 1])
-
-# 2행 3열을 3행 2열로 변경
-print(&quot;\nNumPy reshape&quot;)
-print(np_matrix.reshape(3, 2))
-
-print(&quot;\nPyTorch reshape&quot;)
-print(torch_matrix.reshape(3, 2))
-</code></pre></div>
-<h3>5. 원소별 곱셈과 행렬곱 구분</h3>
-<ul>
-<li><code>*</code> : Element-wise multiplication(원소별 곱셈)</li>
-<li><code>@</code> : Matrix multiplication(행렬곱)</li>
-</ul>
-<p>두 연산은 결과가 다르므로 반드시 구분해야 합니다.</p>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_numpy_torch.ipynb · 코드 셀 5 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>a_np = np.array([[1, 2],
-                 [3, 4]])
-
-b_np = np.array([[5, 6],
-                 [7, 8]])
-
-a_torch = torch.tensor(a_np)
-b_torch = torch.tensor(b_np)
-
-# 원소별 곱셈: 같은 위치의 원소끼리 곱합니다.
-print(&quot;NumPy 원소별 곱셈&quot;)
-print(a_np * b_np)
-
-print(&quot;\nPyTorch 원소별 곱셈&quot;)
-print(a_torch * b_torch)
-
-# 행렬곱: 행과 열을 곱하여 새로운 행렬을 만듭니다.
-print(&quot;\nNumPy 행렬곱&quot;)
-print(a_np @ b_np)
-
-print(&quot;\nPyTorch 행렬곱&quot;)
-print(a_torch @ b_torch)
-</code></pre></div>
-<h3>6. NumPy와 PyTorch 사이의 변환</h3>
-<ul>
-<li><code>torch.tensor(np_data)</code>는 NumPy 배열의 값을 이용해 새 텐서를 만듭니다.</li>
-<li>CPU 텐서는 <code>.numpy()</code>로 NumPy 배열로 변환할 수 있습니다.</li>
-<li><code>.copy()</code>를 붙이면 원본 텐서와 독립된 NumPy 배열을 만들 수 있어 초보 실습에서 혼선을 줄일 수 있습니다.</li>
-</ul>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_numpy_torch.ipynb · 코드 셀 6 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code># NumPy 배열 → PyTorch 텐서
-np_data = np.array([10, 20, 30], dtype=np.float32)
-tensor_data = torch.tensor(np_data)
-
-# PyTorch 텐서 → NumPy 배열
-back_to_numpy = tensor_data.numpy().copy()
-
-print(&quot;원본 NumPy :&quot;, np_data)
-print(&quot;PyTorch 변환:&quot;, tensor_data)
-print(&quot;다시 NumPy :&quot;, back_to_numpy)
-</code></pre></div>
-<h3>7. PyTorch의 자동 미분</h3>
-<p>함수는 다음과 같습니다.</p>
-<div class="math-block" role="math" aria-label="y = x^2 + 2x"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>y</mi><mo>&#x0003D;</mo><msup><mi>x</mi><mn>2</mn></msup><mo>&#x0002B;</mo><mn>2</mn><mi>x</mi></mrow></math></div>
-<p>미분 결과는 다음과 같습니다.</p>
-<div class="math-block" role="math" aria-label="\frac{dy}{dx} = 2x + 2"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mfrac><mrow><mi>d</mi><mi>y</mi></mrow><mrow><mi>d</mi><mi>x</mi></mrow></mfrac><mo>&#x0003D;</mo><mn>2</mn><mi>x</mi><mo>&#x0002B;</mo><mn>2</mn></mrow></math></div>
-<p><code>x = 3</code>을 대입하면 기울기는 <code>8</code>입니다. PyTorch는 <code>backward()</code>를 실행하여 이 값을 자동으로 계산합니다.</p>
-<blockquote>
-<p><strong>자동 미분은 신경망 학습에 필요한 기울기를 자동으로 계산합니다.</strong></p>
-</blockquote>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_numpy_torch.ipynb · 코드 셀 7 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code># x에 대한 계산 과정을 추적하도록 설정합니다.
-x = torch.tensor(3.0, requires_grad=True)
-
-# y = x² + 2x
-y = x**2 + 2*x
-
-# y를 x로 미분합니다. dy/dx
-y.backward()
-
-print(&quot;x =&quot;, x.item())
-print(&quot;y =&quot;, y.item())
-print(&quot;dy/dx =&quot;, x.grad.item())
-</code></pre></div>
-<h3>8. 미니 실습: 센서 데이터 정규화</h3>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_numpy_torch.ipynb · 코드 셀 8 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code># 센서 측정값을 0~1 범위로 변환합니다.
-sensor_values = [20.0, 30.0, 40.0, 50.0]
-
-# NumPy
-np_sensor = np.array(sensor_values, dtype=np.float32)
-np_normalized = (np_sensor - np_sensor.min()) / (np_sensor.max() - np_sensor.min())
-
-# PyTorch
-torch_sensor = torch.tensor(sensor_values, dtype=torch.float32)
-torch_normalized = (
-    (torch_sensor - torch_sensor.min())
-    / (torch_sensor.max() - torch_sensor.min())
-)
-
-print(&quot;NumPy 결과 :&quot;, np_normalized)
-print(&quot;PyTorch 결과:&quot;, torch_normalized)
-
-# 두 결과가 같은지 확인합니다.
-print(&quot;결과 일치:&quot;, np.allclose(np_normalized, torch_normalized.numpy()))
-</code></pre></div>
-<h3>9. 핵심 정리</h3>
-<ul>
-<li>NumPy의 기본 단위는 <code>ndarray</code>, PyTorch의 기본 단위는 <code>Tensor</code>입니다.</li>
-<li><code>*</code>는 원소별 곱셈이고, <code>@</code>는 행렬곱입니다.</li>
-<li>PyTorch는 자동 미분을 지원하므로 딥러닝 모델 학습에 사용할 수 있습니다.</li>
-</ul>
-</section><section class="section" id="s04"><h2><span class="num">04</span>ch01_2 NumPy 배열과 PyTorch Tensor 이해하기</h2><p>노트북: <code>notebooks/ch01_2_numpy_and_tensor.ipynb</code> · 원본 파일: <code>ch01_2_numpy_and_tensor.ipynb</code> · 상태: 원본 · 실행 기록 없음 · 미검증</p>
-<h3>개요</h3>
-<ul>
-<li>Python(파이썬) 리스트와 NumPy(넘파이) 배열의 차이를 이해합니다.</li>
-<li>NumPy 배열을 PyTorch Tensor(파이토치 텐서, 다차원 배열)로 변환합니다.</li>
-</ul>
-<h3>1. NumPy와 PyTorch 불러오기</h3>
-<ul>
-<li>NumPy는 <code>np</code>라는 짧은 이름으로 사용합니다.</li>
-<li>PyTorch는 <code>torch</code>라는 이름으로 사용합니다.</li>
-</ul>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_2_numpy_and_tensor.ipynb · 코드 셀 1 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>import numpy as np
-import torch
-</code></pre></div>
-<h3>2. Python 리스트와 NumPy 배열 비교</h3>
-<p>Python 리스트에서 <code>+</code>는 두 리스트를 이어 붙입니다.
-NumPy 배열에서 <code>+</code>는 같은 위치의 숫자를 더합니다.</p>
-<blockquote>
-<p><strong>NumPy 배열은 같은 위치의 원소끼리 수치 연산을 수행합니다.</strong></p>
-</blockquote>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_2_numpy_and_tensor.ipynb · 코드 셀 2 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code># Python 리스트
-list_a = [1, 2, 3]
-list_b = [10, 20, 30]
-
-# NumPy 배열
-array_a = np.array([1, 2, 3])
-array_b = np.array([10, 20, 30])
-
-print(&quot;Python 리스트 + :&quot;, list_a + list_b)
-print(&quot;NumPy 배열 +    :&quot;, array_a + array_b)
-</code></pre></div>
-<h3>3. Scalar·Vector·Matrix 구분</h3>
-<table>
-<thead>
-<tr>
-  <th>구분</th>
-  <th>의미</th>
-  <th>예시 shape</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td>Scalar(스칼라)</td>
-  <td>값 1개</td>
-  <td><code>()</code></td>
-</tr>
-<tr>
-  <td>Vector(벡터)</td>
-  <td>1차원 데이터</td>
-  <td><code>(3,)</code></td>
-</tr>
-<tr>
-  <td>Matrix(매트릭스)</td>
-  <td>2차원 데이터</td>
-  <td><code>(2, 2)</code></td>
-</tr>
-<tr>
-  <td>Tensor(텐서)</td>
-  <td>3차원 이상의 데이터까지 포함</td>
-  <td><code>(2, 3, 4)</code></td>
-</tr>
-</tbody>
-</table>
-<ul>
-<li><code>ndim</code>은 차원의 개수입니다.</li>
-<li><code>shape</code>는 각 차원에 몇 개의 값이 있는지를 나타냅니다.</li>
-</ul>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_2_numpy_and_tensor.ipynb · 코드 셀 3 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>scalar = np.array(7)
-vector = np.array([1, 2, 3])
-matrix = np.array([[1, 2], [3, 4]])
-
-print(&quot;Scalar → ndim:&quot;, scalar.ndim, &quot;, shape:&quot;, scalar.shape)
-print(&quot;Vector → ndim:&quot;, vector.ndim, &quot;, shape:&quot;, vector.shape)
-print(&quot;Matrix → ndim:&quot;, matrix.ndim, &quot;, shape:&quot;, matrix.shape)
-</code></pre></div>
-<h3>4. 2차원 배열 읽기</h3>
-<p>다음 배열은 3행 2열 구조입니다.</p>
-<div class="math-block" role="math" aria-label="X =
-\begin{bmatrix}
-22.5 &amp; 0.10 \\
-31.0 &amp; 0.45 \\
-36.0 &amp; 0.90
-\end{bmatrix}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>X</mi><mo>&#x0003D;</mo><mo>&#x0005B;</mo><mtable><mtr><mtd><mn>22.5</mn></mtd><mtd><mn>0.10</mn></mtd></mtr><mtr><mtd><mn>31.0</mn></mtd><mtd><mn>0.45</mn></mtd></mtr><mtr><mtd><mn>36.0</mn></mtd><mtd><mn>0.90</mn></mtd></mtr></mtable><mo>&#x0005D;</mo></mrow></math></div>
-<p>각 행은 하나의 측정 데이터이고, 각 열은 측정 항목입니다.</p>
-<ul>
-<li>첫 번째 열: 온도</li>
-<li>두 번째 열: 진동</li>
-</ul>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_2_numpy_and_tensor.ipynb · 코드 셀 4 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>sensor_data = np.array(
-    [
-        [22.5, 0.10],
-        [31.0, 0.45],
-        [36.0, 0.90],
-    ],
-    dtype=np.float32,
-)
-
-print(sensor_data)
-print(&quot;차원 수:&quot;, sensor_data.ndim)
-print(&quot;shape:&quot;, sensor_data.shape)
-print(&quot;자료형:&quot;, sensor_data.dtype)
-</code></pre></div>
-<h3>5. Indexing으로 원하는 값 선택하기</h3>
-<p>인덱스는 <code>0</code>부터 시작합니다.</p>
-<ul>
-<li><code>sensor_data[0]</code> : 첫 번째 행</li>
-<li><code>sensor_data[:, 0]</code> : 모든 행의 첫 번째 열</li>
-<li><code>sensor_data[1, 0]</code> : 두 번째 행의 첫 번째 값</li>
-</ul>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_2_numpy_and_tensor.ipynb · 코드 셀 5 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>print(&quot;첫 번째 측정 데이터:&quot;, sensor_data[0])
-print(&quot;모든 온도값:&quot;, sensor_data[:, 0])
-print(&quot;모든 진동값:&quot;, sensor_data[:, 1])
-print(&quot;두 번째 온도값:&quot;, sensor_data[1, 0])
-</code></pre></div>
-<h3>6. Boolean Mask로 조건에 맞는 값 선택하기</h3>
-<p>Boolean Mask(불리언 마스크)는 조건의 결과인 <code>True</code>와 <code>False</code>를 이용해 필요한 값만 선택합니다.</p>
-<p>다음 예제에서는 온도가 30℃ 이상인 데이터만 선택합니다.</p>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_2_numpy_and_tensor.ipynb · 코드 셀 6 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>temperatures = sensor_data[:, 0]
-
-high_mask = temperatures &gt;= 30.0
-high_temperatures = temperatures[high_mask]
-
-print(&quot;30℃ 이상 여부:&quot;, high_mask)
-print(&quot;30℃ 이상 온도:&quot;, high_temperatures)
-</code></pre></div>
-<h3>7. 간단한 Broadcasting 이해하기</h3>
-<p>Broadcasting(브로드캐스팅, 작은 데이터를 큰 배열에 맞춰 자동 확장하는 기능)을 사용하면 모든 값에 같은 숫자를 더하거나 곱할 수 있습니다.</p>
-<p>센서 보정값 <code>1.5</code>를 모든 온도에 더해 보겠습니다.</p>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_2_numpy_and_tensor.ipynb · 코드 셀 7 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>temperature_offset = 1.5
-corrected_temperatures = temperatures + temperature_offset
-
-print(&quot;보정 전:&quot;, temperatures)
-print(&quot;보정 후:&quot;, corrected_temperatures)
-</code></pre></div>
-<h3>8. NumPy 배열을 PyTorch Tensor로 변환하기</h3>
-<p><code>torch.from_numpy()</code>를 사용하면 NumPy 배열을 Tensor로 변환할 수 있습니다.</p>
-<p>두 자료형은 모양이 비슷하지만 소속 라이브러리가 다릅니다.</p>
-<ul>
-<li>NumPy: <code>ndarray</code></li>
-<li>PyTorch: <code>Tensor</code></li>
-</ul>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_2_numpy_and_tensor.ipynb · 코드 셀 8 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>sensor_tensor = torch.from_numpy(sensor_data)
-
-print(sensor_tensor)
-print(&quot;자료형:&quot;, type(sensor_tensor))
-print(&quot;dim:&quot;, sensor_tensor.dim())
-print(&quot;shape:&quot;, sensor_tensor.shape)
-print(&quot;dtype:&quot;, sensor_tensor.dtype)
-</code></pre></div>
-<h3>9. NumPy와 Tensor의 속성 비교</h3>
-<table>
-<thead>
-<tr>
-  <th>확인 항목</th>
-  <th>NumPy 배열</th>
-  <th>PyTorch Tensor</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td>차원 수</td>
-  <td><code>ndim</code></td>
-  <td><code>dim()</code></td>
-</tr>
-<tr>
-  <td>모양</td>
-  <td><code>shape</code></td>
-  <td><code>shape</code></td>
-</tr>
-<tr>
-  <td>자료형</td>
-  <td><code>dtype</code></td>
-  <td><code>dtype</code></td>
-</tr>
-<tr>
-  <td>저장 장치</td>
-  <td>별도 확인 없음</td>
-  <td><code>device</code></td>
-</tr>
-</tbody>
-</table>
-<p>PyTorch Tensor는 CPU(씨피유) 또는 GPU(지피유)에 저장할 수 있으므로 <code>device</code> 속성이 있습니다.</p>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_2_numpy_and_tensor.ipynb · 코드 셀 9 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>print(&quot;NumPy ndim :&quot;, sensor_data.ndim)
-print(&quot;Tensor dim :&quot;, sensor_tensor.dim())
-
-print(&quot;NumPy shape:&quot;, sensor_data.shape)
-print(&quot;Tensor shape:&quot;, sensor_tensor.shape)
-
-print(&quot;Tensor device:&quot;, sensor_tensor.device)
-</code></pre></div>
-<h3>10. 미니 실습: 센서 데이터 판정하기</h3>
-<p>온도와 진동 데이터를 Tensor로 변환한 뒤 다음 조건을 확인합니다.</p>
-<ul>
-<li>온도 35℃ 이상</li>
-<li>진동 0.7 이상</li>
-</ul>
-<p>두 조건이 모두 참이면 점검이 필요한 데이터로 판정합니다.</p>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_2_numpy_and_tensor.ipynb · 코드 셀 10 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>practice_data = np.array(
-    [
-        [24.0, 0.20],
-        [34.0, 0.55],
-        [38.0, 0.85],
-    ],
-    dtype=np.float32,
-)
-
-practice_tensor = torch.from_numpy(practice_data)
-
-temperature_alarm = practice_tensor[:, 0] &gt;= 35.0
-vibration_alarm = practice_tensor[:, 1] &gt;= 0.7
-inspection_required = temperature_alarm &amp; vibration_alarm
-
-print(&quot;센서 데이터:&quot;)
-print(practice_tensor)
-
-print()
-print(&quot;점검 필요 여부:&quot;)
-print(inspection_required)
-
-print()
-print(&quot;점검이 필요한 데이터:&quot;)
-print(practice_tensor[inspection_required])
-</code></pre></div>
-<h3>12. 핵심 정리</h3>
-<ul>
-<li>Python 리스트는 일반적인 데이터 저장에 사용합니다.</li>
-<li>불리언 마스크는 조건에 맞는 데이터를 선택합니다.</li>
-<li>PyTorch Tensor는 <code>dim</code>, <code>shape</code>, <code>dtype</code>, <code>device</code> 속성을 확인할 수 있습니다.</li>
-</ul>
-</section><section class="section" id="s05"><h2><span class="num">05</span>ch01_3 PyTorch Tensor 연산</h2><p>노트북: <code>notebooks/ch01_3_tensor_operations.ipynb</code> · 원본 파일: <code>ch01_3_tensor_operations.ipynb</code> · 상태: 원본 · 실행 기록 없음 · 미검증</p>
-<h3>개요</h3>
-<ul>
-<li>일정한 값과 난수로 Tensor(텐서, 다차원 배열)를 생성합니다.</li>
-<li>여러 묶음의 센서 데이터를 하나로 결합합니다.</li>
-</ul>
-<h3>1. 라이브러리 불러오기</h3>
-<p>NumPy는 <code>np</code>, PyTorch(파이토치)는 <code>torch</code>라는 이름으로 사용합니다.</p>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_3_tensor_operations.ipynb · 코드 셀 1 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>import numpy as np
-import torch
-</code></pre></div>
-<h3>2. Tensor 생성 함수</h3>
-<p>PyTorch는 자주 사용하는 형태의 Tensor를 간단히 만들 수 있습니다.</p>
-<table>
-<thead>
-<tr>
-  <th>함수</th>
-  <th>역할</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td><code>torch.zeros()</code></td>
-  <td>모든 원소를 0으로 생성</td>
-</tr>
-<tr>
-  <td><code>torch.ones()</code></td>
-  <td>모든 원소를 1로 생성</td>
-</tr>
-<tr>
-  <td><code>torch.arange()</code></td>
-  <td>일정한 간격의 연속 값 생성</td>
-</tr>
-<tr>
-  <td><code>torch.rand()</code></td>
-  <td>0 이상 1 미만의 난수 생성</td>
-</tr>
-<tr>
-  <td><code>torch.randn()</code></td>
-  <td>평균 0, 표준편차 1인 난수 생성</td>
-</tr>
-</tbody>
-</table>
-<p><code>torch.manual_seed()</code>를 사용하면 다시 실행해도 같은 난수가 생성됩니다.</p>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_3_tensor_operations.ipynb · 코드 셀 2 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code># 같은 난수 결과를 얻기 위한 기준값
-torch.manual_seed(42)
-
-zeros_tensor = torch.zeros(2, 3)
-ones_tensor = torch.ones(2, 3)
-range_tensor = torch.arange(0, 6).reshape(2, 3)
-random_tensor = torch.rand(2, 3)
-
-print(&quot;zeros:&quot;)
-print(zeros_tensor)
-
-print()
-print(&quot;ones:&quot;)
-print(ones_tensor)
-
-print()
-print(&quot;arange + reshape:&quot;)
-print(range_tensor)
-
-print()
-print(&quot;rand:&quot;)
-print(random_tensor)
-</code></pre></div>
-<h3>3. NumPy 배열과 Tensor의 메모리 공유</h3>
-<p><code>torch.from_numpy()</code>로 만든 Tensor는 원본 NumPy 배열과 메모리를 공유할 수 있습니다.</p>
-<p>따라서 NumPy 배열의 값을 바꾸면 Tensor의 값도 함께 바뀔 수 있습니다.</p>
-<p>독립된 복사본이 필요할 때는 <code>clone()</code>을 사용합니다.</p>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_3_tensor_operations.ipynb · 코드 셀 3 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>numpy_data = np.array([[10, 20], [30, 40]], dtype=np.float32)
-
-shared_tensor = torch.from_numpy(numpy_data)
-copied_tensor = shared_tensor.clone()
-
-# NumPy 배열의 첫 번째 값을 변경합니다.
-numpy_data[0, 0] = 99
-
-print(&quot;변경된 NumPy 배열:&quot;)
-print(numpy_data)
-
-print()
-print(&quot;메모리를 공유하는 Tensor:&quot;)
-print(shared_tensor)
-
-print()
-print(&quot;미리 복사한 독립 Tensor:&quot;)
-print(copied_tensor)
-</code></pre></div>
-<h3>4. CPU와 GPU 장치 선택</h3>
-<p><code>device</code>(디바이스, 저장·연산 장치)는 Tensor가 저장되는 위치입니다.</p>
-<ul>
-<li><code>cpu</code>: CPU 메모리</li>
-<li><code>cuda</code>: NVIDIA(엔비디아) GPU 메모리</li>
-</ul>
-<p>다음 코드는 GPU가 있으면 GPU를 선택하고, 없으면 CPU를 선택합니다.</p>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_3_tensor_operations.ipynb · 코드 셀 4 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>device = torch.device(&quot;cuda&quot; if torch.cuda.is_available() else &quot;cpu&quot;)
-
-data = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
-data_on_device = data.to(device)
-
-print(&quot;선택된 장치:&quot;, device)
-print(&quot;Tensor의 장치:&quot;, data_on_device.device)
-</code></pre></div>
-<h3>5. Tensor 모양 바꾸기</h3>
-<p><code>reshape()</code>는 원소의 총개수를 유지하면서 Tensor의 모양을 바꿉니다.</p>
-<div class="math-block" role="math" aria-label="2 \times 3 = 3 \times 2 = 6"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mn>2</mn><mo>&#x000D7;</mo><mn>3</mn><mo>&#x0003D;</mo><mn>3</mn><mo>&#x000D7;</mo><mn>2</mn><mo>&#x0003D;</mo><mn>6</mn></mrow></math></div>
-<p>따라서 원소가 6개인 Tensor는 <code>(2, 3)</code>, <code>(3, 2)</code>, <code>(1, 6)</code> 등의 모양으로 변경할 수 있습니다.</p>
-<p><code>flatten()</code>은 여러 차원의 Tensor를 1차원으로 펼칩니다.</p>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_3_tensor_operations.ipynb · 코드 셀 5 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>tensor_a = torch.arange(1, 7).reshape(2, 3)
-
-print(&quot;원래 Tensor:&quot;)
-print(tensor_a)
-print(&quot;shape:&quot;, tensor_a.shape)
-
-print()
-print(&quot;reshape(3, 2):&quot;)
-print(tensor_a.reshape(3, 2))
-
-print()
-print(&quot;flatten():&quot;)
-print(tensor_a.flatten())
-</code></pre></div>
-<h3>6. <code>torch.cat()</code>으로 연결하기</h3>
-<p><code>torch.cat()</code>은 <strong>기존 차원을 따라</strong> Tensor를 연결합니다.</p>
-<p>두 Tensor의 shape가 모두 <code>(2, 3)</code>일 때:</p>
-<ul>
-<li><code>dim=0</code>: 첫 번째 차원의 크기가 증가 → <code>(4, 3)</code></li>
-<li><code>dim=1</code>: 두 번째 차원의 크기가 증가 → <code>(2, 6)</code></li>
-</ul>
-<blockquote>
-<p><code>dim</code>은 단순히 행·열 이름보다 <strong>어느 차원의 크기를 늘리는가</strong>로 이해하는 것이 좋습니다.</p>
-</blockquote>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_3_tensor_operations.ipynb · 코드 셀 6 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>tensor_b = torch.tensor(
-    [[10, 20, 30],
-     [40, 50, 60]]
-)
-
-cat_dim0 = torch.cat([tensor_a, tensor_b], dim=0)
-cat_dim1 = torch.cat([tensor_a, tensor_b], dim=1)
-
-print(&quot;cat dim=0:&quot;)
-print(cat_dim0)
-print(&quot;shape:&quot;, cat_dim0.shape)
-
-print()
-print(&quot;cat dim=1:&quot;)
-print(cat_dim1)
-print(&quot;shape:&quot;, cat_dim1.shape)
-</code></pre></div>
-<h3>7. <code>torch.stack()</code>으로 쌓기</h3>
-<p><code>torch.stack()</code>은 <strong>새로운 차원을 추가하여</strong> Tensor를 쌓습니다.</p>
-<p>두 개의 <code>(2, 3)</code> Tensor를 <code>dim=0</code>으로 쌓으면 결과 shape는 <code>(2, 2, 3)</code>이 됩니다.</p>
-<ul>
-<li>첫 번째 <code>2</code>: Tensor 묶음의 개수</li>
-<li>두 번째 <code>2</code>: 각 Tensor의 행 개수</li>
-<li>마지막 <code>3</code>: 각 Tensor의 열 개수</li>
-</ul>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_3_tensor_operations.ipynb · 코드 셀 7 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>stack_dim0 = torch.stack([tensor_a, tensor_b], dim=0)
-
-print(&quot;stack dim=0:&quot;)
-print(stack_dim0)
-print(&quot;shape:&quot;, stack_dim0.shape)
-</code></pre></div>
-<h3>8. <code>cat</code>과 <code>stack</code> 비교</h3>
-<table>
-<thead>
-<tr>
-  <th>함수</th>
-  <th>핵심 동작</th>
-  <th>예시 결과</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td><code>torch.cat()</code></td>
-  <td>기존 차원을 따라 연결</td>
-  <td><code>(2, 3)</code> 두 개 → <code>(4, 3)</code></td>
-</tr>
-<tr>
-  <td><code>torch.stack()</code></td>
-  <td>새로운 차원을 만들어 쌓기</td>
-  <td><code>(2, 3)</code> 두 개 → <code>(2, 2, 3)</code></td>
-</tr>
-</tbody>
-</table>
-<hr />
-<blockquote>
-<p><strong><code>cat</code>은 Tensor를 연결하고, <code>stack</code>은 새로운 차원으로 묶습니다.</strong></p>
-</blockquote>
-<h3>9. 미니 실습: 센서 데이터 묶음 합치기</h3>
-<p>두 번에 나누어 측정한 온도·진동 데이터를 하나로 결합합니다.</p>
-<p>각 행은 하나의 측정값이며, 각 열은 다음 의미를 가집니다.</p>
-<ul>
-<li>첫 번째 열: 온도</li>
-<li>두 번째 열: 진동</li>
-</ul>
-<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_3_tensor_operations.ipynb · 코드 셀 8 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code># 첫 번째 측정 묶음
-batch_1 = torch.tensor(
-    [[22.0, 0.10],
-     [25.0, 0.15]]
-)
-
-# 두 번째 측정 묶음
-batch_2 = torch.tensor(
-    [[31.0, 0.45],
-     [36.0, 0.90]]
-)
-
-# 모든 측정값을 하나의 표로 연결합니다.
-all_sensor_data = torch.cat([batch_1, batch_2], dim=0)
-
-# 두 측정 묶음을 구분한 상태로 쌓습니다.
-grouped_sensor_data = torch.stack([batch_1, batch_2], dim=0)
-
-print(&quot;하나로 연결한 센서 데이터:&quot;)
-print(all_sensor_data)
-print(&quot;shape:&quot;, all_sensor_data.shape)
-
-print()
-print(&quot;측정 묶음별로 쌓은 센서 데이터:&quot;)
-print(grouped_sensor_data)
-print(&quot;shape:&quot;, grouped_sensor_data.shape)
-</code></pre></div>
-<h3>11. 핵심 정리</h3>
-<ul>
-<li><code>zeros</code>, <code>ones</code>, <code>arange</code>, <code>rand</code>로 Tensor를 쉽게 생성할 수 있습니다.</li>
-<li><code>.to(device)</code>는 Tensor를 CPU 또는 GPU로 이동합니다.</li>
-<li><code>torch.stack()</code>은 새로운 차원을 추가하여 쌓습니다.</li>
-</ul>
-</section><section class="section" id="s06"><h2><span class="num">06</span>검증</h2><table>
-<thead>
-<tr>
-  <th>노트북</th>
-  <th>원본 실행 기록</th>
-  <th>이번 정리에서 재실행</th>
-  <th>모델 파일 이름 대응</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td>ch01_1</td>
+  <td>이진분류</td>
+  <td style="text-align:right">1</td>
+  <td>Logit</td>
   <td>없음</td>
-  <td>미검증</td>
-  <td>해당 없음</td>
+  <td>BCEWithLogitsLoss</td>
 </tr>
 <tr>
-  <td>ch01_2</td>
+  <td>다중분류</td>
+  <td style="text-align:right">클래스 수 C</td>
+  <td>C개 Logit</td>
   <td>없음</td>
-  <td>미검증</td>
-  <td>해당 없음</td>
+  <td>CrossEntropyLoss</td>
 </tr>
 <tr>
-  <td>ch01_3</td>
+  <td>다중레이블</td>
+  <td style="text-align:right">클래스 수 C</td>
+  <td>C개 Logit</td>
   <td>없음</td>
-  <td>미검증</td>
-  <td>해당 없음</td>
+  <td>BCEWithLogitsLoss</td>
 </tr>
 </tbody>
 </table>
+<p>여기서 매우 중요한 점이 있다.</p>
+<h3>은닉층과 출력층의 활성화 함수는 다른 문제다</h3>
+<p>MLP 예:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력
+ ↓
+Linear
+ ↓
+ReLU
+ ↓
+Linear
+ ↓
+ReLU
+ ↓
+Linear
+ ↓
+Logits
+</code></pre></div>
+<p>ReLU(렐루, 음수는 0으로 만들고 양수는 그대로 전달하는 활성화 함수)는 <strong>은닉층</strong>에 사용한다.</p>
+<p>반면 마지막 출력층은 Loss와 맞춰 설계한다.</p>
+</section><section class="section" id="s04"><h2><span class="num">04</span>3. PyTorch 주요 Loss Function</h2><h3>3.1 <code>nn.MSELoss()</code></h3>
+<p>MSE(Mean Squared Error, 평균제곱오차)</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>예측값과 실제값의 차이
+        ↓
+제곱
+        ↓
+평균
+</code></pre></div>
+<p>대표 용도:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Regression
+</code></pre></div>
+<p>예:</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>prediction = model(x)
+
+loss_function = nn.MSELoss()
+loss = loss_function(prediction, y)
+</code></pre></div>
+<p>Target:</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>dtype=torch.float32
+</code></pre></div>
+<p>특징:</p>
 <ul>
-<li>이 페이지의 실행 결과와 그림은 <strong>원본 노트북에 저장된 기록</strong>이며, 이번 정리 과정에서 다시 실행하지 않았습니다(재실행 미검증).</li>
-<li>모델 파일 이름 대응: 모델을 저장·불러오는 노트북은 파일 이름의 장 번호를 새 순번으로 함께 바꾸고, 저장하는 노트북과 불러오는 노트북의 이름이 같은지 스크립트로 확인했습니다(통과). 모델 파일을 쓰지 않는 노트북은 해당 없음입니다.</li>
-<li>노트북 안의 설명·코드·출력 순서는 원본을 그대로 따릅니다(STANDARD 8절: 코드·이미지·절 순서 임의 변경 금지).</li>
+<li>큰 오차에 강한 벌점을 줌</li>
+<li>이상치가 있으면 Loss가 크게 영향을 받음</li>
 </ul>
-<p><strong>완료 기준:</strong> 노트북을 순서대로 실행해 오류 없이 끝나고, 손실 감소와 평가 지표가 원본 기록과 비슷한 범위로 나오는지 확인합니다.</p>
+<h3>3.2 <code>nn.L1Loss()</code></h3>
+<p>MAE(Mean Absolute Error, 평균절대오차)에 해당한다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>|예측 - 실제|
+       ↓
+평균
+</code></pre></div>
+<p>장점:</p>
+<ul>
+<li>MSE보다 이상치의 영향을 덜 받는다.</li>
+</ul>
+<p>따라서:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>이상치가 적음
+→ MSE가 많이 사용됨
+
+이상치 영향이 큼
+→ L1Loss 고려
+</code></pre></div>
+<h3>3.3 <code>nn.BCELoss()</code></h3>
+<p>BCE(Binary Cross Entropy, 이진 교차 엔트로피)</p>
+<p>중요:</p>
+<blockquote>
+<p><code>BCELoss()</code>는 입력으로 <strong>확률값</strong>을 받는다.</p>
+</blockquote>
+<p>따라서 모델이 Sigmoid까지 수행해야 한다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Linear
+ ↓
+Sigmoid
+ ↓
+0~1 확률
+ ↓
+BCELoss
+</code></pre></div>
+<p>예:</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>probability = torch.sigmoid(logit)
+loss = nn.BCELoss()(probability, y)
+</code></pre></div>
+<p>그러나 일반적으로는 이 방법보다 다음 방법을 권장한다.</p>
+<h3>3.4 <code>nn.BCEWithLogitsLoss()</code></h3>
+<p>실무적으로 이진분류에서 가장 중요한 Loss 중 하나이다.</p>
+<p>개념적으로:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>BCEWithLogitsLoss
+≈
+Sigmoid
++
+Binary Cross Entropy
+</code></pre></div>
+<p>모델:</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>self.output = nn.Linear(hidden_size, 1)
+</code></pre></div>
+<p>Forward:</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>return self.output(x)
+</code></pre></div>
+<p>Sigmoid를 넣지 않는다.</p>
+<p>학습:</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>loss_function = nn.BCEWithLogitsLoss()
+</code></pre></div>
+<p>구조:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Linear
+ ↓
+Logit
+ ↓
+BCEWithLogitsLoss
+</code></pre></div>
+<p>장점:</p>
+<ul>
+<li>수치적으로 더 안정적</li>
+<li>Sigmoid를 따로 계산할 필요 없음</li>
+</ul>
+<p>따라서 PyTorch에서는 보통:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>이진분류
+→ BCEWithLogitsLoss
+</code></pre></div>
+<p>를 우선한다.</p>
+<h3>3.5 <code>nn.CrossEntropyLoss()</code></h3>
+<p>Multi-class Classification의 대표 Loss이다.</p>
+<p>개념적으로:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>CrossEntropyLoss
+=
+LogSoftmax
++
+NLLLoss
+</code></pre></div>
+<p>따라서 모델에 Softmax를 넣지 않는다.</p>
+<p>정상 구조:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Linear(C)
+ ↓
+Logits
+ ↓
+CrossEntropyLoss
+</code></pre></div>
+<p>잘못된 구조:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Linear(C)
+ ↓
+Softmax
+ ↓
+CrossEntropyLoss
+</code></pre></div>
+<p>즉 Softmax를 중복 적용하는 문제가 생긴다.</p>
+<p>MNIST 10개 클래스:</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>self.output = nn.Linear(hidden_size, 10)
+</code></pre></div>
+<p>Forward:</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>return self.output(x)
+</code></pre></div>
+<p>Loss:</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>loss_function = nn.CrossEntropyLoss()
+</code></pre></div>
+<p>Target:</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>tensor([7, 2, 1, 9])
+</code></pre></div>
+<p>dtype:</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>torch.long
+</code></pre></div>
+</section><section class="section" id="s05"><h2><span class="num">05</span>4. Loss와 출력층 연결</h2><table>
+<thead>
+<tr>
+  <th>문제</th>
+  <th>출력층</th>
+  <th>출력</th>
+  <th>Loss</th>
+  <th>Target</th>
+  <th>핵심 주의</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>회귀</td>
+  <td><code>Linear(...,1)</code></td>
+  <td>실수</td>
+  <td><code>MSELoss</code></td>
+  <td>float</td>
+  <td>출력층 활성화 보통 없음</td>
+</tr>
+<tr>
+  <td>이진분류</td>
+  <td><code>Linear(...,1)</code></td>
+  <td>Logit</td>
+  <td><code>BCEWithLogitsLoss</code></td>
+  <td>float 0/1</td>
+  <td>Sigmoid 넣지 않음</td>
+</tr>
+<tr>
+  <td>이진분류 구식 구조</td>
+  <td>Linear + Sigmoid</td>
+  <td>확률</td>
+  <td><code>BCELoss</code></td>
+  <td>float 0/1</td>
+  <td>수치 안정성 낮음</td>
+</tr>
+<tr>
+  <td>다중분류</td>
+  <td><code>Linear(...,C)</code></td>
+  <td>C개 Logit</td>
+  <td><code>CrossEntropyLoss</code></td>
+  <td>long 클래스 번호</td>
+  <td>Softmax 넣지 않음</td>
+</tr>
+<tr>
+  <td>다중레이블</td>
+  <td><code>Linear(...,C)</code></td>
+  <td>C개 Logit</td>
+  <td><code>BCEWithLogitsLoss</code></td>
+  <td>float 0/1 배열</td>
+  <td>각 클래스 독립</td>
+</tr>
+</tbody>
+</table>
+<p>이 표는 거의 암기해도 좋다.</p>
+</section><section class="section" id="s06"><h2><span class="num">06</span>5. Optimizer 선택</h2><p>Loss와 Optimizer는 역할이 다르다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Loss
+→ 얼마나 틀렸는가 계산
+
+Backward
+→ 어느 방향으로 고쳐야 하는가 계산
+
+Optimizer
+→ W와 b를 실제로 수정
+</code></pre></div>
+<h3>5.1 SGD</h3>
+<p>SGD(Stochastic Gradient Descent, 확률적 경사하강법)는 가장 기본적인 Optimizer이다.</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>optimizer = torch.optim.SGD(
+    model.parameters(),
+    lr=0.01
+)
+</code></pre></div>
+<p>현재 학습 과정에서는 매우 중요하다.</p>
+<p>왜냐하면:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Loss
+ ↓
+Gradient
+ ↓
+W, b 업데이트
+</code></pre></div>
+<p>관계를 가장 직접적으로 볼 수 있기 때문이다.</p>
+<p>따라서:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>① Linear Regression
+② Logistic Regression
+③ Multi-class Classification
+</code></pre></div>
+<p>초기 학습에서는 SGD가 매우 좋은 선택이다.</p>
+<p>SGD가 단순하다고 성능이 나쁜 Optimizer라는 뜻은 아니다.</p>
+<p>잘 조정된 SGD + Momentum은 CNN 등에서도 매우 강력하다.</p>
+<h3>5.2 SGD + Momentum</h3>
+<p>Momentum(모멘텀, 이전 업데이트 방향을 함께 활용하는 방법)을 추가한다.</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>optimizer = torch.optim.SGD(
+    model.parameters(),
+    lr=0.01,
+    momentum=0.9
+)
+</code></pre></div>
+<p>기본 SGD:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>현재 Gradient만 보고 이동
+</code></pre></div>
+<p>Momentum:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>현재 Gradient
++
+이전에 이동하던 방향
+        ↓
+더 안정적인 이동
+</code></pre></div>
+<p>특히 Loss 표면이 다음과 같을 때 효과적이다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>＼       /
+ ＼     /
+  ＼   /
+   ＼ /
+</code></pre></div>
+<p>SGD가 좌우로 흔들리면서 이동한다면 Momentum이 진행 방향을 안정시키는 역할을 한다.</p>
+<h3>5.3 Adam</h3>
+<p>Adam(Adaptive Moment Estimation, 적응형 모멘트 추정)은 각 파라미터별로 Learning Rate를 자동 조정하는 성격이 있다.</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>optimizer = torch.optim.Adam(
+    model.parameters(),
+    lr=0.001
+)
+</code></pre></div>
+<p>장점:</p>
+<ul>
+<li>초기 설정이 비교적 쉬움</li>
+<li>빠르게 Loss가 감소하는 경우가 많음</li>
+<li>MLP, CNN, RNN/LSTM 실험에 편리함</li>
+</ul>
+<p>따라서 새로운 딥러닝 모델의 초기 실험에서는 매우 자주 사용한다.</p>
+<h3>5.4 AdamW</h3>
+<p>AdamW(Adam with decoupled Weight Decay, 가중치 감소를 분리 적용한 Adam)는 Weight Decay를 Adam과 더 적절하게 결합한 방법이다.</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>optimizer = torch.optim.AdamW(
+    model.parameters(),
+    lr=0.001,
+    weight_decay=0.01
+)
+</code></pre></div>
+<p>특히:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Transformer
+대규모 신경망
+정규화가 필요한 딥러닝
+</code></pre></div>
+<p>에서 많이 사용한다.</p>
+<p>Transformer 계열에서는 AdamW가 매우 대표적인 초기 선택이다.</p>
+</section><section class="section" id="s07"><h2><span class="num">07</span>6. Optimizer를 어떻게 선택할 것인가</h2><p>초기 판단은 다음처럼 하면 충분하다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>학습 원리를 이해하고 싶은가?
+        ↓
+SGD
+
+SGD 진동을 줄이고 싶은가?
+        ↓
+SGD + Momentum
+
+MLP/CNN/RNN을 빠르게 학습해보고 싶은가?
+        ↓
+Adam
+
+Transformer 또는 Weight Decay를 적극적으로 적용하는가?
+        ↓
+AdamW
+</code></pre></div>
+<p>절대적인 규칙은 아니다.</p>
+</section><section class="section" id="s08"><h2><span class="num">08</span>7. SGD를 선택한 후 결정할 것</h2><p>Optimizer 이름을 정했다고 끝나는 것이 아니다.</p>
+<h3>Learning Rate</h3>
+<p>가장 중요한 Hyperparameter(하이퍼파라미터, 학습 전에 사용자가 정하는 값)이다.</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>lr=0.01
+</code></pre></div>
+<p>너무 큼:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Loss
+ ↓ ↑ ↓ ↑
+진동
+</code></pre></div>
+<p>더 크면:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Loss → 폭발
+</code></pre></div>
+<p>너무 작음:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Loss
+───────＼
+        ＼
+         ＼
+
+너무 천천히 감소
+</code></pre></div>
+<p>따라서 반드시 Loss 그래프를 본다.</p>
+<h3>Momentum</h3>
+<p>예:</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>momentum=0.9
+</code></pre></div>
+<p>효과:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>SGD의 좌우 진동 감소
++
+이전 이동 방향 유지
++
+수렴 속도 개선 가능
+</code></pre></div>
+<p>너무 크거나 Learning Rate와 조합이 좋지 않으면 오히려 진동할 수도 있다.</p>
+<h3>Weight Decay</h3>
+<p>Weight Decay(웨이트 디케이, 큰 가중치에 제약을 주는 정규화)는 모델이 지나치게 복잡하게 학습하는 것을 억제한다.</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>weight_decay=1e-4
+</code></pre></div>
+<p>주로:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Train 성능 매우 좋음
+Validation 성능 나쁨
+        ↓
+Overfitting 의심
+        ↓
+Weight Decay 고려
+</code></pre></div>
+</section><section class="section" id="s09"><h2><span class="num">09</span>8. Batch Size</h2><p>Batch Size(배치 크기)는 한 번의 업데이트에 사용하는 데이터 수이다.</p>
+<p>예:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>전체 데이터 60,000개
+
+Batch Size = 100
+        ↓
+1 Epoch당 약 600번 업데이트
+</code></pre></div>
+<p>작은 Batch:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Gradient 변동 ↑
+메모리 사용 ↓
+업데이트 횟수 ↑
+</code></pre></div>
+<p>큰 Batch:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Gradient 안정 ↑
+메모리 사용 ↑
+업데이트 횟수 ↓
+</code></pre></div>
+<p>Batch Size를 바꾸면 최적 Learning Rate도 달라질 수 있다.</p>
+</section><section class="section" id="s10"><h2><span class="num">10</span>9. Epoch</h2><p>Epoch(에폭, 전체 훈련 데이터를 한 번 학습하는 단위)</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Epoch 1
+→ 전체 데이터 한 번
+
+Epoch 10
+→ 전체 데이터 열 번
+</code></pre></div>
+<p>Epoch를 무조건 늘린다고 좋은 것이 아니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Train Loss ↓
+Validation Loss ↓
+→ 정상
+
+Train Loss ↓
+Validation Loss ↑
+→ Overfitting 시작
+</code></pre></div>
+<p>따라서 Epoch는 Validation과 함께 결정한다.</p>
+</section><section class="section" id="s11"><h2><span class="num">11</span>10. 데이터 전처리</h2><h3>Standardization</h3>
+<p>Standardization(스탠더다이제이션, 표준화):</p>
+<div class="math-block" role="math" aria-label="x_{scaled} = \frac{x-\mu}{\sigma}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>x</mi><mrow><mi>s</mi><mi>c</mi><mi>a</mi><mi>l</mi><mi>e</mi><mi>d</mi></mrow></msub><mo>&#x0003D;</mo><mfrac><mrow><mi>x</mi><mo>&#x02212;</mo><mi>&#x003BC;</mi></mrow><mrow><mi>&#x003C3;</mi></mrow></mfrac></mrow></math></div>
+<p>즉:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>평균 → 약 0
+표준편차 → 약 1
+</code></pre></div>
+<p>특징들의 단위 차이가 클 때 특히 중요하다.</p>
+<p>예:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>키          170
+몸무게       70
+연봉   50,000,000
+</code></pre></div>
+<p>그대로 사용하면 스케일 차이가 매우 크다.</p>
+</section><section class="section" id="s12"><h2><span class="num">12</span>11. Train 평균과 표준편차만 사용</h2><p>이 부분은 매우 중요하다.</p>
+<p>정상 과정:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Train
+ ↓
+mean, std 계산
+ ↓
+Train 변환
+Validation 변환
+Test 변환
+</code></pre></div>
+<p>즉:</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>x_train_scaled = (x_train - train_mean) / train_std
+x_val_scaled   = (x_val   - train_mean) / train_std
+x_test_scaled  = (x_test  - train_mean) / train_std
+</code></pre></div>
+<p>잘못된 방식:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Test 데이터
+ ↓
+Test mean/std 계산
+ ↓
+Test 변환
+</code></pre></div>
+<p>이렇게 하면 Test 데이터의 정보를 미리 사용하게 된다.</p>
+<p>즉:</p>
+<blockquote>
+<p>Data Leakage(데이터 리키지, 데이터 누출)가 발생한다.</p>
+</blockquote>
+<p>Test는 마지막까지 <strong>처음 보는 데이터처럼 유지</strong>해야 한다.</p>
+</section><section class="section" id="s13"><h2><span class="num">13</span>12. Normalization과 Standardization</h2><p>두 용어는 상황에 따라 다르게 사용되지만 교육 단계에서는 다음 정도로 구분하면 좋다.</p>
+<p>Standardization:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>평균 0
+표준편차 1
+</code></pre></div>
+<p>Normalization(노멀라이제이션, 값의 범위를 일정하게 조정):</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>예: 0~255
+ ↓
+0~1
+</code></pre></div>
+<p>MNIST 예:</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>pixel = pixel / 255.0
+</code></pre></div>
+</section><section class="section" id="s14"><h2><span class="num">14</span>13. Class Imbalance</h2><p>예:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>정상 9,900개
+암      100개
+</code></pre></div>
+<p>모델이 전부 정상이라고 해도:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Accuracy = 99%
+</code></pre></div>
+<p>따라서 Accuracy만 보면 매우 좋은 모델처럼 보인다.</p>
+<p>하지만 암 검출:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Recall = 0
+</code></pre></div>
+<p>일 수 있다.</p>
+<p>따라서 클래스 불균형에서는:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Precision
+Recall
+F1 Score
+</code></pre></div>
+<p>를 함께 봐야 한다.</p>
+</section><section class="section" id="s15"><h2><span class="num">15</span>14. Loss와 Metric은 다르다</h2><p>매우 중요한 구분이다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Loss
+→ 학습할 때 W와 b를 수정하기 위한 값
+
+Metric
+→ 학습 결과를 사람이 평가하기 위한 값
+</code></pre></div>
+</section><section class="section" id="s16"><h2><span class="num">16</span>15. Regression 평가</h2><h3>MSE</h3>
+<p>오차 제곱 평균.</p>
+<p>작을수록 좋다.</p>
+<p>큰 오차에 민감하다.</p>
+<h3>MAE</h3>
+<p>오차 절대값 평균.</p>
+<p>단위가 원래 Target과 같다.</p>
+<p>예:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>실제 무게 단위 g
+
+MAE = 80g
+</code></pre></div>
+<p>해석:</p>
+<blockquote>
+<p>평균적으로 약 80g 정도 틀린다.</p>
+</blockquote>
+<h3>RMSE</h3>
+<p>MSE에 제곱근을 취한다.</p>
+<p>원래 Target과 단위가 같아 해석하기 쉽다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>RMSE = 100g
+</code></pre></div>
+<h3>R²</h3>
+<p>R²(R-squared, 결정계수)는 모델이 데이터 변동을 얼마나 설명하는지를 나타낸다.</p>
+<p>보통:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>1에 가까움
+→ 설명력이 높음
+</code></pre></div>
+<p>MAE/MSE와는 다른 평가 지표이다.</p>
+<p>따라서:</p>
+<blockquote>
+<p>R²는 MAE나 MSE로부터 단순 변환한 값이 아니다.</p>
+</blockquote>
+</section><section class="section" id="s17"><h2><span class="num">17</span>16. Classification 평가</h2><h3>Accuracy</h3>
+<p>전체 예측 중 맞힌 비율.</p>
+<h3>Precision</h3>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>모델이 Positive라고 예측한 것 중
+실제로 Positive인 비율
+</code></pre></div>
+<h3>Recall</h3>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>실제 Positive 중
+모델이 찾아낸 비율
+</code></pre></div>
+<h3>F1 Score</h3>
+<p>Precision과 Recall을 함께 고려한다.</p>
+<p>특히 Class Imbalance가 있을 때 중요하다.</p>
+</section><section class="section" id="s18"><h2><span class="num">18</span>17. Validation으로 학습 상태 판단</h2><h3>정상 학습</h3>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Epoch →
+Train Loss       ↘
+Validation Loss  ↘
+</code></pre></div>
+<p>학습이 정상적으로 진행되고 있다.</p>
+</section><section class="section" id="s19"><h2><span class="num">19</span>18. Underfitting</h2><p>Underfitting(언더피팅, 과소적합):</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Train Loss 높음
+Validation Loss 높음
+</code></pre></div>
+<p>의미:</p>
+<blockquote>
+<p>모델 자체가 충분히 학습하지 못했다.</p>
+</blockquote>
+<p>검토할 것:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Epoch 증가
+모델 크기 증가
+은닉층 증가
+노드 증가
+Learning Rate 조정
+</code></pre></div>
+</section><section class="section" id="s20"><h2><span class="num">20</span>19. Overfitting</h2><p>Overfitting(오버피팅, 과적합):</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Train Loss       계속 ↓
+Validation Loss      ↑
+</code></pre></div>
+<p>의미:</p>
+<blockquote>
+<p>훈련 데이터를 학습하는 것이 아니라 점점 암기하고 있다.</p>
+</blockquote>
+<p>대응:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Epoch 감소
+Early Stopping
+Weight Decay
+Dropout
+데이터 증가
+Data Augmentation
+모델 단순화
+</code></pre></div>
+</section><section class="section" id="s21"><h2><span class="num">21</span>20. MLP와 CNN은 Loss를 결정하지 않는다</h2><p>이 점은 반드시 구분한다.</p>
+<h3>문제 유형</h3>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Regression
+Binary Classification
+Multi-class Classification
+Multi-label Classification
+</code></pre></div>
+<p>이것이:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>출력층
+Activation
+Loss
+Metric
+</code></pre></div>
+<p>을 결정한다.</p>
+<h3>모델 구조</h3>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Linear Model
+MLP
+CNN
+RNN/LSTM
+Transformer
+</code></pre></div>
+<p>이것은:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력 특징을 어떻게 처리할 것인가
+</code></pre></div>
+<p>를 결정한다.</p>
+</section><section class="section" id="s22"><h2><span class="num">22</span>21. MNIST 예</h2><h3>MLP</h3>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>28×28
+ ↓
+Flatten
+ ↓
+784
+ ↓
+Linear
+ ↓
+ReLU
+ ↓
+Linear
+ ↓
+ReLU
+ ↓
+Linear(10)
+ ↓
+10 Logits
+ ↓
+CrossEntropyLoss
+</code></pre></div>
+<h3>CNN</h3>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>28×28
+ ↓
+Conv
+ ↓
+ReLU
+ ↓
+Pooling
+ ↓
+Conv
+ ↓
+ReLU
+ ↓
+Flatten
+ ↓
+Linear(10)
+ ↓
+10 Logits
+ ↓
+CrossEntropyLoss
+</code></pre></div>
+<p>앞부분은 다르다.</p>
+<p>하지만 마지막은 같다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>10개 중 하나를 선택
+        ↓
+10 Logits
+        ↓
+CrossEntropyLoss
+</code></pre></div>
+</section><section class="section" id="s23"><h2><span class="num">23</span>22. 이진분류와 다중분류의 핵심 비교</h2><div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>이진분류
+
+Linear(1)
+ ↓
+Logit
+ ↓
+BCEWithLogitsLoss
+ ↓
+추론 시 Sigmoid
+</code></pre></div>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>다중분류
+
+Linear(C)
+ ↓
+C개 Logit
+ ↓
+CrossEntropyLoss
+ ↓
+추론 시 argmax
+</code></pre></div>
+<p>확률을 보고 싶다면:</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>probability = torch.softmax(logits, dim=1)
+</code></pre></div>
+<p>를 <strong>추론 단계에서</strong> 적용할 수 있다.</p>
+</section><section class="section" id="s24"><h2><span class="num">24</span>23. 가장 많이 하는 PyTorch 실수</h2><h4>실수 1. Sigmoid 중복</h4>
+<p>잘못된 구조:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Sigmoid
+ ↓
+BCEWithLogitsLoss
+</code></pre></div>
+<p><code>BCEWithLogitsLoss</code> 자체가 Sigmoid 계산을 포함하므로 중복이다.</p>
+<p>정상:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Logit → BCEWithLogitsLoss
+</code></pre></div>
+<h4>실수 2. Softmax 중복</h4>
+<p>잘못된 구조:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Softmax
+ ↓
+CrossEntropyLoss
+</code></pre></div>
+<p>정상:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Logits → CrossEntropyLoss
+</code></pre></div>
+<h4>실수 3. CrossEntropy Target을 One-hot으로 사용</h4>
+<p>일반적인 PyTorch 다중분류에서는:</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>tensor([2, 0, 7, 1])
+</code></pre></div>
+<p>처럼 클래스 번호를 사용한다.</p>
+<p>dtype:</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>torch.long
+</code></pre></div>
+<h4>실수 4. BCE Target을 long으로 사용</h4>
+<p><code>BCEWithLogitsLoss</code>에서는 보통:</p>
+<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>tensor([[0.], [1.], [0.]])
+</code></pre></div>
+<p>처럼 float를 사용한다.</p>
+<h4>실수 5. 출력 Shape 불일치</h4>
+<p>이진분류:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>prediction : [N, 1]
+target     : [N, 1]
+</code></pre></div>
+<p>처럼 맞추는 것이 안전하다.</p>
+<h4>실수 6. Loss와 Accuracy 혼동</h4>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Loss = 0.25
+</code></pre></div>
+<p>라고 해서 Accuracy가 75%라는 의미는 전혀 아니다.</p>
+</section><section class="section" id="s25"><h2><span class="num">25</span>24. 새로운 문제를 받았을 때 의사결정 순서</h2><div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>① 무엇을 예측하는가?
+        ↓
+② Target은 실수인가 클래스인가?
+        ↓
+③ 회귀인가 분류인가?
+        ↓
+④ 분류라면
+   이진 / 다중 / 다중레이블인가?
+        ↓
+⑤ 출력 노드 수 결정
+        ↓
+⑥ 출력층 Activation 결정
+        ↓
+⑦ Loss 결정
+        ↓
+⑧ 모델 구조 결정
+   Linear / MLP / CNN / RNN / Transformer
+        ↓
+⑨ Optimizer 결정
+        ↓
+⑩ Learning Rate 결정
+        ↓
+⑪ Batch Size 결정
+        ↓
+⑫ Epoch 결정
+        ↓
+⑬ 데이터 전처리
+        ↓
+⑭ Train / Validation
+        ↓
+⑮ Metric 평가
+        ↓
+⑯ Underfitting / Overfitting 판단
+        ↓
+⑰ Hyperparameter 조정
+</code></pre></div>
+</section><section class="section" id="s26"><h2><span class="num">26</span>25. 학습 유형별 최종 요약표</h2><table>
+<thead>
+<tr>
+  <th>학습 유형</th>
+  <th>출력층</th>
+  <th>출력 Activation</th>
+  <th>Loss</th>
+  <th>교육용 기본</th>
+  <th>실전 초기 선택</th>
+  <th>주요 Metric</th>
+  <th>관찰</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>① Linear Regression</td>
+  <td>Linear(1)</td>
+  <td>없음</td>
+  <td>MSELoss</td>
+  <td>SGD</td>
+  <td>SGD / Adam</td>
+  <td>MAE, RMSE, R²</td>
+  <td>Loss 수렴</td>
+</tr>
+<tr>
+  <td>② Logistic Regression</td>
+  <td>Linear(1)</td>
+  <td>없음</td>
+  <td>BCEWithLogitsLoss</td>
+  <td>SGD</td>
+  <td>SGD / Adam</td>
+  <td>Accuracy, F1</td>
+  <td>확률·경계</td>
+</tr>
+<tr>
+  <td>③ Multi-class Classification</td>
+  <td>Linear(C)</td>
+  <td>없음</td>
+  <td>CrossEntropyLoss</td>
+  <td>SGD</td>
+  <td>SGD / Adam</td>
+  <td>Accuracy, F1</td>
+  <td>클래스별 성능</td>
+</tr>
+<tr>
+  <td>④ MLP 회귀</td>
+  <td>Linear(k)</td>
+  <td>없음</td>
+  <td>MSELoss</td>
+  <td>SGD</td>
+  <td>Adam</td>
+  <td>MAE, RMSE, R²</td>
+  <td>Train/Val Loss</td>
+</tr>
+<tr>
+  <td>⑤ MLP 이진분류</td>
+  <td>Linear(1)</td>
+  <td>없음</td>
+  <td>BCEWithLogitsLoss</td>
+  <td>SGD</td>
+  <td>Adam</td>
+  <td>Accuracy, Precision, Recall, F1</td>
+  <td>Train/Val</td>
+</tr>
+<tr>
+  <td>⑥ MLP 다중분류</td>
+  <td>Linear(C)</td>
+  <td>없음</td>
+  <td>CrossEntropyLoss</td>
+  <td>SGD</td>
+  <td>Adam</td>
+  <td>Accuracy, F1</td>
+  <td>Train/Val</td>
+</tr>
+<tr>
+  <td>⑦ CNN 다중분류</td>
+  <td>Linear(C)</td>
+  <td>없음</td>
+  <td>CrossEntropyLoss</td>
+  <td>SGD+Momentum</td>
+  <td>Adam 또는 SGD+Momentum</td>
+  <td>Accuracy, F1</td>
+  <td>Train/Val</td>
+</tr>
+</tbody>
+</table>
+</section><section class="section" id="s27"><h2><span class="num">27</span>26. ⑥~⑧까지 확장</h2><h3>RNN/LSTM</h3>
+<p>Loss가 RNN/LSTM 때문에 결정되는 것은 아니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>시계열 숫자 예측
+→ MSELoss
+
+감정 긍정/부정
+→ BCEWithLogitsLoss
+
+문자/단어 분류
+→ CrossEntropyLoss
+</code></pre></div>
+<p>Optimizer 초기 선택:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Adam
+</code></pre></div>
+<p>이 편리하다.</p>
+<h3>Autoencoder</h3>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력 → Encoder → Latent → Decoder → 복원
+</code></pre></div>
+<p>대표적으로:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>연속값 복원
+→ MSELoss / L1Loss
+
+이진적 데이터 복원
+→ BCE 계열
+</code></pre></div>
+<p>Optimizer:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Adam
+</code></pre></div>
+<p>이 초기 선택으로 많이 사용된다.</p>
+<h3>Transformer</h3>
+<p>대표적인 언어 모델:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>다음 Token 예측
+        ↓
+Vocabulary 중 하나 선택
+        ↓
+Multi-class Classification
+        ↓
+CrossEntropyLoss
+</code></pre></div>
+<p>대표 Optimizer:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>AdamW
+</code></pre></div>
+</section><section class="section" id="s28"><h2><span class="num">28</span>27. 전체 테크트리를 하나의 원리로 정리</h2><p>현재 테크트리는 사실 두 개의 축으로 이해해야 한다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>[문제 유형 축]
+
+Regression
+Binary Classification
+Multi-class Classification
+Multi-label Classification
+Reconstruction
+
+             ×
+
+[모델 구조 축]
+
+Linear
+MLP
+CNN
+RNN/LSTM
+Autoencoder
+Transformer
+</code></pre></div>
+<p>예를 들어:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>MLP + Regression
+MLP + Binary Classification
+MLP + Multi-class Classification
+
+CNN + Binary Classification
+CNN + Multi-class Classification
+
+RNN + Regression
+RNN + Classification
+
+Transformer + Multi-class Classification
+</code></pre></div>
+<p>처럼 조합된다.</p>
+<p>따라서:</p>
+<blockquote>
+<p><strong>MLP의 Loss는 무엇인가?</strong></p>
+</blockquote>
+<p>라는 질문 자체에는 하나의 답이 없다.</p>
+<p>정확한 질문은:</p>
+<blockquote>
+<p><strong>MLP를 이용하여 어떤 문제를 해결하는가?</strong></p>
+</blockquote>
+<p>이다.</p>
+</section><section class="section" id="s29"><h2><span class="num">29</span>28. 가장 먼저 외워야 할 4줄</h2><p>현재 단계에서는 사실 다음 네 줄을 가장 확실히 이해하면 된다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>회귀
+→ 실수 출력
+→ MSELoss
+</code></pre></div>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>이진분류
+→ Logit 1개
+→ BCEWithLogitsLoss
+</code></pre></div>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>다중분류
+→ C개 Logit
+→ CrossEntropyLoss
+</code></pre></div>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>다중레이블
+→ C개 독립 Logit
+→ BCEWithLogitsLoss
+</code></pre></div>
+<p>그다음:</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>학습 원리 이해
+→ SGD
+
+SGD 개선
+→ SGD + Momentum
+
+딥러닝 초기 실험
+→ Adam
+
+Transformer / Weight Decay 중심
+→ AdamW
+</code></pre></div>
+<p>로 연결하면 된다.</p>
+</section><section class="section" id="s30"><h2><span class="num">30</span>29. 최종 판단 공식</h2><p>새로운 문제를 만났을 때 Loss 이름부터 떠올리지 않는다.</p>
+<p>먼저 다음 질문을 한다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>&quot;정답 y가 어떻게 생겼는가?&quot;
+</code></pre></div>
+<h4>y가 실수</h4>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>72.5
+104.2
+350.8
+</code></pre></div>
+<p>→ Regression<br />
+→ MSELoss / L1Loss</p>
+<h4>y가 0 또는 1</h4>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>0
+1
+0
+1
+</code></pre></div>
+<p>→ Binary Classification<br />
+→ BCEWithLogitsLoss</p>
+<h4>y가 클래스 번호 하나</h4>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>0
+7
+4
+2
+9
+</code></pre></div>
+<p>→ Multi-class Classification<br />
+→ CrossEntropyLoss</p>
+<h4>y가 여러 개의 0/1</h4>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>[1, 0, 1, 0]
+</code></pre></div>
+<p>→ Multi-label Classification<br />
+→ BCEWithLogitsLoss</p>
+<p>이 판단이 되면 그다음 출력층 구조도 거의 자동으로 결정된다.</p>
+</section><section class="section" id="s31"><h2><span class="num">31</span>핵심 정리</h2><div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Target 형태
+   ↓
+문제 유형
+   ↓
+출력 노드 수
+   ↓
+출력 Logit 형태
+   ↓
+Loss Function
+   ↓
+Optimizer
+   ↓
+Learning Rate / Batch / Epoch
+   ↓
+Validation
+   ↓
+Metric
+</code></pre></div>
+<p>머신러닝과 딥러닝의 학습 설정을 선택할 때 가장 중요한 통찰은 다음이다.</p>
+<blockquote>
+<p><strong>손실함수는 모델 이름이 아니라 정답과 출력의 관계로 결정한다.</strong></p>
+</blockquote>
+<blockquote>
+<p><strong>Optimizer는 문제 종류보다 학습 과정의 속도·안정성·일반화 특성을 보고 선택한다.</strong></p>
+</blockquote>
+<blockquote>
+<p><strong>Validation은 별도의 모델이 아니라 모든 학습에서 과소적합과 과적합을 판단하는 공통 축이다.</strong></p>
+</blockquote>
+<p>이 세 가지가 잡히면 Linear Regression → Logistic Regression → Multi-class → MLP → CNN → RNN/LSTM → Autoencoder → Transformer가 서로 별개 주제가 아니라 하나의 학습 체계로 연결된다.</p>
+</section><section class="section" id="s32"><h2><span class="num">32</span>검증</h2><table>
+<thead>
+<tr>
+  <th>항목</th>
+  <th>판정</th>
+  <th>근거</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>문서 내용</td>
+  <td>통과</td>
+  <td>본문 문장·코드·순서는 원본 문서와 같음</td>
+</tr>
+<tr>
+  <td>문서 안 코드 예시 실행</td>
+  <td>미검증</td>
+  <td>설명용 짧은 예시로, 실행하지 않음</td>
+</tr>
+<tr>
+  <td>발표 자료(PPTX) 내용</td>
+  <td>통과</td>
+  <td>슬라이드 글자가 이 문서의 판단 순서·Loss 대응표와 같음</td>
+</tr>
+</tbody>
+</table>
 </section><div class="chapter-links" id="chapter-links"></div></main></div>
-<footer class="footer">PyTorch 머신러닝 기초 · v02  · 실습 결과는 실제 환경에서 검증</footer>
-<script>window.COURSE={"title": "PyTorch 머신러닝 기초", "short_title": "MACHINE LEARNING", "home_label": "전체 학습 안내서", "chapters": [{"id": "ch01", "number": 1, "title": "Tensor 기초", "file": "ch01_tensor_basics_v02.html"}, {"id": "ch02", "number": 2, "title": "선형회귀", "file": "ch02_linear_regression_v02.html"}, {"id": "ch03", "number": 3, "title": "로지스틱·Softmax 분류", "file": "ch03_classification_v02.html"}, {"id": "ch04", "number": 4, "title": "학습 설정 선택 기준", "file": "ch04_training_setup_guide_v02.html"}]};</script><script>/*
+<footer class="footer">PyTorch 머신러닝 기초 · v03  · 실습 결과는 실제 환경에서 검증</footer>
+<script>window.COURSE={"title": "PyTorch 머신러닝 기초", "short_title": "MACHINE LEARNING", "home_label": "전체 학습 안내서", "chapters": [{"id": "ch01", "number": 1, "title": "Tensor 기초", "file": "ch01_tensor_basics_v03.html"}, {"id": "ch02", "number": 2, "title": "선형회귀", "file": "ch02_linear_regression_v03.html"}, {"id": "ch03", "number": 3, "title": "로지스틱·Softmax 분류", "file": "ch03_classification_v03.html"}, {"id": "ch04", "number": 4, "title": "학습 설정 선택 기준", "file": "ch04_training_setup_guide_v03.html"}]};</script><script>/*
  * 교육용 HTML 공통 동작 — 유지보수용 원본 (STANDARD 4·10.3·10.4)
  * 페이지 본문은 바꾸지 않고 탐색·이전/다음·모바일 메뉴·코드 복사만 덧붙인다.
  * 입력: 페이지의 window.COURSE (tools/guide/build_guides.py가 실제 존재하는 장만 넣음),

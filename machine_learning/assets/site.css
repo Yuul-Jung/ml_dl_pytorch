@@ -613,6 +613,41 @@ pre code {
   overflow-wrap: anywhere;
 }
 
+/* (추가) 코드 풀이 상자: 코드·실행 결과 바로 아래에서 무엇을 하는 코드인지 풀어 씁니다. */
+.explain {
+  margin: -6px 0 22px;
+  padding: 12px 16px 4px;
+  background: #fbfbf9;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  font-size: 0.93rem;
+}
+.explain p,
+.explain ul {
+  margin: 0 0 9px;
+}
+.explain ul {
+  padding-left: 1.2em;
+}
+.explain li {
+  margin: 3px 0;
+}
+.box-title {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin: 0 0 6px !important;
+}
+.note.insight p:last-child,
+.note.insight ul:last-child {
+  margin-bottom: 0;
+}
+.note.insight ul {
+  margin: 0;
+  padding-left: 1.2em;
+}
+
 /* (추가) 수식(MathML): 블록 수식은 가운데 정렬, 넓으면 가로 스크롤 */
 .math-block {
   margin: 14px 0;
