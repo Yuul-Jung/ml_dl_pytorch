@@ -4,6 +4,42 @@
   "site_description": "NumPy와 PyTorch Tensor에서 출발해 선형회귀, 로지스틱·Softmax 분류, 학습 설정 선택 기준까지 단계별 노트북 실습으로 정리한 머신러닝 교재입니다.",
   "course_code": "MACHINE LEARNING",
   "version": "v02",
+  "goal": "정답 Target(타깃)의 형태를 보고 출력층·Loss Function(손실함수)·Optimizer(최적화 알고리즘)·Metric(평가 지표)을 스스로 고르고, **데이터 준비 → 순전파 → 손실 → 기울기 → 갱신 → 평가** 과정을 PyTorch 코드로 구현하는 것이 이 과정의 목표입니다.",
+  "lanes": [
+    {
+      "label": "기초 도구",
+      "chapters": [
+        1
+      ],
+      "caption": "배열과 Tensor, 자동 미분"
+    },
+    {
+      "label": "회귀",
+      "chapters": [
+        2
+      ],
+      "caption": "연속값을 예측하는 선형 모델"
+    },
+    {
+      "label": "분류",
+      "chapters": [
+        3
+      ],
+      "caption": "클래스를 고르는 선형 모델"
+    },
+    {
+      "label": "종합 판단",
+      "chapters": [
+        4
+      ],
+      "caption": "문제 유형별 학습 설정 선택"
+    }
+  ],
+  "other_course": {
+    "role": "다음 과정",
+    "title": "PyTorch 딥러닝 실습",
+    "href": "../../deep_learning/dist/index.html"
+  },
   "chapters": [
     {
       "id": "ch01",
@@ -17,7 +53,10 @@
         "NumPy",
         "Tensor",
         "Autograd"
-      ]
+      ],
+      "level": "기초",
+      "outcome": "Tensor 생성·변환·결합과 자동 미분 확인 코드",
+      "notebooks": 3
     },
     {
       "id": "ch02",
@@ -31,7 +70,10 @@
         "Linear Regression",
         "MSE",
         "Gradient Descent"
-      ]
+      ],
+      "level": "기초",
+      "outcome": "선형회귀 학습 함수와 주택가격 예측 모델 (MAE·RMSE·잔차 분석)",
+      "notebooks": 6
     },
     {
       "id": "ch03",
@@ -46,7 +88,10 @@
         "Softmax",
         "BCEWithLogitsLoss",
         "CrossEntropyLoss"
-      ]
+      ],
+      "level": "핵심",
+      "outcome": "심장질환·붓꽃 분류 모델, 혼동행렬, 학습 최적화 비교 실험",
+      "notebooks": 5
     },
     {
       "id": "ch04",
@@ -61,7 +106,10 @@
         "Optimizer",
         "Metric",
         "Validation"
-      ]
+      ],
+      "level": "종합",
+      "outcome": "문제 유형별 출력층·Loss·Optimizer·Metric 선택 기준표",
+      "notebooks": 0
     }
   ]
 }

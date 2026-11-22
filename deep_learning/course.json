@@ -4,6 +4,39 @@
   "site_description": "은닉층이 있는 심층 신경망(MLP)에서 출발해 MNIST·Fashion-MNIST, CNN, ResNet18 전이학습, 모델 저장·ONNX 배포, 단일 객체 위치 추정까지 단계별 노트북 실습으로 정리한 딥러닝 교재입니다.",
   "course_code": "DEEP LEARNING",
   "version": "v02",
+  "goal": "은닉층과 활성화 함수를 쌓은 신경망으로 표 데이터·이미지를 분류하고, CNN·ResNet 전이학습으로 성능을 높인 뒤 **모델 저장 → ONNX 변환 → 위치 추정**까지 이어지는 실무형 흐름을 PyTorch 코드로 구현하는 것이 이 과정의 목표입니다.",
+  "lanes": [
+    {
+      "label": "심층 신경망 기초",
+      "chapters": [
+        1,
+        2,
+        3
+      ],
+      "caption": "MLP로 표 데이터·이미지 분류"
+    },
+    {
+      "label": "합성곱 신경망",
+      "chapters": [
+        4,
+        5
+      ],
+      "caption": "CNN·ResNet과 전이학습"
+    },
+    {
+      "label": "배포와 응용",
+      "chapters": [
+        6,
+        7
+      ],
+      "caption": "모델 저장·ONNX, 객체 위치 추정"
+    }
+  ],
+  "other_course": {
+    "role": "선수 과정",
+    "title": "PyTorch 머신러닝 기초",
+    "href": "../../machine_learning/dist/index.html"
+  },
   "chapters": [
     {
       "id": "ch01",
@@ -17,7 +50,10 @@
         "MLP",
         "ReLU",
         "BCEWithLogitsLoss"
-      ]
+      ],
+      "level": "기초",
+      "outcome": "심장질환 MLP 이진분류 모델과 평가지표",
+      "notebooks": 1
     },
     {
       "id": "ch02",
@@ -32,7 +68,10 @@
         "DataLoader",
         "Adam",
         "Dropout"
-      ]
+      ],
+      "level": "핵심",
+      "outcome": "MNIST MLP 최적 모델, Optimizer·Dropout 비교, 오분류 분석",
+      "notebooks": 4
     },
     {
       "id": "ch03",
@@ -46,7 +85,10 @@
         "Fashion-MNIST",
         "MLP",
         "Top-k"
-      ]
+      ],
+      "level": "핵심",
+      "outcome": "Fashion-MNIST MLP 모델과 단일 이미지 Top-3 예측",
+      "notebooks": 2
     },
     {
       "id": "ch04",
@@ -61,7 +103,10 @@
         "Conv2d",
         "CIFAR-10",
         "Augmentation"
-      ]
+      ],
+      "level": "핵심",
+      "outcome": "Fashion-MNIST·CIFAR-10 CNN 모델, 특징맵 시각화, 심층 CNN 비교",
+      "notebooks": 4
     },
     {
       "id": "ch05",
@@ -75,7 +120,10 @@
         "ResNet18",
         "Transfer Learning",
         "Fine-tuning"
-      ]
+      ],
+      "level": "심화",
+      "outcome": "CIFAR-10 ResNet18 모델과 전이학습 모델",
+      "notebooks": 2
     },
     {
       "id": "ch06",
@@ -90,7 +138,10 @@
         "Checkpoint",
         "ONNX",
         "ONNX Runtime"
-      ]
+      ],
+      "level": "확장",
+      "outcome": "저장·복원을 검증한 체크포인트와 ONNX 모델, Runtime 추론 비교",
+      "notebooks": 2
     },
     {
       "id": "ch07",
@@ -105,7 +156,10 @@
         "Bounding Box",
         "IoU",
         "YOLO"
-      ]
+      ],
+      "level": "확장",
+      "outcome": "클래스와 Bounding Box를 함께 예측하는 위치 추정 CNN과 IoU 평가",
+      "notebooks": 2
     }
   ]
 }

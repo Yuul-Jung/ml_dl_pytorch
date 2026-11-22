@@ -77,6 +77,74 @@ def enhance_blocks(content):
     return re.sub(r'<pre><code class="language-flow">(.*?)</code></pre>', flow, content, flags=re.S)
 
 
+# (추가) 과정 INDEX: 기준 디자인(ai-agent-engineering) 첫 화면처럼
+# 과정 개요·숫자 요약 → 전체 학습 테크트리 → 학습·실습·배포 안내 → 장별 카드(산출물·세부 목차) → 학습·검증 원칙
+def build_index(default_content):
+    if 'goal' not in CONFIG:
+        return default_content, ['단계별 학습', '실습 중심', 'GitHub Pages']
+    by_no = {ch['number']: ch for ch in CHAPTERS}
+    toc = {}
+    for ch in CHAPTERS:
+        md = (ROOT / ch['source']).read_text(encoding='utf-8')
+        toc[ch['id']] = re.findall(r'^##\s+(.+?)\s*$', md, flags=re.M)
+    n_ch = len(CHAPTERS)
+    n_nb = sum(ch.get('notebooks', 0) for ch in CHAPTERS)
+    n_sec = sum(len(v) for v in toc.values())
+    other = CONFIG.get('other_course')
+
+    stats = ''.join(f'<div class="stat"><b>{v}</b><span>{escape(k)}</span></div>'
+                    for v, k in [(n_ch, '전체 학습 장'), (n_nb, '실습 노트북'), (n_sec, '세부 절 합계')])
+    intro = (f'<p>{escape(CONFIG["site_description"])}</p><div class="stats">{stats}</div>'
+             f'<h3>전체 학습의 최종 목적</h3>{MARKDOWN(CONFIG["goal"])}')
+
+    lanes = []
+    for i, lane in enumerate(CONFIG['lanes']):
+        items = ' → '.join(f'<a href="{escape(by_no[n]["file"])}">{n:02d} {escape(by_no[n]["title"])}</a>' for n in lane['chapters'])
+        if i:
+            lanes.append('<div class="down" aria-hidden="true">↓</div>')
+        lanes.append(f'<div class="step lane"><span class="lane-label">{escape(lane["label"])}</span>'
+                     f'<span class="lane-items">{items}</span><small>{escape(lane["caption"])}</small></div>')
+    roadmap = ('<p>다음 구성도는 학습 진행의 중심 경로입니다. 각 장은 앞 장의 개념과 코드를 이어서 사용합니다.</p>'
+               '<div class="flow" role="list" aria-label="전체 학습 테크트리">' + ''.join(lanes) + '</div>')
+
+    rows = [('기본 환경', 'Python 3 + PyTorch + Jupyter Notebook(또는 Google Colab)'),
+            ('실습 순서', '배경 개념 → 개념 흐름도 → 코드 → 실행 결과 → 풀이 → 검증'),
+            ('노트북 위치', '과정 폴더의 <code>notebooks/</code>를 작업 폴더로 열고 장 안 순번(<code>chNN_K</code>)대로 실행'),
+            ('실행 결과', '페이지의 결과·그림은 원본 노트북에 저장된 기록이며, 다시 실행하지 않은 항목은 미검증으로 표시'),
+            ('공개 자료', '로컬 경로·계정 정보를 점검해 가린 뒤 GitHub Pages로 배포')]
+    if other:
+        rows.append((other['role'], f'<a href="{escape(other["href"])}">{escape(other["title"])}</a>'))
+    table = ('<div class="table-wrap"><table><thead><tr><th>구분</th><th>진행 기준</th></tr></thead><tbody>'
+             + ''.join(f'<tr><td>{escape(a)}</td><td>{b}</td></tr>' for a, b in rows) + '</tbody></table></div>')
+
+    cards = []
+    for ch in CHAPTERS:
+        secs = toc[ch['id']]
+        items = ''.join(f'<li><span class="n">{i:02d}</span>{escape(t)}</li>' for i, t in enumerate(secs))
+        tags = ' · '.join(escape(t) for t in ch.get('tags', []))
+        cards.append(
+            f'<article class="course-card"><div class="card-top"><span class="card-no">{ch["number"]:02d}</span>'
+            f'<span class="card-meta">CHAPTER {ch["number"]:02d} · {escape(ch.get("level", ""))}</span></div>'
+            f'<h3>{escape(ch["title"])}</h3><p>{escape(ch["subtitle"])}</p><p class="tools">{tags}</p>'
+            f'<p class="outcome"><b>실습 산출물</b> {escape(ch.get("outcome", ""))}</p>'
+            f'<details><summary>세부 목차 펼쳐보기 · 00–{len(secs) - 1:02d}절 · {len(secs)}개 절 · 노트북 {ch.get("notebooks", 0)}개</summary>'
+            f'<ol class="subtoc">{items}</ol></details>'
+            f'<a class="start" href="{escape(ch["file"])}">제{ch["number"]:02d}장 학습 시작 ↗</a></article>')
+    chapters = ('<p>각 장의 학습 목적, 주요 도구, 실습 산출물을 비교할 수 있습니다. 세부 목차는 실제 장 원고(<code>content/chNN.md</code>)의 절 제목과 순서를 그대로 반영합니다.</p>'
+                '<div class="card-grid">' + ''.join(cards) + '</div>')
+
+    principle = ('<p>배경 개념 → 개념 흐름도 → 단계별 코드 → 실행 결과 → 풀이 → 검증 순서로 진행합니다. 원본 노트북의 실행 기록과 이번 정리에서 확인한 결과를 구분하고, '
+                 '확인하지 않은 항목은 <b>미검증</b>으로 표시합니다. 판정은 통과·실패·미검증·해당 없음으로 나눕니다.</p>')
+
+    sections = [('intro', '과정 개요', intro), ('roadmap', '전체 학습 테크트리', roadmap),
+                ('guide', '학습·실습·배포 안내', table), ('chapters', '장별 학습 목차와 산출물', chapters),
+                ('practice', '학습·검증 원칙', principle)]
+    content = ''.join(f'<section class="section" id="{sid}"><h2><span class="num">{i:02d}</span>{escape(t)}</h2>{body}</section>'
+                      for i, (sid, t, body) in enumerate(sections))
+    chips = [f'총 {n_ch}장', f'노트북 {n_nb}개', f'세부 절 {n_sec}개', 'PyTorch · Jupyter']
+    return content, chips
+
+
 def render_markdown_sections(md):
     parts=re.split(r'^##\s+(.+?)\s*$',md,flags=re.M)
     if parts[0].strip():
@@ -113,7 +181,9 @@ def build():
 <section class="section" id="roadmap"><h2><span class="num">01</span>전체 학습 테크트리</h2>{roadmap}</section>
 <section class="section" id="chapters"><h2><span class="num">02</span>장별 목차</h2><div class="chapter-grid">{''.join(cards)}</div></section>
 <section class="section" id="practice"><h2><span class="num">03</span>학습·검증 원칙</h2><p>개념 → 구조도 → 단계별 코드 → 예상 출력 → 검증 → 완료 기준 순서로 진행합니다. 실제 실행 결과와 교육용 예시는 명확히 구분합니다.</p><p>코드와 설정은 공식 문서를 우선하며, 외부 시스템을 수정하는 작업에는 사용자 승인 및 원본 보호를 적용합니다.</p></section>'''
-    (OUT/'index.html').write_text(page(CONFIG['site_title'],CONFIG['course_code'],CONFIG['site_description'],['단계별 학습','실습 중심','GitHub Pages'],content),encoding='utf-8')
+    # (추가) 과정 INDEX 구성 (build_index)
+    content, index_chips = build_index(content)
+    (OUT/'index.html').write_text(page(CONFIG['site_title'],CONFIG['course_code'],CONFIG['site_description'],index_chips,content),encoding='utf-8')
     # 최신 버전만 남기기: 출력 디렉터리에 있는 이전 장 HTML 제거, 소스/타 저장소에는 영향 없음
     for p in OUT.glob('*.html'):
         if p.name not in expected: p.unlink()
