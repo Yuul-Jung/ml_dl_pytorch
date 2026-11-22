@@ -54,6 +54,29 @@ def page(title, kicker, desc, chips, body, chapter_id='', footer=''):
 <script>window.COURSE={course_data};</script><script>{SCRIPT}</script></body></html>'''
 
 
+# (추가) 코드 박스 제목 줄에 파일명·언어·검증 상태를 넣고(공통 코드 규칙 10절),
+# 실행 결과는 코드와 구분되는 출력 상자로, ```flow 블록은 단계 흐름도(.flow)로 바꾼다.
+def enhance_blocks(content):
+    code_re = r'<p>코드 박스: (.*?)</p>\s*<pre><code(?: class="language-([^\"]+)")?>(.*?)</code></pre>'
+    content = re.sub(code_re,
+        lambda m: '<div class="codeblock"><div class="codebar"><span>' + (m.group(2) or 'text').upper()
+            + ' · ' + m.group(1) + '</span></div><pre class="src"><code>' + m.group(3) + '</code></pre></div>',
+        content, flags=re.S)
+    out_re = r'<p>실행 결과: (.*?)</p>\s*<pre><code(?: class="language-[^\"]+")?>(.*?)</code></pre>'
+    content = re.sub(out_re,
+        lambda m: '<div class="outputblock"><div class="codebar"><span>OUTPUT · ' + m.group(1)
+            + '</span></div><pre>' + m.group(2) + '</pre></div>',
+        content, flags=re.S)
+
+    def flow(m):
+        steps = [s.strip() for s in m.group(1).strip().split('\n') if s.strip()]
+        steps = [re.sub(r'`([^`]+)`', r'<code>\1</code>', s) for s in steps]
+        body = '<div class="down" aria-hidden="true">↓</div>'.join(f'<div class="step">{s}</div>' for s in steps)
+        return f'<div class="flow" role="list" aria-label="개념 흐름도">{body}</div>'
+
+    return re.sub(r'<pre><code class="language-flow">(.*?)</code></pre>', flow, content, flags=re.S)
+
+
 def render_markdown_sections(md):
     parts=re.split(r'^##\s+(.+?)\s*$',md,flags=re.M)
     if parts[0].strip():
@@ -62,6 +85,8 @@ def render_markdown_sections(md):
     for n in range(1,len(parts),2):
         title=parts[n].strip()
         content=MARKDOWN(parts[n+1].strip())
+        # (추가) 코드 박스 제목 줄·실행 결과 상자·개념 흐름도 처리
+        content=enhance_blocks(content)
         # fenced code needs a consistent header and copy button container
         content=re.sub(r'<pre><code(?: class="language-([^\"]+)")?>(.*?)</code></pre>',
             lambda m:'<div class="codeblock"><div class="codebar"><span>'+escape(m.group(1) or 'TEXT')+'</span></div><pre><code>'+m.group(2)+'</code></pre></div>',content,flags=re.S)

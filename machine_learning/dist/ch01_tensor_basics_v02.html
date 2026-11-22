@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="state_dict 저장·복원 → 추론 함수 → ONNX 내보내기·Runtime 추론"><title>제06장 · 모델 저장·ONNX · PyTorch 딥러닝 실습</title>
+<meta name="description" content="NumPy 배열 → PyTorch Tensor → 연산 → 자동 미분"><title>제01장 · Tensor 기초 · PyTorch 머신러닝 기초</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>/*
@@ -598,1326 +598,763 @@ pre code {
   max-width: 100%;
   overflow-x: auto;
 }
-</style></head><body data-chapter="ch06">
+
+/* (추가) 실행 결과 상자: 코드 박스와 구분하고 복사 버튼은 두지 않습니다. */
+.outputblock {
+  border: 1px solid var(--line);
+  border-left: 3px solid #8a8f98;
+  margin: -6px 0 18px;
+  background: #ffffff;
+}
+.outputblock pre {
+  margin: 0;
+  padding: 13px 15px;
+  overflow: auto;
+  line-height: 1.6;
+  font-size: 0.78rem;
+  color: var(--ink-2);
+}
+.codebar span {
+  overflow-wrap: anywhere;
+}
+</style></head><body data-chapter="ch01">
 <button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button><div class="shade" id="shade"></div>
-<header class="hero"><div class="hero-inner"><p class="kicker">DEEP LEARNING · CHAPTER 06</p><h1>제06장 · 모델 저장·ONNX</h1><p>state_dict 저장·복원 → 추론 함수 → ONNX 내보내기·Runtime 추론</p><div class="chips"><span class="chip">state_dict</span><span class="chip">Checkpoint</span><span class="chip">ONNX</span><span class="chip">ONNX Runtime</span></div></div></header>
-<div class="wrap"><nav class="toc" id="course-nav" aria-label="장과 절 탐색"></nav><main class="content" id="main-content"><section class="section" id="s00"><h2><span class="num">00</span>배경 개념</h2><p>학습한 모델을 다시 쓰려면 가중치(<code>state_dict</code>)와 추론에 필요한 정보(클래스 이름·전처리·기준 출력)를 함께 저장하고, 복원한 모델이 같은 출력을 내는지 비교해야 합니다.</p>
-<p>ONNX(오닉스, Open Neural Network Exchange)는 PyTorch 모델을 프레임워크와 무관한 형식으로 내보내는 표준입니다. ONNX Runtime으로 추론한 결과와 PyTorch 결과를 비교해 배포용 변환이 맞는지 검증합니다.</p>
-</section><section class="section" id="s01"><h2><span class="num">01</span>전체 실습 흐름</h2><ol>
-<li><strong>ch06_1</strong> PyTorch 모델 저장·불러오기·추론 — 5장 전이학습 모델 저장·복원, 저장 전후 출력 비교, 추론 함수</li>
-<li><strong>ch06_2</strong> PyTorch ONNX 내보내기와 Runtime 추론 — ResNet18 ONNX 내보내기 → 모델 검사 → ONNX Runtime 추론 → Top-5 비교</li>
+<header class="hero"><div class="hero-inner"><p class="kicker">MACHINE LEARNING · CHAPTER 01</p><h1>제01장 · Tensor 기초</h1><p>NumPy 배열 → PyTorch Tensor → 연산 → 자동 미분</p><div class="chips"><span class="chip">NumPy</span><span class="chip">Tensor</span><span class="chip">Autograd</span></div></div></header>
+<div class="wrap"><nav class="toc" id="course-nav" aria-label="장과 절 탐색"></nav><main class="content" id="main-content"><section class="section" id="s00"><h2><span class="num">00</span>배경 개념</h2><p>머신러닝 모델은 입력·가중치·출력을 모두 <strong>다차원 배열</strong>로 다룹니다. NumPy(넘파이, 수치 계산 라이브러리)의 <code>ndarray</code>와 PyTorch(파이토치, 딥러닝 프레임워크)의 <code>Tensor</code>(텐서, 다차원 배열)는 모양(<code>shape</code>)·자료형(<code>dtype</code>)·인덱싱 규칙이 거의 같아서, 먼저 두 도구를 같은 예제로 비교합니다.</p>
+<p>Tensor는 NumPy 배열과 달리 <strong>장치(<code>device</code>, CPU/GPU) 이동</strong>과 **Autograd(오토그래드, 자동 미분)**를 지원합니다. 이 두 기능이 다음 장의 경사하강법 학습을 가능하게 합니다.</p>
+</section><section class="section" id="s01"><h2><span class="num">01</span>전체 실습 흐름</h2><p>개념 흐름도 — 이 장 노트북의 공통 학습 절차 (개념도, 이름은 실제 코드 기준):</p>
+<div class="flow" role="list" aria-label="개념 흐름도"><div class="step"><code>np.array()</code> NumPy 배열 생성</div><div class="down" aria-hidden="true">↓</div><div class="step"><code>torch.from_numpy()</code> · <code>torch.tensor()</code> Tensor 변환</div><div class="down" aria-hidden="true">↓</div><div class="step"><code>reshape</code> · <code>torch.cat()</code> · <code>torch.stack()</code> 모양 바꾸기·합치기</div><div class="down" aria-hidden="true">↓</div><div class="step"><code>requires_grad=True</code> → <code>backward()</code> 자동 미분</div><div class="down" aria-hidden="true">↓</div><div class="step"><code>.to(device)</code> CPU/GPU 장치 이동</div></div>
+<p>노트북별 실습 순서:</p>
+<ol>
+<li><strong>ch01_1</strong> NumPy와 PyTorch — NumPy와 PyTorch의 역할 비교, 원소별 곱셈(<code>*</code>)과 행렬곱(<code>@</code>) 구분, 자동 미분 맛보기</li>
+<li><strong>ch01_2</strong> NumPy 배열과 PyTorch Tensor 이해하기 — Scalar·Vector·Matrix, 인덱싱·Boolean Mask·Broadcasting, NumPy → Tensor 변환</li>
+<li><strong>ch01_3</strong> PyTorch Tensor 연산 — Tensor 생성 함수, 메모리 공유, CPU/GPU 선택, <code>reshape</code>·<code>cat</code>·<code>stack</code></li>
 </ol>
 <p>노트북 파일(<code>notebooks/</code> 폴더):</p>
 <ul>
-<li><strong>ch06_1</strong> <code>ch06_1_model_save_load_inference.ipynb</code> (원본 <code>ch06_1_PyTorch_Model_Save_Load_Inference.ipynb</code>)</li>
-<li><strong>ch06_2</strong> <code>ch06_2_onnx_export_runtime_inference.ipynb</code> (원본 <code>ch06_2_PyTorch_ONNX_Export_Runtime_Inference.ipynb</code>)</li>
+<li><strong>ch01_1</strong> <code>ch01_1_numpy_torch.ipynb</code> (원본 <code>ch01_1_numpy_torch.ipynb</code>)</li>
+<li><strong>ch01_2</strong> <code>ch01_2_numpy_and_tensor.ipynb</code> (원본 <code>ch01_2_numpy_and_tensor.ipynb</code>)</li>
+<li><strong>ch01_3</strong> <code>ch01_3_tensor_operations.ipynb</code> (원본 <code>ch01_3_tensor_operations.ipynb</code>)</li>
 </ul>
 </section><section class="section" id="s02"><h2><span class="num">02</span>환경 확인</h2><ul>
-<li>필요 환경: Python 3, <code>torch</code>, <code>torchvision</code>, <code>onnx</code>, <code>onnxruntime</code>, <code>matplotlib</code> · 06_1은 05_2가 저장한 모델 사용 · 06_2 예제 이미지 <code>png/dog.jpg</code></li>
+<li>필요 환경: Python 3, <code>numpy</code>, <code>torch</code></li>
 <li>Google Colab 또는 로컬 Jupyter에서 <code>notebooks/</code> 폴더를 작업 폴더로 열고 순서대로 실행합니다.</li>
 </ul>
-<div class="codeblock"><div class="codebar"><span>bash</span></div><pre><code># 필요한 패키지 설치 (로컬 실행 시)
+<div class="codeblock"><div class="codebar"><span>BASH · Ubuntu 터미널 · 예시 명령 · 미검증</span></div><pre class="src"><code># 필요한 패키지 설치 (로컬 실행 시)
 python -m pip install torch torchvision numpy pandas scikit-learn matplotlib
 </code></pre></div>
-</section><section class="section" id="s03"><h2><span class="num">03</span>ch06_1 PyTorch 모델 저장·불러오기·추론</h2><p>노트북: <code>notebooks/ch06_1_model_save_load_inference.ipynb</code> · 원본 파일: <code>ch06_1_PyTorch_Model_Save_Load_Inference.ipynb</code> · 상태: 원본 실행 기록 포함</p>
+</section><section class="section" id="s03"><h2><span class="num">03</span>ch01_1 NumPy와 PyTorch</h2><p>노트북: <code>notebooks/ch01_1_numpy_torch.ipynb</code> · 원본 파일: <code>ch01_1_numpy_torch.ipynb</code> · 상태: 원본 · 실행 기록 없음 · 미검증</p>
+<p>NumPy(넘파이, 수치 계산 라이브러리)와 PyTorch(파이토치, 딥러닝 프레임워크)의 기본 사용법을 같은 예제로 비교합니다.</p>
 <h3>개요</h3>
 <ul>
-<li><code>state_dict()</code>가 저장하는 내용을 이해합니다.</li>
-<li><code>load_state_dict()</code>로 모델 가중치를 복원합니다.</li>
+<li>NumPy의 <code>ndarray</code>(엔디에레이, 다차원 배열)와 PyTorch의 <code>Tensor</code>(텐서, 다차원 배열)를 구분합니다.</li>
+<li>PyTorch의 <code>Autograd</code>(오토그래드, 자동 미분)를 간단히 확인합니다.</li>
 </ul>
-<h3>공통 설정</h3>
-<p>데이터·모델·이미지 폴더 위치를 지정합니다.</p>
-<p>파일명: <code>ch06_1_model_save_load_inference.ipynb</code> · 코드 셀 1 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>from pathlib import Path
-
-DATA_DIR = Path(&quot;data&quot;)
-MODEL_DIR = Path(&quot;models&quot;)
-PNG_DIR = Path(&quot;png&quot;)
-
-DATA_DIR.mkdir(exist_ok=True)
-
-MODEL_DIR.mkdir(exist_ok=True)
-PNG_DIR.mkdir(exist_ok=True)
-
-print(&quot;데이터 폴더:&quot;, DATA_DIR)
-print(&quot;모델 폴더  :&quot;, MODEL_DIR)
-print(&quot;이미지 폴더:&quot;, PNG_DIR)
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>데이터 폴더: data
-모델 폴더  : models
-이미지 폴더: png
-</code></pre></div>
-<h3>공통 import</h3>
-<p>파일명: <code>ch06_1_model_save_load_inference.ipynb</code> · 코드 셀 2 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>import json
-import platform
-import shutil
-import sys
-import time
-from pathlib import Path
-import matplotlib.pyplot as plt
-import torch
-import torch.nn as nn
-from PIL import Image
-from torchvision.models import resnet18, ResNet18_Weights
-</code></pre></div>
-<h4>1) 실행 장치 확인</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>1. 실행 환경 확인
-2. 모델 소스 선택
-3. ResNet18 모델 준비
-4. state_dict와 Checkpoint 저장
-5. CPU에서 모델 복원
-6. 저장 전후 출력 비교
-7. 원하는 장치에서 추론
-8. 실제 이미지와 배치 추론
-9. 평균 추론 시간 측정
-10. PC 배포 폴더와 ZIP 생성
-</code></pre></div>
-<ul>
-<li>학습 코드는 다시 작성하지 않습니다.</li>
-<li>모델 생성 함수는 하나만 사용합니다.</li>
-<li>단일 추론과 배치 추론은 같은 함수로 처리합니다.</li>
-<li>배포에 필요하지 않은 Optimizer(옵티마이저, 가중치 갱신 알고리즘) 상태는 저장하지 않습니다.</li>
-<li>복잡한 자동 분기보다 설정값을 명확하게 표시합니다.</li>
-</ul>
-<table>
-<thead>
-<tr>
-  <th>저장 방식</th>
-  <th>저장 내용</th>
-  <th>사용 목적</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td><code>state_dict</code></td>
-  <td>Weight(웨이트, 가중치), Bias(바이어스, 편향), Buffer(버퍼, 계층 상태값)</td>
-  <td>가장 기본적인 모델 저장</td>
-</tr>
-<tr>
-  <td>Checkpoint(체크포인트)</td>
-  <td><code>state_dict</code> + 모델 정보 + 클래스 + 전처리</td>
-  <td>재현 가능한 추론·배포</td>
-</tr>
-<tr>
-  <td>전체 모델 객체</td>
-  <td>Python 모델 객체 전체</td>
-  <td>코드 경로 의존성이 커서 기본 방식으로 권장하지 않음</td>
-</tr>
-</tbody>
-</table>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>학습 재개
-→ 모델 상태 + Optimizer 상태 + Epoch 정보
-
-추론 배포
-→ 모델 상태 + 모델 구조 정보 + 전처리 + 클래스 정보
-</code></pre></div>
-<p>BatchNorm(배치 노멀라이제이션, 배치 정규화)의 <code>running_mean</code>, <code>running_var</code>도 <code>state_dict</code>에 포함됩니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>모델 파일
-.pt 또는 .pth
-
-Runtime(런타임, 실행 엔진)
-PyTorch
-
-계산 장치
-CPU, CUDA GPU 또는 Apple MPS
-</code></pre></div>
-<p>파일명: <code>ch06_1_model_save_load_inference.ipynb</code> · 코드 셀 3 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>torch.manual_seed(42)
-
-if torch.cuda.is_available():
-    device = torch.device(&quot;cuda&quot;)
-elif hasattr(torch.backends, &quot;mps&quot;) and torch.backends.mps.is_available():
-    device = torch.device(&quot;mps&quot;)
-else:
-    device = torch.device(&quot;cpu&quot;)
-
-print(&quot;Python 버전 :&quot;, sys.version.split()[0])
-
-print(&quot;PyTorch 버전:&quot;, torch.__version__)
-
-print(&quot;운영체제     :&quot;, platform.system())
-
-print(&quot;실행 장치    :&quot;, device)
-
-if device.type == &quot;cuda&quot;:
-    print(&quot;GPU 이름     :&quot;, torch.cuda.get_device_name(0))
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Python 버전 : 3.12.3
-PyTorch 버전: 2.13.0+cu130
-운영체제     : Linux
-실행 장치    : cuda
-GPU 이름     : NVIDIA GeForce RTX 3070 Laptop GPU
-</code></pre></div>
-<h4>2) 모델 구성</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>ResNet18_Weights.DEFAULT
-→ ImageNet-1K 사전학습 가중치
-→ 1,000개 클래스
-→ 별도 학습 없이 저장·복원·추론 실습
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>CIFAR-10 전이학습 Checkpoint
-→ CIFAR-10 10개 클래스
-→ 마지막 fc 계층을 10개 출력으로 복원
-→ 학습 결과를 이어서 사용
-</code></pre></div>
-<p>아래 설정에서 <code>MODEL_SOURCE</code>만 변경합니다.</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>MODEL_SOURCE = &quot;imagenet&quot;
-MODEL_SOURCE = &quot;transfer&quot;
-</code></pre></div>
-<p>파일명: <code>ch06_1_model_save_load_inference.ipynb</code> · 코드 셀 4 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>MODEL_SOURCE = &quot;transfer&quot;
-
-TRANSFER_CHECKPOINT_PATH = MODEL_DIR / &quot;ch05_2_best_resnet18_transfer_learning.pt&quot;
-
-CIFAR10_CLASSES = [
-    &quot;airplane&quot;, &quot;automobile&quot;, &quot;bird&quot;, &quot;cat&quot;, &quot;deer&quot;,
-    &quot;dog&quot;, &quot;frog&quot;, &quot;horse&quot;, &quot;ship&quot;, &quot;truck&quot;,
-]
-
-weights = ResNet18_Weights.DEFAULT
-
-preprocess = weights.transforms()
-</code></pre></div>
-<h4>3) 모델 구성</h4>
-<p>파일명: <code>ch06_1_model_save_load_inference.ipynb</code> · 코드 셀 5 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>def create_resnet18(num_classes=1000, pretrained=False):
-    &quot;&quot;&quot;출력 클래스 수에 맞는 ResNet18을 생성합니다.&quot;&quot;&quot;
-    selected_weights = weights if pretrained else None
-    model = resnet18(weights=selected_weights)
-
-    if num_classes != 1000:
-        model.fc = nn.Linear(model.fc.in_features, num_classes)
-
-    return model
-</code></pre></div>
-<h4>4) 모델 구성</h4>
-<p>파일명: <code>ch06_1_model_save_load_inference.ipynb</code> · 코드 셀 6 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>if MODEL_SOURCE == &quot;transfer&quot; and TRANSFER_CHECKPOINT_PATH.exists():
-    source_checkpoint = torch.load(
-        TRANSFER_CHECKPOINT_PATH,
-        map_location=&quot;cpu&quot;,
-        weights_only=True,
-    )
-
-    num_classes = int(
-        source_checkpoint.get(&quot;number_of_classes&quot;, 10)
-    )
-    class_names = source_checkpoint.get(
-        &quot;class_names&quot;, CIFAR10_CLASSES
-    )
-
-    model = create_resnet18(num_classes=num_classes)
-    model.load_state_dict(source_checkpoint[&quot;model_state_dict&quot;])
-
-    model_description = &quot;CIFAR-10 Fine-Tuned ResNet18&quot;
-    dataset_name = &quot;CIFAR-10&quot;
-
-elif MODEL_SOURCE == &quot;transfer&quot;:
-    # 전이학습 Checkpoint가 없어도 저장·복원 실습 자체는 실행할 수 있습니다.
-    source_checkpoint = None
-    num_classes = 10
-    class_names = CIFAR10_CLASSES
-    model = create_resnet18(num_classes=num_classes)
-
-    model_description = &quot;Demo ResNet18 (untrained)&quot;
-    dataset_name = &quot;CIFAR-10 class layout&quot;
-
-    print(&quot;전이학습 Checkpoint가 없어 실습용 미학습 ResNet18을 사용합니다.&quot;)
-
-else:
-    source_checkpoint = None
-    num_classes = 1000
-    class_names = list(weights.meta[&quot;categories&quot;])
-
-    try:
-        model = create_resnet18(
-            num_classes=num_classes,
-            pretrained=True,
-        )
-        model_description = &quot;ImageNet Pretrained ResNet18&quot;
-    except Exception:
-        model = create_resnet18(
-            num_classes=num_classes,
-            pretrained=False,
-        )
-        model_description = &quot;Demo ResNet18 (untrained)&quot;
-        print(&quot;사전학습 가중치를 받을 수 없어 미학습 ResNet18을 사용합니다.&quot;)
-
-    dataset_name = &quot;ImageNet-1K&quot;
-</code></pre></div>
-<h4>5) 모델 확인</h4>
-<p>파일명: <code>ch06_1_model_save_load_inference.ipynb</code> · 코드 셀 7 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>model = model.to(device)
-
-model.eval()
-
-print(&quot;모델       :&quot;, model_description)
-
-print(&quot;데이터 기준:&quot;, dataset_name)
-
-print(&quot;클래스 수  :&quot;, num_classes)
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>모델       : CIFAR-10 Fine-Tuned ResNet18
-데이터 기준: CIFAR-10
-클래스 수  : 10
-</code></pre></div>
-<h4>6) 데이터 구조 확인</h4>
-<p><code>state_dict()</code>는 다음과 같은 Dictionary(딕셔너리, 키와 값의 묶음)입니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Key
-→ 계층과 파라미터 이름
-
-Value
-→ 실제 Tensor(텐서, 다차원 수치 배열)
-</code></pre></div>
-<p>저장 전 기준 출력은 다음과 같습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathbf{y}_{ref}=f_{\theta}(\mathbf{x})
-</code></pre></div>
-<ul>
-<li><code>\mathbf{x}</code>: 기준 입력</li>
-<li><code>f_{\theta}</code>: 가중치 <code>\theta</code>를 가진 모델</li>
-<li><code>\mathbf{y}_{ref}</code>: 저장 전 모델의 기준 출력</li>
-</ul>
-<p>파일명: <code>ch06_1_model_save_load_inference.ipynb</code> · 코드 셀 8 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>model_state = model.state_dict()
-
-print(&quot;state_dict 항목 수:&quot;, len(model_state))
-
-print(&quot;\n앞쪽 8개 항목&quot;)
-
-for index, (name, tensor) in enumerate(model_state.items()):
-    print(f&quot;{name:35s} → {tuple(tensor.shape)}&quot;)
-    if index == 7:
-        break
-
-sample_input = torch.randn(1, 3, 224, 224, device=device)
-
-with torch.inference_mode():
-    reference_output = model(sample_input)
-
-print(&quot;\n입력 Shape:&quot;, tuple(sample_input.shape))
-
-print(&quot;출력 Shape:&quot;, tuple(reference_output.shape))
-
-print(&quot;예측 클래스:&quot;, reference_output.argmax(dim=1).tolist())
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>state_dict 항목 수: 122
-
-앞쪽 8개 항목
-conv1.weight                        → (64, 3, 7, 7)
-bn1.weight                          → (64,)
-bn1.bias                            → (64,)
-bn1.running_mean                    → (64,)
-bn1.running_var                     → (64,)
-bn1.num_batches_tracked             → ()
-layer1.0.conv1.weight               → (64, 64, 3, 3)
-layer1.0.bn1.weight                 → (64,)
-
-입력 Shape: (1, 3, 224, 224)
-출력 Shape: (1, 10)
-예측 클래스: [4]
-</code></pre></div>
-<h4>7) 모델 저장</h4>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>torch.save(model.state_dict(), &quot;model_weights.pth&quot;)
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>checkpoint = {
- &quot;model_state_dict&quot;: model.state_dict(),
- &quot;number_of_classes&quot;: num_classes,
- &quot;class_names&quot;: class_names,
- &quot;preprocessing&quot;: {...},
-}
-</code></pre></div>
-<p>Checkpoint에는 모델을 다시 학습하지 않고 추론하기 위해 필요한 정보를 함께 넣습니다.</p>
-<p>파일명: <code>ch06_1_model_save_load_inference.ipynb</code> · 코드 셀 9 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>output_dir = MODEL_DIR / &quot;ch06_1_pytorch_deployment&quot;
-
-output_dir.mkdir(exist_ok=True)
-
-state_dict_path = output_dir / &quot;resnet18_state_dict.pth&quot;
-
-checkpoint_path = output_dir / &quot;resnet18_inference_checkpoint.pt&quot;
-
-torch.save(model.state_dict(), state_dict_path)
-
-checkpoint = {
-    &quot;model_name&quot;: &quot;resnet18&quot;,
-    &quot;model_description&quot;: model_description,
-    &quot;dataset_name&quot;: dataset_name,
-    &quot;number_of_classes&quot;: num_classes,
-    &quot;class_names&quot;: class_names,
-    &quot;model_state_dict&quot;: model.state_dict(),
-    &quot;input_shape&quot;: [1, 3, 224, 224],
-    &quot;input_dtype&quot;: &quot;float32&quot;,
-    &quot;tensor_layout&quot;: &quot;NCHW&quot;,
-    &quot;preprocessing&quot;: {
-        &quot;resize&quot;: 256,
-        &quot;center_crop&quot;: 224,
-        &quot;mean&quot;: [0.485, 0.456, 0.406],
-        &quot;std&quot;: [0.229, 0.224, 0.225],
-    },
-}
-
-torch.save(checkpoint, checkpoint_path)
-
-print(&quot;가중치 파일    :&quot;, state_dict_path)
-
-print(&quot;Checkpoint 파일:&quot;, checkpoint_path)
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>가중치 파일    : models/ch06_1_pytorch_deployment/resnet18_state_dict.pth
-Checkpoint 파일: models/ch06_1_pytorch_deployment/resnet18_inference_checkpoint.pt
-</code></pre></div>
-<h4>8) 모델 복원</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>1. Checkpoint를 CPU로 불러오기
-2. 저장된 클래스 수 확인
-3. 같은 모델 구조 생성
-4. load_state_dict()로 가중치 적용
-5. model.eval()로 추론 모드 전환
-</code></pre></div>
-<p><code>map_location=&quot;cpu&quot;</code>를 사용하면 GPU에서 저장한 Tensor도 먼저 CPU로 불러올 수 있습니다.</p>
-<p>파일명: <code>ch06_1_model_save_load_inference.ipynb</code> · 코드 셀 10 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>loaded_checkpoint = torch.load(
-    checkpoint_path,
-    map_location=&quot;cpu&quot;,
-    weights_only=True,
-)
-
-restored_model = create_resnet18(
-    num_classes=int(loaded_checkpoint[&quot;number_of_classes&quot;])
-)
-
-restored_model.load_state_dict(
-    loaded_checkpoint[&quot;model_state_dict&quot;]
-)
-
-restored_model.eval()
-
-print(&quot;복원 장치   :&quot;, next(restored_model.parameters()).device)
-
-print(&quot;출력 클래스 :&quot;, restored_model.fc.out_features)
-
-print(&quot;학습 모드   :&quot;, restored_model.training)
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>복원 장치   : cpu
-출력 클래스 : 10
-학습 모드   : False
-</code></pre></div>
-<h4>9) 저장·복원 결과 비교</h4>
-<p>복원한 모델 출력:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathbf{y}_{load}=f_{\hat{\theta}}(\mathbf{x})
-</code></pre></div>
-<p>최대 절대 오차:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>E_{\max}
-=
-\max_i
-\left|
-y_{ref,i}-y_{load,i}
-\right|
-</code></pre></div>
-<p>가중치가 정확히 복원되면 <code>E_{\max}</code>는 0 또는 매우 작은 값입니다.</p>
-<p>파일명: <code>ch06_1_model_save_load_inference.ipynb</code> · 코드 셀 11 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code># 검증용 입력을 CPU로 이동합니다.
-cpu_input = sample_input.detach().cpu()
-
-# 원본 모델과 동일한 구조의 CPU 모델을 만듭니다.
-reference_model_cpu = create_resnet18(
-    num_classes=num_classes
-)
-
-# 저장 직전 원본 모델의 가중치를 CPU 모델에 복사합니다.
-reference_model_cpu.load_state_dict(
-    model.state_dict()
-)
-
-reference_model_cpu.eval()
-
-# 원본 가중치와 복원 가중치를 
-# 동일한 CPU 환경에서 각각 추론합니다.
-with torch.inference_mode():
-    reference_cpu = reference_model_cpu(cpu_input)
-    restored_output = restored_model(cpu_input)
-
-# 두 결과의 최대 차이를 확인합니다.
-max_error = (
-    reference_cpu - restored_output
-).abs().max().item()
-
-# 같은 장치에서 동일한 가중치로 계산했으므로
-# 엄격한 기준으로 비교할 수 있습니다.
-torch.testing.assert_close(
-    reference_cpu,
-    restored_output,
-    rtol=1e-5,
-    atol=1e-6,
-)
-
-print(f&quot;최대 절대 오차: {max_error:.8f}&quot;)
-print(&quot;저장·복원 검증: 통과&quot;)
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>최대 절대 오차: 0.00000000
-저장·복원 검증: 통과
-</code></pre></div>
-<h4>10) 추론 함수 정의</h4>
-<ul>
-<li><p>Dropout(드롭아웃, 일부 뉴런을 임시로 끄는 정규화)을 추론 방식으로 전환합니다.</p>
-</li>
-<li><p>BatchNorm의 이동 평균과 이동 분산을 사용합니다.</p>
-</li>
-<li><p>Gradient(그래디언트, 기울기) 계산을 중지합니다.</p>
-</li>
-<li><p>추론에 필요하지 않은 계산 그래프 생성을 줄입니다.</p>
-</li>
-</ul>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>model.eval()
-
-with torch.inference_mode():
- output = model(input_tensor)
-</code></pre></div>
-<p>두 기능은 역할이 다르므로 추론할 때 함께 사용합니다.</p>
-<p>분류 모델은 Logit(로짓, 확률 변환 전 점수)을 출력합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>p_i
-=
-\frac{e^{z_i}}
-{\sum_{j=1}^{C}e^{z_j}}
-</code></pre></div>
-<ul>
-<li><code>z_i</code>: <code>i</code>번째 클래스의 Logit</li>
-<li><code>p_i</code>: <code>i</code>번째 클래스의 예측 확률</li>
-<li><code>C</code>: 전체 클래스 수</li>
-</ul>
-<p>단일 이미지는 <code>(C, H, W)</code>, 배치 이미지는 <code>(N, C, H, W)</code> Shape를 사용합니다.</p>
-<p>파일명: <code>ch06_1_model_save_load_inference.ipynb</code> · 코드 셀 12 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>def predict(model, input_tensor, class_names, device, top_k=5):
-    model = model.to(device).eval()
-
-    if input_tensor.ndim == 3:
-        input_tensor = input_tensor.unsqueeze(0)
-
-    input_tensor = input_tensor.to(device)
-
-    with torch.inference_mode():
-        logits = model(input_tensor)
-        probabilities = torch.softmax(logits, dim=1)
-        top_probs, top_indices = probabilities.topk(
-            k=min(top_k, probabilities.shape[1]),
-            dim=1,
-        )
-
-    batch_results = []
-
-    for sample_probs, sample_indices in zip(
-        top_probs.cpu(), top_indices.cpu()
-    ):
-        sample_results = []
-
-        for probability, class_index in zip(
-            sample_probs, sample_indices
-        ):
-            index = int(class_index)
-            sample_results.append({
-                &quot;class_index&quot;: index,
-                &quot;class_name&quot;: class_names[index],
-                &quot;probability&quot;: float(probability),
-            })
-
-        batch_results.append(sample_results)
-
-    return batch_results
-</code></pre></div>
-<h4>11) 단일 입력 추론</h4>
-<p>파일명: <code>ch06_1_model_save_load_inference.ipynb</code> · 코드 셀 13 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>single_results = predict(
-    restored_model,
-    cpu_input[0],
-    loaded_checkpoint[&quot;class_names&quot;],
-    device,
-    top_k=5,
-)[0]
-
-print(&quot;===== 단일 Tensor Top-5 =====&quot;)
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>===== 단일 Tensor Top-5 =====
-</code></pre></div>
-<h4>12) Top-5 결과 출력</h4>
-<p>파일명: <code>ch06_1_model_save_load_inference.ipynb</code> · 코드 셀 14 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>for rank, result in enumerate(single_results, start=1):
-    print(
-        f&quot;{rank}. {result['class_name']}&quot;
-        f&quot; - {result['probability'] * 100:.2f}%&quot;
-    )
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>1. deer - 49.80%
-2. bird - 21.60%
-3. airplane - 14.71%
-4. frog - 7.91%
-5. ship - 2.70%
-</code></pre></div>
-<h4>13) 배치 입력 추론</h4>
-<p>파일명: <code>ch06_1_model_save_load_inference.ipynb</code> · 코드 셀 15 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>batch_input = torch.randn(4, 3, 224, 224)
-
-batch_results = predict(
-    restored_model,
-    batch_input,
-    loaded_checkpoint[&quot;class_names&quot;],
-    device,
-    top_k=1,
-)
-
-print(&quot;\n===== 배치 Tensor Top-1 =====&quot;)
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>
-===== 배치 Tensor Top-1 =====
-</code></pre></div>
-<h4>14) 배치 결과 출력</h4>
-<p>파일명: <code>ch06_1_model_save_load_inference.ipynb</code> · 코드 셀 16 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>for index, result in enumerate(batch_results):
-    prediction = result[0]
-    print(
-        f&quot;{index}: {prediction['class_name']}&quot;
-        f&quot; - {prediction['probability'] * 100:.2f}%&quot;
-    )
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>0: deer - 60.31%
-1: deer - 53.80%
-2: deer - 55.22%
-3: deer - 52.94%
-</code></pre></div>
-<h4>15) 결과 시각화</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>이미지 열기
-→ RGB 변환
-→ Resize·Crop·Normalize
-→ Batch 차원 추가
-→ 모델 추론
-→ Top-k 결과 출력
-</code></pre></div>
-<p>ImageNet 사전학습 ResNet18은 <code>ResNet18_Weights.DEFAULT.transforms()</code>가 제공하는 전처리를 사용합니다.</p>
-<p>파일명: <code>ch06_1_model_save_load_inference.ipynb</code> · 코드 셀 17 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>IMAGE_PATH = None
-
-if IMAGE_PATH is not None:
-    image = Image.open(IMAGE_PATH).convert(&quot;RGB&quot;)
-    image_tensor = preprocess(image)
-
-    image_results = predict(
-        restored_model,
-        image_tensor,
-        loaded_checkpoint[&quot;class_names&quot;],
-        device,
-        top_k=5,
-    )[0]
-
-    plt.figure(figsize=(6, 6))
-    plt.imshow(image)
-    plt.axis(&quot;off&quot;)
-    plt.title(IMAGE_PATH.name)
-    plt.show()
-
-    print(&quot;===== 실제 이미지 Top-5 =====&quot;)
-    for rank, result in enumerate(image_results, start=1):
-        print(
-            f&quot;{rank}. {result['class_name']}&quot;
-            f&quot; - {result['probability'] * 100:.2f}%&quot;
-        )
-else:
-    print(&quot;IMAGE_PATH에 이미지 파일 경로를 지정하면 실행됩니다.&quot;)
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>IMAGE_PATH에 이미지 파일 경로를 지정하면 실행됩니다.
-</code></pre></div>
-<h4>16) 평균 추론 시간 측정</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>T_{latency}
-=
-\frac{t_{end}-t_{start}}{N}
-</code></pre></div>
-<ul>
-<li><code>N</code>: 반복 추론 횟수</li>
-<li><code>T_{latency}</code>: 한 번 추론하는 데 걸리는 평균 시간</li>
-</ul>
-<p>GPU에서는 연산이 비동기로 실행될 수 있으므로 측정 전후에 동기화합니다.</p>
-<p>파일명: <code>ch06_1_model_save_load_inference.ipynb</code> · 코드 셀 18 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>def measure_latency(model, input_tensor, device, warmup=5, repeat=20):
-    model = model.to(device).eval()
-    input_tensor = input_tensor.to(device)
-
-    with torch.inference_mode():
-        for _ in range(warmup):
-            model(input_tensor)
-
-        if device.type == &quot;cuda&quot;:
-            torch.cuda.synchronize()
-
-        start = time.perf_counter()
-
-        for _ in range(repeat):
-            model(input_tensor)
-
-        if device.type == &quot;cuda&quot;:
-            torch.cuda.synchronize()
-
-    return (time.perf_counter() - start) / repeat
-
-timing_input = torch.randn(1, 3, 224, 224)
-
-average_seconds = measure_latency(
-    restored_model,
-    timing_input,
-    device,
-)
-
-print(&quot;측정 장치      :&quot;, device)
-
-print(f&quot;평균 추론 시간: {average_seconds * 1000:.3f} ms&quot;)
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>측정 장치      : cuda
-평균 추론 시간: 2.047 ms
-</code></pre></div>
-<h4>17) 배포 파일 생성</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>model checkpoint
-→ 모델 가중치와 기본 정보
-
-inference_config.json
-→ 입력 Shape와 전처리 규칙
-
-class_names.json
-→ 출력 Index와 클래스 이름의 대응
-
-sample_input.pt
-→ 기준 입력
-
-reference_output.pt
-→ 기준 출력
-
-inference_example.py
-→ 독립 실행 예제
-</code></pre></div>
-<p>파일명: <code>ch06_1_model_save_load_inference.ipynb</code> · 코드 셀 19 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>config = {
-    &quot;model_name&quot;: &quot;resnet18&quot;,
-    &quot;runtime&quot;: &quot;PyTorch&quot;,
-    &quot;input_shape&quot;: [1, 3, 224, 224],
-    &quot;input_dtype&quot;: &quot;float32&quot;,
-    &quot;tensor_layout&quot;: &quot;NCHW&quot;,
-    &quot;output_type&quot;: &quot;logits&quot;,
-    &quot;number_of_classes&quot;: num_classes,
-    &quot;preprocessing&quot;: checkpoint[&quot;preprocessing&quot;],
-}
-
-(output_dir / &quot;inference_config.json&quot;).write_text(
-    json.dumps(config, ensure_ascii=False, indent=2),
-    encoding=&quot;utf-8&quot;,
-)
-
-(output_dir / &quot;class_names.json&quot;).write_text(
-    json.dumps(class_names, ensure_ascii=False, indent=2),
-    encoding=&quot;utf-8&quot;,
-)
-
-saved_input = cpu_input[:1]
-
-with torch.inference_mode():
-    saved_output = restored_model.cpu()(saved_input)
-
-torch.save(saved_input, output_dir / &quot;sample_input.pt&quot;)
-
-torch.save(saved_output, output_dir / &quot;reference_output.pt&quot;)
-
-inference_script = 'import torch\nimport torch.nn as nn\nfrom pathlib import Path\nfrom torchvision.models import resnet18\n\nbase_dir = Path(__file__).resolve().parent\n\ndevice = torch.device(\n    &quot;cuda&quot; if torch.cuda.is_available() else &quot;cpu&quot;\n)\n\ncheckpoint = torch.load(\n    base_dir / &quot;resnet18_inference_checkpoint.pt&quot;,\n    map_location=&quot;cpu&quot;,\n    weights_only=True,\n)\n\nnum_classes = int(checkpoint[&quot;number_of_classes&quot;])\n\nmodel = resnet18(weights=None)\n\nif num_classes != 1000:\n    model.fc = nn.Linear(model.fc.in_features, num_classes)\n\nmodel.load_state_dict(checkpoint[&quot;model_state_dict&quot;])\nmodel = model.to(device).eval()\n\ninput_tensor = torch.load(\n    base_dir / &quot;sample_input.pt&quot;,\n    map_location=device,\n    weights_only=True,\n)\n\nwith torch.inference_mode():\n    logits = model(input_tensor)\n    probabilities = torch.softmax(logits, dim=1)\n    confidence, prediction = probabilities.max(dim=1)\n\nclass_names = checkpoint[&quot;class_names&quot;]\nprediction_index = int(prediction.item())\n\nprint(&quot;Prediction:&quot;, class_names[prediction_index])\nprint(&quot;Confidence:&quot;, f&quot;{float(confidence.item()) * 100:.2f}%&quot;)\n'
-
-(output_dir / &quot;inference_example.py&quot;).write_text(
-    inference_script,
-    encoding=&quot;utf-8&quot;,
-)
-
-print(&quot;배포 파일 저장 완료&quot;)
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>배포 파일 저장 완료
-</code></pre></div>
-<h4>18) 배포 폴더 확인과 ZIP 생성</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>ch06_1_pytorch_deployment/
-├─ resnet18_state_dict.pth
-├─ resnet18_inference_checkpoint.pt
-├─ inference_config.json
-├─ class_names.json
-├─ sample_input.pt
-├─ reference_output.pt
-└─ inference_example.py
-</code></pre></div>
-<p>파일명: <code>ch06_1_model_save_load_inference.ipynb</code> · 코드 셀 20 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>print(&quot;===== 배포 폴더 =====&quot;)
-
-for file_path in sorted(output_dir.iterdir()):
-    size_kb = file_path.stat().st_size / 1024
-    print(f&quot;{file_path.name:40s} {size_kb:10.1f} KB&quot;)
-
-zip_path = shutil.make_archive(
-    base_name=str(output_dir),
-    format=&quot;zip&quot;,
-    root_dir=output_dir,
-)
-
-print(&quot;\nZIP 파일:&quot;, zip_path)
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>===== 배포 폴더 =====
-class_names.json                                0.1 KB
-inference_config.json                           0.4 KB
-inference_example.py                            1.1 KB
-reference_output.pt                             1.6 KB
-resnet18_inference_checkpoint.pt            43759.1 KB
-resnet18_state_dict.pth                     43757.1 KB
-sample_input.pt                               589.6 KB
-
-ZIP 파일: ~/lab_jupyter/lab_ML_DL_2/models/ch06_1_pytorch_deployment.zip
-</code></pre></div>
-</section><section class="section" id="s04"><h2><span class="num">04</span>ch06_2 PyTorch ONNX 내보내기와 Runtime 추론</h2><p>노트북: <code>notebooks/ch06_2_onnx_export_runtime_inference.ipynb</code> · 원본 파일: <code>ch06_2_PyTorch_ONNX_Export_Runtime_Inference.ipynb</code> · 상태: 원본 실행 기록 포함</p>
-<h3>개요</h3>
-<ul>
-<li>PyTorch Model(파이토치 모델), ONNX Model(오닉스 모델), ONNX Runtime을 구분합니다.</li>
-<li><code>ONNXProgram</code>(오닉스 프로그램, 변환된 ONNX 모델 객체)을 파일로 저장합니다.</li>
-</ul>
-<h3>공통 설정</h3>
-<p>데이터·모델·이미지 폴더 위치를 지정합니다.</p>
-<p>파일명: <code>ch06_2_onnx_export_runtime_inference.ipynb</code> · 코드 셀 1 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code># ONNX 변환과 실행에 필요한 패키지 설치 : 설치 또는 최신 버전으로 업그레이드
-%pip install -U onnx onnxscript onnxruntime
-
-# 우분투 터미널(컨트롤 + 알트 + t) 인 경우에는
-# 설치 또는 최신 버전으로 업그레이드
-#python -m pip install -U onnx onnxscript onnxruntime
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Requirement already satisfied: onnx in ~/lab_jupyter/.venv/lib/python3.12/site-packages (1.22.0)
-Requirement already satisfied: onnxscript in ~/lab_jupyter/.venv/lib/python3.12/site-packages (0.7.1)
-Requirement already satisfied: onnxruntime in ~/lab_jupyter/.venv/lib/python3.12/site-packages (1.29.0)
-Requirement already satisfied: numpy&gt;=1.23.2 in ~/lab_jupyter/.venv/lib/python3.12/site-packages (from onnx) (2.5.2)
-Requirement already satisfied: protobuf&gt;=4.25.1 in ~/lab_jupyter/.venv/lib/python3.12/site-packages (from onnx) (7.36.0)
-Requirement already satisfied: typing_extensions&gt;=4.15.0 in ~/lab_jupyter/.venv/lib/python3.12/site-packages (from onnx) (4.16.0)
-Requirement already satisfied: ml_dtypes&gt;=0.5.4 in ~/lab_jupyter/.venv/lib/python3.12/site-packages (from onnx) (0.6.0)
-Requirement already satisfied: onnx_ir&lt;2,&gt;=0.1.16 in ~/lab_jupyter/.venv/lib/python3.12/site-packages (from onnxscript) (1.0.0)
-Requirement already satisfied: packaging in ~/lab_jupyter/.venv/lib/python3.12/site-packages (from onnxscript) (26.3)
-Requirement already satisfied: sympy&gt;=1.13 in ~/lab_jupyter/.venv/lib/python3.12/site-packages (from onnx_ir&lt;2,&gt;=0.1.16-&gt;onnxscript) (1.14.0)
-Requirement already satisfied: flatbuffers in ~/lab_jupyter/.venv/lib/python3.12/site-packages (from onnxruntime) (25.12.19)
-Requirement already satisfied: mpmath&lt;1.4,&gt;=1.1.0 in ~/lab_jupyter/.venv/lib/python3.12/site-packages (from sympy&gt;=1.13-&gt;onnx_ir&lt;2,&gt;=0.1.16-&gt;onnxscript) (1.3.0)
-Note: you may need to restart the kernel to use updated packages.
-</code></pre></div>
-<p>파일명: <code>ch06_2_onnx_export_runtime_inference.ipynb</code> · 코드 셀 2 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code># ONNX 관련 패키지 설치 확인
-import onnx
-import onnxscript
-import onnxruntime
-
-print(&quot;ONNX       :&quot;, onnx.__version__)
-print(&quot;ONNXScript :&quot;, onnxscript.__version__)
-print(&quot;ONNXRuntime:&quot;, onnxruntime.__version__)
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>ONNX       : 1.22.0
-ONNXScript : 0.7.1
-ONNXRuntime: 1.29.0
-</code></pre></div>
-<p>파일명: <code>ch06_2_onnx_export_runtime_inference.ipynb</code> · 코드 셀 3 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>from pathlib import Path
-
-DATA_DIR = Path(&quot;data&quot;)
-MODEL_DIR = Path(&quot;models&quot;)
-PNG_DIR = Path(&quot;png&quot;)
-
-DATA_DIR.mkdir(exist_ok=True)
-
-MODEL_DIR.mkdir(exist_ok=True)
-PNG_DIR.mkdir(exist_ok=True)
-
-print(&quot;데이터 폴더:&quot;, DATA_DIR)
-print(&quot;모델 폴더  :&quot;, MODEL_DIR)
-print(&quot;이미지 폴더:&quot;, PNG_DIR)
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>데이터 폴더: data
-모델 폴더  : models
-이미지 폴더: png
-</code></pre></div>
-<h3>공통 import</h3>
-<p>파일명: <code>ch06_2_onnx_export_runtime_inference.ipynb</code> · 코드 셀 4 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>from pathlib import Path
-from urllib.request import urlretrieve
-import matplotlib.pyplot as plt
-import numpy as np
-import onnx
-import onnxruntime as ort
-import torch
-from PIL import Image
-from torchvision.models import resnet18, ResNet18_Weights
-</code></pre></div>
-<h4>1) 전체 흐름</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>사전학습 ResNet18 준비
-→ 실제 이미지 전처리
-→ PyTorch 기준 출력 생성
-→ ONNX 변환
-→ ONNX 파일 저장
-→ 모델 구조 검사
-→ ONNX Runtime Session 생성
-→ NumPy 입력으로 추론
-→ PyTorch 출력과 비교
-→ Top-5 결과 비교
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>.pth 또는 .pt
-→ PyTorch Runtime
-→ PC 직접 추론
-
-.onnx
-→ ONNX Runtime
-→ PyTorch와 분리된 추론
-</code></pre></div>
+<h3>1. NumPy와 PyTorch의 역할</h3>
 <table>
 <thead>
 <tr>
   <th>구분</th>
+  <th>NumPy</th>
+  <th>PyTorch</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>핵심 자료형</td>
+  <td><code>ndarray</code></td>
+  <td><code>Tensor</code></td>
+</tr>
+<tr>
+  <td>주요 목적</td>
+  <td>수치 계산, 데이터 처리</td>
+  <td>딥러닝 모델 작성과 학습</td>
+</tr>
+<tr>
+  <td>자동 미분</td>
+  <td>지원하지 않음</td>
+  <td>지원</td>
+</tr>
+<tr>
+  <td>GPU 연산</td>
+  <td>기본적으로 CPU 중심</td>
+  <td>GPU 연산 지원</td>
+</tr>
+<tr>
+  <td>기본 문법</td>
+  <td>배열 중심</td>
+  <td>NumPy와 매우 유사</td>
+</tr>
+</tbody>
+</table>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_numpy_torch.ipynb · 코드 셀 1 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>import numpy as np
+import torch
+
+print(&quot;NumPy version :&quot;, np.__version__)
+print(&quot;PyTorch version:&quot;, torch.__version__)
+</code></pre></div>
+<h3>2. 배열과 텐서 만들기</h3>
+<ul>
+<li><code>dtype</code>(디타입, 데이터 자료형)은 숫자를 저장하는 방식을 나타냅니다.</li>
+<li>딥러닝에서는 일반적으로 <code>float32</code>(플로트 서티투, 32비트 실수형)를 많이 사용합니다.</li>
+<li>두 자료형은 겉모습이 비슷하지만 서로 다른 라이브러리의 객체입니다.</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_numpy_torch.ipynb · 코드 셀 2 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code># 같은 데이터를 NumPy 배열과 PyTorch 텐서로 만듭니다.
+numbers = [1, 2, 3, 4]
+
+np_array = np.array(numbers, dtype=np.float32)
+torch_tensor = torch.tensor(numbers, dtype=torch.float32)
+
+print(&quot;NumPy 배열 :&quot;, np_array)
+print(&quot;PyTorch 텐서:&quot;, torch_tensor)
+
+print(&quot;NumPy 자료형 :&quot;, np_array.dtype)
+print(&quot;PyTorch 자료형:&quot;, torch_tensor.dtype)
+</code></pre></div>
+<h3>3. 기본 연산 비교</h3>
+<p><code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>는 기본적으로 <strong>원소별 연산</strong>입니다.</p>
+<blockquote>
+<p><strong>원소별 연산은 각 원소에 같은 계산을 적용합니다.</strong></p>
+</blockquote>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_numpy_torch.ipynb · 코드 셀 3 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code># 두 라이브러리의 기본 연산 문법은 거의 같습니다.
+print(&quot;[NumPy]&quot;)
+print(&quot;더하기 :&quot;, np_array + 10)
+print(&quot;곱하기 :&quot;, np_array * 2)
+print(&quot;합계   :&quot;, np_array.sum())
+print(&quot;평균   :&quot;, np_array.mean())
+
+print(&quot;\n[PyTorch]&quot;)
+print(&quot;더하기 :&quot;, torch_tensor + 10)
+print(&quot;곱하기 :&quot;, torch_tensor * 2)
+print(&quot;합계   :&quot;, torch_tensor.sum())
+print(&quot;평균   :&quot;, torch_tensor.mean())
+</code></pre></div>
+<h3>4. Shape, 인덱싱, Reshape</h3>
+<ul>
+<li><code>shape</code>(셰이프, 데이터 모양)의 <code>(2, 3)</code>은 <strong>2행 3열</strong>을 의미합니다.</li>
+<li>인덱스는 <code>0</code>부터 시작합니다.</li>
+<li><code>reshape</code>는 데이터의 값과 개수는 유지하고 모양만 바꿉니다.</li>
+<li>원소가 6개이므로 <code>(3, 2)</code>, <code>(1, 6)</code>, <code>(6, 1)</code> 등으로 변경할 수 있습니다.</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_numpy_torch.ipynb · 코드 셀 4 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code># 2행 3열 데이터
+data = [[1, 2, 3],
+        [4, 5, 6]]
+
+np_matrix = np.array(data)
+torch_matrix = torch.tensor(data)
+
+print(&quot;NumPy shape :&quot;, np_matrix.shape)
+print(&quot;PyTorch shape:&quot;, torch_matrix.shape)
+
+# 첫 번째 행, 두 번째 열의 값
+print(&quot;NumPy 값 :&quot;, np_matrix[0, 1])
+print(&quot;PyTorch 값:&quot;, torch_matrix[0, 1])
+
+# 2행 3열을 3행 2열로 변경
+print(&quot;\nNumPy reshape&quot;)
+print(np_matrix.reshape(3, 2))
+
+print(&quot;\nPyTorch reshape&quot;)
+print(torch_matrix.reshape(3, 2))
+</code></pre></div>
+<h3>5. 원소별 곱셈과 행렬곱 구분</h3>
+<ul>
+<li><code>*</code> : Element-wise multiplication(원소별 곱셈)</li>
+<li><code>@</code> : Matrix multiplication(행렬곱)</li>
+</ul>
+<p>두 연산은 결과가 다르므로 반드시 구분해야 합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_numpy_torch.ipynb · 코드 셀 5 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>a_np = np.array([[1, 2],
+                 [3, 4]])
+
+b_np = np.array([[5, 6],
+                 [7, 8]])
+
+a_torch = torch.tensor(a_np)
+b_torch = torch.tensor(b_np)
+
+# 원소별 곱셈: 같은 위치의 원소끼리 곱합니다.
+print(&quot;NumPy 원소별 곱셈&quot;)
+print(a_np * b_np)
+
+print(&quot;\nPyTorch 원소별 곱셈&quot;)
+print(a_torch * b_torch)
+
+# 행렬곱: 행과 열을 곱하여 새로운 행렬을 만듭니다.
+print(&quot;\nNumPy 행렬곱&quot;)
+print(a_np @ b_np)
+
+print(&quot;\nPyTorch 행렬곱&quot;)
+print(a_torch @ b_torch)
+</code></pre></div>
+<h3>6. NumPy와 PyTorch 사이의 변환</h3>
+<ul>
+<li><code>torch.tensor(np_data)</code>는 NumPy 배열의 값을 이용해 새 텐서를 만듭니다.</li>
+<li>CPU 텐서는 <code>.numpy()</code>로 NumPy 배열로 변환할 수 있습니다.</li>
+<li><code>.copy()</code>를 붙이면 원본 텐서와 독립된 NumPy 배열을 만들 수 있어 초보 실습에서 혼선을 줄일 수 있습니다.</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_numpy_torch.ipynb · 코드 셀 6 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code># NumPy 배열 → PyTorch 텐서
+np_data = np.array([10, 20, 30], dtype=np.float32)
+tensor_data = torch.tensor(np_data)
+
+# PyTorch 텐서 → NumPy 배열
+back_to_numpy = tensor_data.numpy().copy()
+
+print(&quot;원본 NumPy :&quot;, np_data)
+print(&quot;PyTorch 변환:&quot;, tensor_data)
+print(&quot;다시 NumPy :&quot;, back_to_numpy)
+</code></pre></div>
+<h3>7. PyTorch의 자동 미분</h3>
+<p>함수는 다음과 같습니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>y = x^2 + 2x
+</code></pre></div>
+<p>미분 결과는 다음과 같습니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\frac{dy}{dx} = 2x + 2
+</code></pre></div>
+<p><code>x = 3</code>을 대입하면 기울기는 <code>8</code>입니다. PyTorch는 <code>backward()</code>를 실행하여 이 값을 자동으로 계산합니다.</p>
+<blockquote>
+<p><strong>자동 미분은 신경망 학습에 필요한 기울기를 자동으로 계산합니다.</strong></p>
+</blockquote>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_numpy_torch.ipynb · 코드 셀 7 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code># x에 대한 계산 과정을 추적하도록 설정합니다.
+x = torch.tensor(3.0, requires_grad=True)
+
+# y = x² + 2x
+y = x**2 + 2*x
+
+# y를 x로 미분합니다. dy/dx
+y.backward()
+
+print(&quot;x =&quot;, x.item())
+print(&quot;y =&quot;, y.item())
+print(&quot;dy/dx =&quot;, x.grad.item())
+</code></pre></div>
+<h3>8. 미니 실습: 센서 데이터 정규화</h3>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_numpy_torch.ipynb · 코드 셀 8 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code># 센서 측정값을 0~1 범위로 변환합니다.
+sensor_values = [20.0, 30.0, 40.0, 50.0]
+
+# NumPy
+np_sensor = np.array(sensor_values, dtype=np.float32)
+np_normalized = (np_sensor - np_sensor.min()) / (np_sensor.max() - np_sensor.min())
+
+# PyTorch
+torch_sensor = torch.tensor(sensor_values, dtype=torch.float32)
+torch_normalized = (
+    (torch_sensor - torch_sensor.min())
+    / (torch_sensor.max() - torch_sensor.min())
+)
+
+print(&quot;NumPy 결과 :&quot;, np_normalized)
+print(&quot;PyTorch 결과:&quot;, torch_normalized)
+
+# 두 결과가 같은지 확인합니다.
+print(&quot;결과 일치:&quot;, np.allclose(np_normalized, torch_normalized.numpy()))
+</code></pre></div>
+<h3>9. 핵심 정리</h3>
+<ul>
+<li>NumPy의 기본 단위는 <code>ndarray</code>, PyTorch의 기본 단위는 <code>Tensor</code>입니다.</li>
+<li><code>*</code>는 원소별 곱셈이고, <code>@</code>는 행렬곱입니다.</li>
+<li>PyTorch는 자동 미분을 지원하므로 딥러닝 모델 학습에 사용할 수 있습니다.</li>
+</ul>
+</section><section class="section" id="s04"><h2><span class="num">04</span>ch01_2 NumPy 배열과 PyTorch Tensor 이해하기</h2><p>노트북: <code>notebooks/ch01_2_numpy_and_tensor.ipynb</code> · 원본 파일: <code>ch01_2_numpy_and_tensor.ipynb</code> · 상태: 원본 · 실행 기록 없음 · 미검증</p>
+<h3>개요</h3>
+<ul>
+<li>Python(파이썬) 리스트와 NumPy(넘파이) 배열의 차이를 이해합니다.</li>
+<li>NumPy 배열을 PyTorch Tensor(파이토치 텐서, 다차원 배열)로 변환합니다.</li>
+</ul>
+<h3>1. NumPy와 PyTorch 불러오기</h3>
+<ul>
+<li>NumPy는 <code>np</code>라는 짧은 이름으로 사용합니다.</li>
+<li>PyTorch는 <code>torch</code>라는 이름으로 사용합니다.</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_2_numpy_and_tensor.ipynb · 코드 셀 1 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>import numpy as np
+import torch
+</code></pre></div>
+<h3>2. Python 리스트와 NumPy 배열 비교</h3>
+<p>Python 리스트에서 <code>+</code>는 두 리스트를 이어 붙입니다.
+NumPy 배열에서 <code>+</code>는 같은 위치의 숫자를 더합니다.</p>
+<blockquote>
+<p><strong>NumPy 배열은 같은 위치의 원소끼리 수치 연산을 수행합니다.</strong></p>
+</blockquote>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_2_numpy_and_tensor.ipynb · 코드 셀 2 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code># Python 리스트
+list_a = [1, 2, 3]
+list_b = [10, 20, 30]
+
+# NumPy 배열
+array_a = np.array([1, 2, 3])
+array_b = np.array([10, 20, 30])
+
+print(&quot;Python 리스트 + :&quot;, list_a + list_b)
+print(&quot;NumPy 배열 +    :&quot;, array_a + array_b)
+</code></pre></div>
+<h3>3. Scalar·Vector·Matrix 구분</h3>
+<table>
+<thead>
+<tr>
+  <th>구분</th>
+  <th>의미</th>
+  <th>예시 shape</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Scalar(스칼라)</td>
+  <td>값 1개</td>
+  <td><code>()</code></td>
+</tr>
+<tr>
+  <td>Vector(벡터)</td>
+  <td>1차원 데이터</td>
+  <td><code>(3,)</code></td>
+</tr>
+<tr>
+  <td>Matrix(매트릭스)</td>
+  <td>2차원 데이터</td>
+  <td><code>(2, 2)</code></td>
+</tr>
+<tr>
+  <td>Tensor(텐서)</td>
+  <td>3차원 이상의 데이터까지 포함</td>
+  <td><code>(2, 3, 4)</code></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><code>ndim</code>은 차원의 개수입니다.</li>
+<li><code>shape</code>는 각 차원에 몇 개의 값이 있는지를 나타냅니다.</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_2_numpy_and_tensor.ipynb · 코드 셀 3 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>scalar = np.array(7)
+vector = np.array([1, 2, 3])
+matrix = np.array([[1, 2], [3, 4]])
+
+print(&quot;Scalar → ndim:&quot;, scalar.ndim, &quot;, shape:&quot;, scalar.shape)
+print(&quot;Vector → ndim:&quot;, vector.ndim, &quot;, shape:&quot;, vector.shape)
+print(&quot;Matrix → ndim:&quot;, matrix.ndim, &quot;, shape:&quot;, matrix.shape)
+</code></pre></div>
+<h3>4. 2차원 배열 읽기</h3>
+<p>다음 배열은 3행 2열 구조입니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>X =
+\begin{bmatrix}
+22.5 &amp; 0.10 \\
+31.0 &amp; 0.45 \\
+36.0 &amp; 0.90
+\end{bmatrix}
+</code></pre></div>
+<p>각 행은 하나의 측정 데이터이고, 각 열은 측정 항목입니다.</p>
+<ul>
+<li>첫 번째 열: 온도</li>
+<li>두 번째 열: 진동</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_2_numpy_and_tensor.ipynb · 코드 셀 4 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>sensor_data = np.array(
+    [
+        [22.5, 0.10],
+        [31.0, 0.45],
+        [36.0, 0.90],
+    ],
+    dtype=np.float32,
+)
+
+print(sensor_data)
+print(&quot;차원 수:&quot;, sensor_data.ndim)
+print(&quot;shape:&quot;, sensor_data.shape)
+print(&quot;자료형:&quot;, sensor_data.dtype)
+</code></pre></div>
+<h3>5. Indexing으로 원하는 값 선택하기</h3>
+<p>인덱스는 <code>0</code>부터 시작합니다.</p>
+<ul>
+<li><code>sensor_data[0]</code> : 첫 번째 행</li>
+<li><code>sensor_data[:, 0]</code> : 모든 행의 첫 번째 열</li>
+<li><code>sensor_data[1, 0]</code> : 두 번째 행의 첫 번째 값</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_2_numpy_and_tensor.ipynb · 코드 셀 5 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>print(&quot;첫 번째 측정 데이터:&quot;, sensor_data[0])
+print(&quot;모든 온도값:&quot;, sensor_data[:, 0])
+print(&quot;모든 진동값:&quot;, sensor_data[:, 1])
+print(&quot;두 번째 온도값:&quot;, sensor_data[1, 0])
+</code></pre></div>
+<h3>6. Boolean Mask로 조건에 맞는 값 선택하기</h3>
+<p>Boolean Mask(불리언 마스크)는 조건의 결과인 <code>True</code>와 <code>False</code>를 이용해 필요한 값만 선택합니다.</p>
+<p>다음 예제에서는 온도가 30℃ 이상인 데이터만 선택합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_2_numpy_and_tensor.ipynb · 코드 셀 6 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>temperatures = sensor_data[:, 0]
+
+high_mask = temperatures &gt;= 30.0
+high_temperatures = temperatures[high_mask]
+
+print(&quot;30℃ 이상 여부:&quot;, high_mask)
+print(&quot;30℃ 이상 온도:&quot;, high_temperatures)
+</code></pre></div>
+<h3>7. 간단한 Broadcasting 이해하기</h3>
+<p>Broadcasting(브로드캐스팅, 작은 데이터를 큰 배열에 맞춰 자동 확장하는 기능)을 사용하면 모든 값에 같은 숫자를 더하거나 곱할 수 있습니다.</p>
+<p>센서 보정값 <code>1.5</code>를 모든 온도에 더해 보겠습니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_2_numpy_and_tensor.ipynb · 코드 셀 7 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>temperature_offset = 1.5
+corrected_temperatures = temperatures + temperature_offset
+
+print(&quot;보정 전:&quot;, temperatures)
+print(&quot;보정 후:&quot;, corrected_temperatures)
+</code></pre></div>
+<h3>8. NumPy 배열을 PyTorch Tensor로 변환하기</h3>
+<p><code>torch.from_numpy()</code>를 사용하면 NumPy 배열을 Tensor로 변환할 수 있습니다.</p>
+<p>두 자료형은 모양이 비슷하지만 소속 라이브러리가 다릅니다.</p>
+<ul>
+<li>NumPy: <code>ndarray</code></li>
+<li>PyTorch: <code>Tensor</code></li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_2_numpy_and_tensor.ipynb · 코드 셀 8 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>sensor_tensor = torch.from_numpy(sensor_data)
+
+print(sensor_tensor)
+print(&quot;자료형:&quot;, type(sensor_tensor))
+print(&quot;dim:&quot;, sensor_tensor.dim())
+print(&quot;shape:&quot;, sensor_tensor.shape)
+print(&quot;dtype:&quot;, sensor_tensor.dtype)
+</code></pre></div>
+<h3>9. NumPy와 Tensor의 속성 비교</h3>
+<table>
+<thead>
+<tr>
+  <th>확인 항목</th>
+  <th>NumPy 배열</th>
+  <th>PyTorch Tensor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>차원 수</td>
+  <td><code>ndim</code></td>
+  <td><code>dim()</code></td>
+</tr>
+<tr>
+  <td>모양</td>
+  <td><code>shape</code></td>
+  <td><code>shape</code></td>
+</tr>
+<tr>
+  <td>자료형</td>
+  <td><code>dtype</code></td>
+  <td><code>dtype</code></td>
+</tr>
+<tr>
+  <td>저장 장치</td>
+  <td>별도 확인 없음</td>
+  <td><code>device</code></td>
+</tr>
+</tbody>
+</table>
+<p>PyTorch Tensor는 CPU(씨피유) 또는 GPU(지피유)에 저장할 수 있으므로 <code>device</code> 속성이 있습니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_2_numpy_and_tensor.ipynb · 코드 셀 9 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>print(&quot;NumPy ndim :&quot;, sensor_data.ndim)
+print(&quot;Tensor dim :&quot;, sensor_tensor.dim())
+
+print(&quot;NumPy shape:&quot;, sensor_data.shape)
+print(&quot;Tensor shape:&quot;, sensor_tensor.shape)
+
+print(&quot;Tensor device:&quot;, sensor_tensor.device)
+</code></pre></div>
+<h3>10. 미니 실습: 센서 데이터 판정하기</h3>
+<p>온도와 진동 데이터를 Tensor로 변환한 뒤 다음 조건을 확인합니다.</p>
+<ul>
+<li>온도 35℃ 이상</li>
+<li>진동 0.7 이상</li>
+</ul>
+<p>두 조건이 모두 참이면 점검이 필요한 데이터로 판정합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_2_numpy_and_tensor.ipynb · 코드 셀 10 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>practice_data = np.array(
+    [
+        [24.0, 0.20],
+        [34.0, 0.55],
+        [38.0, 0.85],
+    ],
+    dtype=np.float32,
+)
+
+practice_tensor = torch.from_numpy(practice_data)
+
+temperature_alarm = practice_tensor[:, 0] &gt;= 35.0
+vibration_alarm = practice_tensor[:, 1] &gt;= 0.7
+inspection_required = temperature_alarm &amp; vibration_alarm
+
+print(&quot;센서 데이터:&quot;)
+print(practice_tensor)
+
+print()
+print(&quot;점검 필요 여부:&quot;)
+print(inspection_required)
+
+print()
+print(&quot;점검이 필요한 데이터:&quot;)
+print(practice_tensor[inspection_required])
+</code></pre></div>
+<h3>12. 핵심 정리</h3>
+<ul>
+<li>Python 리스트는 일반적인 데이터 저장에 사용합니다.</li>
+<li>불리언 마스크는 조건에 맞는 데이터를 선택합니다.</li>
+<li>PyTorch Tensor는 <code>dim</code>, <code>shape</code>, <code>dtype</code>, <code>device</code> 속성을 확인할 수 있습니다.</li>
+</ul>
+</section><section class="section" id="s05"><h2><span class="num">05</span>ch01_3 PyTorch Tensor 연산</h2><p>노트북: <code>notebooks/ch01_3_tensor_operations.ipynb</code> · 원본 파일: <code>ch01_3_tensor_operations.ipynb</code> · 상태: 원본 · 실행 기록 없음 · 미검증</p>
+<h3>개요</h3>
+<ul>
+<li>일정한 값과 난수로 Tensor(텐서, 다차원 배열)를 생성합니다.</li>
+<li>여러 묶음의 센서 데이터를 하나로 결합합니다.</li>
+</ul>
+<h3>1. 라이브러리 불러오기</h3>
+<p>NumPy는 <code>np</code>, PyTorch(파이토치)는 <code>torch</code>라는 이름으로 사용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_3_tensor_operations.ipynb · 코드 셀 1 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>import numpy as np
+import torch
+</code></pre></div>
+<h3>2. Tensor 생성 함수</h3>
+<p>PyTorch는 자주 사용하는 형태의 Tensor를 간단히 만들 수 있습니다.</p>
+<table>
+<thead>
+<tr>
+  <th>함수</th>
   <th>역할</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-  <td>PyTorch Model</td>
-  <td>Python에서 정의하고 학습한 신경망</td>
+  <td><code>torch.zeros()</code></td>
+  <td>모든 원소를 0으로 생성</td>
 </tr>
 <tr>
-  <td>ONNX Exporter(오닉스 익스포터)</td>
-  <td>PyTorch 계산 그래프를 ONNX로 변환</td>
+  <td><code>torch.ones()</code></td>
+  <td>모든 원소를 1로 생성</td>
 </tr>
 <tr>
-  <td>ONNX Model</td>
-  <td>계산 그래프와 가중치를 저장한 교환 형식</td>
+  <td><code>torch.arange()</code></td>
+  <td>일정한 간격의 연속 값 생성</td>
 </tr>
 <tr>
-  <td>ONNX Runtime</td>
-  <td>ONNX 모델을 읽고 추론하는 실행 엔진</td>
+  <td><code>torch.rand()</code></td>
+  <td>0 이상 1 미만의 난수 생성</td>
 </tr>
 <tr>
-  <td>Execution Provider(이그제큐션 프로바이더)</td>
-  <td>CPU·GPU·NPU 등 실제 실행 장치와 연결</td>
+  <td><code>torch.randn()</code></td>
+  <td>평균 0, 표준편차 1인 난수 생성</td>
 </tr>
 </tbody>
 </table>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>PyTorch Model
-→ ONNX Exporter
-→ model.onnx
-→ ONNX Runtime
-→ CPU·GPU·가속기
-</code></pre></div>
-<p>ONNX 파일을 생성했다고 해서 자동으로 추론되는 것은 아닙니다. ONNX 파일을 읽고 실행하는 Runtime이 필요합니다.</p>
-<p>코랩에서는 다음 세 패키지만 준비하면 됩니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>onnx
-→ ONNX 파일 읽기와 구조 검사
+<p><code>torch.manual_seed()</code>를 사용하면 다시 실행해도 같은 난수가 생성됩니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_3_tensor_operations.ipynb · 코드 셀 2 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code># 같은 난수 결과를 얻기 위한 기준값
+torch.manual_seed(42)
 
-onnxscript
-→ 현재 PyTorch ONNX 변환 지원
+zeros_tensor = torch.zeros(2, 3)
+ones_tensor = torch.ones(2, 3)
+range_tensor = torch.arange(0, 6).reshape(2, 3)
+random_tensor = torch.rand(2, 3)
 
-onnxruntime
-→ ONNX 모델 추론
-</code></pre></div>
-<p>CPU 실습에서는 <code>onnxruntime</code>을 사용합니다. GPU 실행은 환경에 맞는 별도 ONNX Runtime GPU 패키지가 필요하므로 이번 기본 실습에서는 다루지 않습니다.</p>
-<h4>2) 실행 장치 확인</h4>
-<p>변환과 결과 비교를 단순하게 하기 위해 PyTorch와 ONNX Runtime 모두 CPU를 사용합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>PyTorch 기준 추론
-→ CPU
-
-ONNX 변환
-→ CPU
-
-ONNX Runtime 추론
-→ CPUExecutionProvider
-</code></pre></div>
-<p>파일명: <code>ch06_2_onnx_export_runtime_inference.ipynb</code> · 코드 셀 5 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>device = torch.device(&quot;cpu&quot;)
-
-print(&quot;PyTorch 버전     :&quot;, torch.__version__)
-
-print(&quot;ONNX 버전        :&quot;, onnx.__version__)
-
-print(&quot;ONNX Runtime 버전:&quot;, ort.__version__)
-
-print(&quot;실행 장치        :&quot;, device)
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>PyTorch 버전     : 2.13.0+cu130
-ONNX 버전        : 1.22.0
-ONNX Runtime 버전: 1.29.0
-실행 장치        : cpu
-</code></pre></div>
-<h4>3) 모델 구성</h4>
-<p>ImageNet(이미지넷, 대규모 이미지 분류 데이터셋)으로 사전학습된 ResNet18을 사용합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>ResNet18_Weights.DEFAULT
-→ 사전학습 가중치
-→ 권장 전처리
-→ ImageNet 1,000개 클래스 이름
-</code></pre></div>
-<p>입력 전처리 흐름:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>PIL Image
-→ Resize·Center Crop
-→ Tensor 변환
-→ Normalize
-→ [3, 224, 224]
-→ Batch 차원 추가
-→ [1, 3, 224, 224]
-</code></pre></div>
-<p>파일명: <code>ch06_2_onnx_export_runtime_inference.ipynb</code> · 코드 셀 6 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>weights = ResNet18_Weights.DEFAULT
-preprocess = weights.transforms()
-class_names = list(weights.meta[&quot;categories&quot;])
-
-try:
-    model = resnet18(weights=weights).to(device).eval()
-    model_source = &quot;ImageNet pretrained&quot;
-except Exception:
-    model = resnet18(weights=None).to(device).eval()
-    model_source = &quot;random initialized&quot;
-    print(&quot;사전학습 가중치를 받을 수 없어 미학습 ResNet18을 사용합니다.&quot;)
-
-image_url = &quot;https://github.com/pytorch/hub/raw/master/images/dog.jpg&quot;
-image_path = PNG_DIR / &quot;dog.jpg&quot;
-
-try:
-    if not image_path.exists():
-        urlretrieve(image_url, image_path)
-    image = Image.open(image_path).convert(&quot;RGB&quot;)
-except Exception:
-    image = Image.new(&quot;RGB&quot;, (224, 224), color=(128, 128, 128))
-    print(&quot;예제 이미지를 받을 수 없어 회색 테스트 이미지를 사용합니다.&quot;)
-
-input_tensor = preprocess(image).unsqueeze(0).to(device)
-
-print(&quot;모델 기준      :&quot;, model_source)
-print(&quot;모델           :&quot;, model.__class__.__name__)
-print(&quot;클래스 수      :&quot;, len(class_names))
-print(&quot;원본 이미지 크기:&quot;, image.size)
-print(&quot;입력 Shape     :&quot;, tuple(input_tensor.shape))
-print(&quot;입력 Dtype     :&quot;, input_tensor.dtype)
-
-plt.figure(figsize=(5, 5))
-plt.imshow(image)
-plt.axis(&quot;off&quot;)
-plt.title(&quot;Inference Image&quot;)
-plt.show()
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>모델 기준      : ImageNet pretrained
-모델           : ResNet
-클래스 수      : 1000
-원본 이미지 크기: (1546, 1213)
-입력 Shape     : (1, 3, 224, 224)
-입력 Dtype     : torch.float32
-</code></pre></div>
-<p>출력 그림 (원본 노트북 기록):</p>
-<p><img src="img/ch06_2_c06_0.png" alt="ch06_2 셀 6 출력 그림" /></p>
-<h4>4) 데이터 구조 확인</h4>
-<p>변환 전 PyTorch 출력은 ONNX 결과를 판단하는 기준입니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathbf{y}_{PT}=f_{\theta}(\mathbf{x})
-</code></pre></div>
-<ul>
-<li><code>\mathbf{x}</code>: 전처리된 입력 이미지</li>
-<li><code>f_{\theta}</code>: 학습된 가중치 <code>\theta</code>를 가진 ResNet18</li>
-<li><code>\mathbf{y}_{PT}</code>: PyTorch가 출력한 Logit(로짓, 확률 변환 전 점수)</li>
-</ul>
-<p>같은 입력을 ONNX Runtime에도 넣은 뒤 두 Logit을 비교합니다.</p>
-<p>파일명: <code>ch06_2_onnx_export_runtime_inference.ipynb</code> · 코드 셀 7 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>with torch.inference_mode():
-    pytorch_logits = model(input_tensor)
-    pytorch_probabilities = torch.softmax(pytorch_logits, dim=1)
-
-print(&quot;PyTorch 출력 Shape:&quot;, tuple(pytorch_logits.shape))
-
-print(&quot;PyTorch Top-1 Index:&quot;, int(pytorch_logits.argmax(dim=1).item()))
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>PyTorch 출력 Shape: (1, 1000)
-PyTorch Top-1 Index: 258
-</code></pre></div>
-<h4>5) ONNX 모델 내보내기</h4>
-<p>현재 PyTorch에서는 <code>torch.export</code> 기반 ONNX Exporter를 사용합니다.</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>onnx_program = torch.onnx.export(
- model,
- (input_tensor,),
- input_names=[&quot;input&quot;],
- output_names=[&quot;logits&quot;],
- dynamo=True,
-)
-</code></pre></div>
-<ul>
-<li><code>model</code>: 변환할 PyTorch 모델</li>
-<li><code>(input_tensor,)</code>: 모델 구조를 분석할 Example Input(이그잼플 인풋, 예제 입력)</li>
-<li><code>input_names</code>: ONNX 입력 이름</li>
-<li><code>output_names</code>: ONNX 출력 이름</li>
-<li><code>dynamo=True</code>: 현재 권장되는 <code>torch.export</code> 기반 변환 방식</li>
-</ul>
-<p>현재 버전에서는 <code>dynamo=True</code>가 기본값이지만, 학습 목적상 명시적으로 적습니다.</p>
-<p>파일명: <code>ch06_2_onnx_export_runtime_inference.ipynb</code> · 코드 셀 8 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>onnx_path = MODEL_DIR / &quot;resnet18_imagenet.onnx&quot;
-
-onnx_program = torch.onnx.export(
-    model,
-    (input_tensor,),
-    input_names=[&quot;input&quot;],
-    output_names=[&quot;logits&quot;],
-    dynamo=True,
-)
-
-onnx_program.save(
-    onnx_path,
-    external_data=False,
-)
-
-print(&quot;ONNX 파일:&quot;, onnx_path)
-
-print(f&quot;파일 크기: {onnx_path.stat().st_size / 1024**2:.2f} MB&quot;)
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>[torch.onnx] Obtain model graph for `ResNet([...]` with `torch.export.export(..., strict=False)`...
-[torch.onnx] Obtain model graph for `ResNet([...]` with `torch.export.export(..., strict=False)`... ✅
-[torch.onnx] Run decompositions...
-[torch.onnx] Run decompositions... ✅
-[torch.onnx] Translate the graph into ONNX...
-[torch.onnx] Translate the graph into ONNX... ✅
-[torch.onnx] Optimize the ONNX graph...
-[torch.onnx] Optimize the ONNX graph... ✅
-ONNX 파일: models/resnet18_imagenet.onnx
-파일 크기: 44.66 MB
-</code></pre></div>
-<h4>6) ONNX 모델 검사</h4>
-<p>ONNX 파일 생성 후에는 두 단계를 확인합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>구조 검사
-onnx.checker.check_model()
-
-실행 정보 확인
-InferenceSession.get_inputs()
-InferenceSession.get_outputs()
-InferenceSession.get_providers()
-</code></pre></div>
-<p>구조 검사를 통과했다는 것은 ONNX 그래프가 형식적으로 올바르다는 뜻입니다. PyTorch와 같은 값을 출력하는지는 별도로 비교해야 합니다.</p>
-<p>파일명: <code>ch06_2_onnx_export_runtime_inference.ipynb</code> · 코드 셀 9 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>onnx_model = onnx.load(onnx_path)
-
-onnx.checker.check_model(onnx_model)
-
-session = ort.InferenceSession(
-    str(onnx_path),
-    providers=[&quot;CPUExecutionProvider&quot;],
-)
-
-session_input = session.get_inputs()[0]
-
-session_output = session.get_outputs()[0]
-
-opset_version = onnx_model.opset_import[0].version
-
-print(&quot;ONNX 구조 검사: 통과&quot;)
-
-print(&quot;Node 수        :&quot;, len(onnx_model.graph.node))
-
-print(&quot;Opset 버전     :&quot;, opset_version)
-
-print(&quot;사용 Provider  :&quot;, session.get_providers())
-
-print(&quot;입력 이름·Shape :&quot;, session_input.name, session_input.shape)
-
-print(&quot;출력 이름·Shape :&quot;, session_output.name, session_output.shape)
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>ONNX 구조 검사: 통과
-Node 수        : 49
-Opset 버전     : 20
-사용 Provider  : ['CPUExecutionProvider']
-입력 이름·Shape : input [1, 3, 224, 224]
-출력 이름·Shape : logits [1, 1000]
-</code></pre></div>
-<h4>7) ONNX Runtime 추론</h4>
-<p>ONNX Runtime의 Python API는 NumPy(넘파이, 수치 배열 라이브러리) 배열을 입력으로 받습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>PyTorch Tensor
-→ CPU로 이동
-→ NumPy 배열 변환
-→ float32 확인
-→ ONNX Runtime 입력
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathbf{y}_{ORT}=g_{\theta}(\mathbf{x})
-</code></pre></div>
-<ul>
-<li><code>g_{\theta}</code>: ONNX Runtime이 실행하는 변환 모델</li>
-<li><code>\mathbf{y}_{ORT}</code>: ONNX Runtime 출력</li>
-</ul>
-<p>파일명: <code>ch06_2_onnx_export_runtime_inference.ipynb</code> · 코드 셀 10 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>input_array = input_tensor.detach().cpu().numpy().astype(np.float32)
-
-onnx_logits = session.run(
-    None,
-    {session_input.name: input_array},
-)[0]
-
-print(&quot;ONNX 출력 Type :&quot;, type(onnx_logits))
-
-print(&quot;ONNX 출력 Shape:&quot;, onnx_logits.shape)
-
-print(&quot;ONNX Top-1 Index:&quot;, int(onnx_logits.argmax(axis=1)[0]))
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>ONNX 출력 Type : &lt;class 'numpy.ndarray'&gt;
-ONNX 출력 Shape: (1, 1000)
-ONNX Top-1 Index: 258
-</code></pre></div>
-<h4>8) PyTorch·ONNX 출력 비교</h4>
-<p>최대 절대 오차:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>E_{\max}
-=
-\max_i
-\left|
-y_{PT,i}-y_{ORT,i}
-\right|
-</code></pre></div>
-<p>평균 절대 오차:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>E_{\mathrm{mean}}
-=
-\frac{1}{C}
-\sum_{i=1}^{C}
-\left|
-y_{PT,i}-y_{ORT,i}
-\right|
-</code></pre></div>
-<ul>
-<li><code>C</code>: 전체 클래스 수</li>
-<li>값이 작을수록 두 Runtime의 출력이 가깝습니다.</li>
-<li>부동소수점 연산 순서가 달라 매우 작은 오차는 발생할 수 있습니다.</li>
-</ul>
-<p>파일명: <code>ch06_2_onnx_export_runtime_inference.ipynb</code> · 코드 셀 11 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>pytorch_output = pytorch_logits.detach().cpu().numpy()
-
-absolute_error = np.abs(pytorch_output - onnx_logits)
-
-max_error = absolute_error.max()
-
-mean_error = absolute_error.mean()
-
-np.testing.assert_allclose(
-    pytorch_output,
-    onnx_logits,
-    rtol=1e-4,
-    atol=1e-5,
-)
-
-print(f&quot;최대 절대 오차: {max_error:.8f}&quot;)
-
-print(f&quot;평균 절대 오차: {mean_error:.8f}&quot;)
-
-print(&quot;PyTorch ↔ ONNX 출력 검증: 통과&quot;)
-</code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>최대 절대 오차: 0.00001526
-평균 절대 오차: 0.00000193
-PyTorch ↔ ONNX 출력 검증: 통과
-</code></pre></div>
-<h4>9) Top-5 결과 비교</h4>
-<p>분류 모델의 Logit을 Softmax(소프트맥스, 여러 클래스 점수를 확률로 변환하는 함수)로 변환합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>p_i
-=
-\frac{e^{z_i}}
-{\sum_{j=1}^{C}e^{z_j}}
-</code></pre></div>
-<p>PyTorch와 ONNX Runtime의 Top-5 클래스 순서와 확률을 비교합니다.</p>
-<p>파일명: <code>ch06_2_onnx_export_runtime_inference.ipynb</code> · 코드 셀 12 · Python · 원본 실행 기록 포함</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>def print_top5(title, logits, class_names):
-    probabilities = torch.softmax(torch.as_tensor(logits), dim=1)
-    top_probs, top_indices = probabilities.topk(5, dim=1)
-
-    print(title)
-    for rank, (probability, class_index) in enumerate(
-        zip(top_probs[0], top_indices[0]),
-        start=1,
-    ):
-        index = int(class_index)
-        print(
-            f&quot;{rank}. {class_names[index]:25s}&quot;
-            f&quot; - {float(probability) * 100:6.2f}%&quot;
-        )
-
-    return top_indices
-
-pytorch_top5 = print_top5(
-    &quot;===== PyTorch Top-5 =====&quot;,
-    pytorch_logits.detach().cpu(),
-    class_names,
-)
+print(&quot;zeros:&quot;)
+print(zeros_tensor)
 
 print()
-
-onnx_top5 = print_top5(
-    &quot;===== ONNX Runtime Top-5 =====&quot;,
-    onnx_logits,
-    class_names,
-)
+print(&quot;ones:&quot;)
+print(ones_tensor)
 
 print()
+print(&quot;arange + reshape:&quot;)
+print(range_tensor)
 
-print(&quot;Top-5 순서 일치:&quot;, torch.equal(pytorch_top5, onnx_top5))
+print()
+print(&quot;rand:&quot;)
+print(random_tensor)
 </code></pre></div>
-<p>실행 결과 (원본 노트북 기록):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>===== PyTorch Top-5 =====
-1. Samoyed                   -  88.46%
-2. Arctic fox                -   4.58%
-3. white wolf                -   4.43%
-4. Pomeranian                -   0.56%
-5. Great Pyrenees            -   0.47%
+<h3>3. NumPy 배열과 Tensor의 메모리 공유</h3>
+<p><code>torch.from_numpy()</code>로 만든 Tensor는 원본 NumPy 배열과 메모리를 공유할 수 있습니다.</p>
+<p>따라서 NumPy 배열의 값을 바꾸면 Tensor의 값도 함께 바뀔 수 있습니다.</p>
+<p>독립된 복사본이 필요할 때는 <code>clone()</code>을 사용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_3_tensor_operations.ipynb · 코드 셀 3 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>numpy_data = np.array([[10, 20], [30, 40]], dtype=np.float32)
 
-===== ONNX Runtime Top-5 =====
-1. Samoyed                   -  88.46%
-2. Arctic fox                -   4.58%
-3. white wolf                -   4.43%
-4. Pomeranian                -   0.56%
-5. Great Pyrenees            -   0.47%
+shared_tensor = torch.from_numpy(numpy_data)
+copied_tensor = shared_tensor.clone()
 
-Top-5 순서 일치: True
+# NumPy 배열의 첫 번째 값을 변경합니다.
+numpy_data[0, 0] = 99
+
+print(&quot;변경된 NumPy 배열:&quot;)
+print(numpy_data)
+
+print()
+print(&quot;메모리를 공유하는 Tensor:&quot;)
+print(shared_tensor)
+
+print()
+print(&quot;미리 복사한 독립 Tensor:&quot;)
+print(copied_tensor)
 </code></pre></div>
-</section><section class="section" id="s05"><h2><span class="num">05</span>검증</h2><table>
+<h3>4. CPU와 GPU 장치 선택</h3>
+<p><code>device</code>(디바이스, 저장·연산 장치)는 Tensor가 저장되는 위치입니다.</p>
+<ul>
+<li><code>cpu</code>: CPU 메모리</li>
+<li><code>cuda</code>: NVIDIA(엔비디아) GPU 메모리</li>
+</ul>
+<p>다음 코드는 GPU가 있으면 GPU를 선택하고, 없으면 CPU를 선택합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_3_tensor_operations.ipynb · 코드 셀 4 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>device = torch.device(&quot;cuda&quot; if torch.cuda.is_available() else &quot;cpu&quot;)
+
+data = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+data_on_device = data.to(device)
+
+print(&quot;선택된 장치:&quot;, device)
+print(&quot;Tensor의 장치:&quot;, data_on_device.device)
+</code></pre></div>
+<h3>5. Tensor 모양 바꾸기</h3>
+<p><code>reshape()</code>는 원소의 총개수를 유지하면서 Tensor의 모양을 바꿉니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>2 \times 3 = 3 \times 2 = 6
+</code></pre></div>
+<p>따라서 원소가 6개인 Tensor는 <code>(2, 3)</code>, <code>(3, 2)</code>, <code>(1, 6)</code> 등의 모양으로 변경할 수 있습니다.</p>
+<p><code>flatten()</code>은 여러 차원의 Tensor를 1차원으로 펼칩니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_3_tensor_operations.ipynb · 코드 셀 5 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>tensor_a = torch.arange(1, 7).reshape(2, 3)
+
+print(&quot;원래 Tensor:&quot;)
+print(tensor_a)
+print(&quot;shape:&quot;, tensor_a.shape)
+
+print()
+print(&quot;reshape(3, 2):&quot;)
+print(tensor_a.reshape(3, 2))
+
+print()
+print(&quot;flatten():&quot;)
+print(tensor_a.flatten())
+</code></pre></div>
+<h3>6. <code>torch.cat()</code>으로 연결하기</h3>
+<p><code>torch.cat()</code>은 <strong>기존 차원을 따라</strong> Tensor를 연결합니다.</p>
+<p>두 Tensor의 shape가 모두 <code>(2, 3)</code>일 때:</p>
+<ul>
+<li><code>dim=0</code>: 첫 번째 차원의 크기가 증가 → <code>(4, 3)</code></li>
+<li><code>dim=1</code>: 두 번째 차원의 크기가 증가 → <code>(2, 6)</code></li>
+</ul>
+<blockquote>
+<p><code>dim</code>은 단순히 행·열 이름보다 <strong>어느 차원의 크기를 늘리는가</strong>로 이해하는 것이 좋습니다.</p>
+</blockquote>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_3_tensor_operations.ipynb · 코드 셀 6 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>tensor_b = torch.tensor(
+    [[10, 20, 30],
+     [40, 50, 60]]
+)
+
+cat_dim0 = torch.cat([tensor_a, tensor_b], dim=0)
+cat_dim1 = torch.cat([tensor_a, tensor_b], dim=1)
+
+print(&quot;cat dim=0:&quot;)
+print(cat_dim0)
+print(&quot;shape:&quot;, cat_dim0.shape)
+
+print()
+print(&quot;cat dim=1:&quot;)
+print(cat_dim1)
+print(&quot;shape:&quot;, cat_dim1.shape)
+</code></pre></div>
+<h3>7. <code>torch.stack()</code>으로 쌓기</h3>
+<p><code>torch.stack()</code>은 <strong>새로운 차원을 추가하여</strong> Tensor를 쌓습니다.</p>
+<p>두 개의 <code>(2, 3)</code> Tensor를 <code>dim=0</code>으로 쌓으면 결과 shape는 <code>(2, 2, 3)</code>이 됩니다.</p>
+<ul>
+<li>첫 번째 <code>2</code>: Tensor 묶음의 개수</li>
+<li>두 번째 <code>2</code>: 각 Tensor의 행 개수</li>
+<li>마지막 <code>3</code>: 각 Tensor의 열 개수</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_3_tensor_operations.ipynb · 코드 셀 7 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code>stack_dim0 = torch.stack([tensor_a, tensor_b], dim=0)
+
+print(&quot;stack dim=0:&quot;)
+print(stack_dim0)
+print(&quot;shape:&quot;, stack_dim0.shape)
+</code></pre></div>
+<h3>8. <code>cat</code>과 <code>stack</code> 비교</h3>
+<table>
 <thead>
 <tr>
-  <th>노트북</th>
-  <th>원본 실행 결과</th>
-  <th>이번 정리에서 재실행</th>
-  <th>순번·파일명 일치</th>
+  <th>함수</th>
+  <th>핵심 동작</th>
+  <th>예시 결과</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-  <td>ch06_1</td>
-  <td>통과 (원본 노트북에 실행 결과 기록 있음)</td>
-  <td>미검증</td>
-  <td>통과</td>
+  <td><code>torch.cat()</code></td>
+  <td>기존 차원을 따라 연결</td>
+  <td><code>(2, 3)</code> 두 개 → <code>(4, 3)</code></td>
 </tr>
 <tr>
-  <td>ch06_2</td>
-  <td>통과 (원본 노트북에 실행 결과 기록 있음)</td>
+  <td><code>torch.stack()</code></td>
+  <td>새로운 차원을 만들어 쌓기</td>
+  <td><code>(2, 3)</code> 두 개 → <code>(2, 2, 3)</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<blockquote>
+<p><strong><code>cat</code>은 Tensor를 연결하고, <code>stack</code>은 새로운 차원으로 묶습니다.</strong></p>
+</blockquote>
+<h3>9. 미니 실습: 센서 데이터 묶음 합치기</h3>
+<p>두 번에 나누어 측정한 온도·진동 데이터를 하나로 결합합니다.</p>
+<p>각 행은 하나의 측정값이며, 각 열은 다음 의미를 가집니다.</p>
+<ul>
+<li>첫 번째 열: 온도</li>
+<li>두 번째 열: 진동</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_3_tensor_operations.ipynb · 코드 셀 8 · 원본 · 실행 기록 없음 · 미검증</span></div><pre class="src"><code># 첫 번째 측정 묶음
+batch_1 = torch.tensor(
+    [[22.0, 0.10],
+     [25.0, 0.15]]
+)
+
+# 두 번째 측정 묶음
+batch_2 = torch.tensor(
+    [[31.0, 0.45],
+     [36.0, 0.90]]
+)
+
+# 모든 측정값을 하나의 표로 연결합니다.
+all_sensor_data = torch.cat([batch_1, batch_2], dim=0)
+
+# 두 측정 묶음을 구분한 상태로 쌓습니다.
+grouped_sensor_data = torch.stack([batch_1, batch_2], dim=0)
+
+print(&quot;하나로 연결한 센서 데이터:&quot;)
+print(all_sensor_data)
+print(&quot;shape:&quot;, all_sensor_data.shape)
+
+print()
+print(&quot;측정 묶음별로 쌓은 센서 데이터:&quot;)
+print(grouped_sensor_data)
+print(&quot;shape:&quot;, grouped_sensor_data.shape)
+</code></pre></div>
+<h3>11. 핵심 정리</h3>
+<ul>
+<li><code>zeros</code>, <code>ones</code>, <code>arange</code>, <code>rand</code>로 Tensor를 쉽게 생성할 수 있습니다.</li>
+<li><code>.to(device)</code>는 Tensor를 CPU 또는 GPU로 이동합니다.</li>
+<li><code>torch.stack()</code>은 새로운 차원을 추가하여 쌓습니다.</li>
+</ul>
+</section><section class="section" id="s06"><h2><span class="num">06</span>검증</h2><table>
+<thead>
+<tr>
+  <th>노트북</th>
+  <th>원본 실행 기록</th>
+  <th>이번 정리에서 재실행</th>
+  <th>모델 파일 이름 대응</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>ch01_1</td>
+  <td>없음</td>
   <td>미검증</td>
-  <td>통과</td>
+  <td>해당 없음</td>
+</tr>
+<tr>
+  <td>ch01_2</td>
+  <td>없음</td>
+  <td>미검증</td>
+  <td>해당 없음</td>
+</tr>
+<tr>
+  <td>ch01_3</td>
+  <td>없음</td>
+  <td>미검증</td>
+  <td>해당 없음</td>
 </tr>
 </tbody>
 </table>
 <ul>
 <li>이 페이지의 실행 결과와 그림은 <strong>원본 노트북에 저장된 기록</strong>이며, 이번 정리 과정에서 다시 실행하지 않았습니다(재실행 미검증).</li>
-<li>순번·파일명 일치: 노트북 제목, 모델 저장·불러오기 파일 이름의 장 번호를 새 순번으로 함께 바꾸고 변환 스크립트로 대응을 확인했습니다.</li>
-<li>실행 결과 안에 찍힌 모델 저장 경로(예: <code>models/ch04_5_best_...</code>)는 원본 실행 당시의 옛 순번입니다. 코드는 새 순번으로 바꿨으므로 다시 실행하면 새 이름으로 저장됩니다.</li>
+<li>모델 파일 이름 대응: 모델을 저장·불러오는 노트북은 파일 이름의 장 번호를 새 순번으로 함께 바꾸고, 저장하는 노트북과 불러오는 노트북의 이름이 같은지 스크립트로 확인했습니다(통과). 모델 파일을 쓰지 않는 노트북은 해당 없음입니다.</li>
+<li>노트북 안의 설명·코드·출력 순서는 원본을 그대로 따릅니다(STANDARD 8절: 코드·이미지·절 순서 임의 변경 금지).</li>
 </ul>
 <p><strong>완료 기준:</strong> 노트북을 순서대로 실행해 오류 없이 끝나고, 손실 감소와 평가 지표가 원본 기록과 비슷한 범위로 나오는지 확인합니다.</p>
 </section><div class="chapter-links" id="chapter-links"></div></main></div>
-<footer class="footer">PyTorch 딥러닝 실습 · v01  · 실습 결과는 실제 환경에서 검증</footer>
-<script>window.COURSE={"title": "PyTorch 딥러닝 실습", "short_title": "DEEP LEARNING", "home_label": "전체 학습 안내서", "chapters": [{"id": "ch01", "number": 1, "title": "심층 신경망 이진분류", "file": "ch01_dnn_binary_classification_v01.html"}, {"id": "ch02", "number": 2, "title": "MNIST MLP", "file": "ch02_mnist_mlp_v01.html"}, {"id": "ch03", "number": 3, "title": "Fashion-MNIST MLP", "file": "ch03_fashion_mnist_mlp_v01.html"}, {"id": "ch04", "number": 4, "title": "CNN", "file": "ch04_cnn_v01.html"}, {"id": "ch05", "number": 5, "title": "ResNet18·전이학습", "file": "ch05_resnet_transfer_learning_v01.html"}, {"id": "ch06", "number": 6, "title": "모델 저장·ONNX", "file": "ch06_model_deployment_v01.html"}, {"id": "ch07", "number": 7, "title": "CNN→YOLO 위치 추정", "file": "ch07_single_object_localization_v01.html"}]};</script><script>/*
+<footer class="footer">PyTorch 머신러닝 기초 · v02  · 실습 결과는 실제 환경에서 검증</footer>
+<script>window.COURSE={"title": "PyTorch 머신러닝 기초", "short_title": "MACHINE LEARNING", "home_label": "전체 학습 안내서", "chapters": [{"id": "ch01", "number": 1, "title": "Tensor 기초", "file": "ch01_tensor_basics_v02.html"}, {"id": "ch02", "number": 2, "title": "선형회귀", "file": "ch02_linear_regression_v02.html"}, {"id": "ch03", "number": 3, "title": "로지스틱·Softmax 분류", "file": "ch03_classification_v02.html"}, {"id": "ch04", "number": 4, "title": "학습 설정 선택 기준", "file": "ch04_training_setup_guide_v02.html"}]};</script><script>/*
  * 교육용 HTML 공통 동작 — 유지보수용 원본 (STANDARD 4·10.3·10.4)
  * 페이지 본문은 바꾸지 않고 탐색·이전/다음·모바일 메뉴·코드 복사만 덧붙인다.
  * 입력: 페이지의 window.COURSE (tools/guide/build_guides.py가 실제 존재하는 장만 넣음),
@@ -1953,7 +1390,11 @@ Top-5 순서 일치: True
   box.append(el("summary", "", "전체 장 바로가기"));
   const chLinks = el("div", "course-ch-links");
   let currentChapter = null;
+  // 보조 장(07.1·12.3 등)은 같은 본 장을 보고 있을 때만 펼쳐 목록을 짧게 유지
+  const baseOf = (n) => String(n).split(".")[0];
+  const curBase = baseOf(pageNames.find((ch) => ch.id === current)?.number ?? "");
   pageNames.forEach((ch) => {
+    if (String(ch.number).includes(".") && baseOf(ch.number) !== curBase) return;
     const a = el("a", "course-ch-link");
     a.href = ch.file;
     a.append(el("span", "course-ch-num", numText(ch.number)), el("span", "", ch.title));

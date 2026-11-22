@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Target 형태 → 출력층 → Loss → Optimizer → Metric"><title>제04장 · 학습 설정 선택 기준 · PyTorch 머신러닝 기초</title>
+<meta name="description" content="단일 선형층 로지스틱 분류 → 은닉층·ReLU가 있는 MLP"><title>제01장 · 심층 신경망 이진분류 · PyTorch 딥러닝 실습</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>/*
@@ -598,1258 +598,903 @@ pre code {
   max-width: 100%;
   overflow-x: auto;
 }
-</style></head><body data-chapter="ch04">
+
+/* (추가) 실행 결과 상자: 코드 박스와 구분하고 복사 버튼은 두지 않습니다. */
+.outputblock {
+  border: 1px solid var(--line);
+  border-left: 3px solid #8a8f98;
+  margin: -6px 0 18px;
+  background: #ffffff;
+}
+.outputblock pre {
+  margin: 0;
+  padding: 13px 15px;
+  overflow: auto;
+  line-height: 1.6;
+  font-size: 0.78rem;
+  color: var(--ink-2);
+}
+.codebar span {
+  overflow-wrap: anywhere;
+}
+</style></head><body data-chapter="ch01">
 <button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button><div class="shade" id="shade"></div>
-<header class="hero"><div class="hero-inner"><p class="kicker">MACHINE LEARNING · CHAPTER 04</p><h1>제04장 · 학습 설정 선택 기준</h1><p>Target 형태 → 출력층 → Loss → Optimizer → Metric</p><div class="chips"><span class="chip">Loss</span><span class="chip">Optimizer</span><span class="chip">Metric</span><span class="chip">Validation</span></div></div></header>
-<div class="wrap"><nav class="toc" id="course-nav" aria-label="장과 절 탐색"></nav><main class="content" id="main-content"><section class="section" id="s00"><h2><span class="num">00</span>이 장의 자료</h2><p>원본 문서 <code>PyTorch 머신러닝·딥러닝 학습 설정 선택 기준.md</code>와 발표 자료(PPTX)를 장 원고로 옮겼습니다. 내용과 순서는 원본 그대로이며, 좌측 목차에 맞도록 제목 계층만 정리했습니다.</p>
+<header class="hero"><div class="hero-inner"><p class="kicker">DEEP LEARNING · CHAPTER 01</p><h1>제01장 · 심층 신경망 이진분류</h1><p>단일 선형층 로지스틱 분류 → 은닉층·ReLU가 있는 MLP</p><div class="chips"><span class="chip">MLP</span><span class="chip">ReLU</span><span class="chip">BCEWithLogitsLoss</span></div></div></header>
+<div class="wrap"><nav class="toc" id="course-nav" aria-label="장과 절 탐색"></nav><main class="content" id="main-content"><section class="section" id="s00"><h2><span class="num">00</span>배경 개념</h2><p>Deep Learning(딥러닝, 심층 학습)은 입력과 출력 사이에 Hidden Layer(은닉층)를 여러 층 쌓고, 층 사이에 ReLU(렐루) 같은 비선형 활성화 함수를 넣어 직선 하나로는 표현할 수 없는 관계를 학습합니다.</p>
+<p>이 장은 머신러닝 과정 3장의 심장질환 로지스틱 분류를 그대로 두고 <strong>모델만</strong> <code>Linear → ReLU → Linear → ReLU → Linear</code> MLP(다층 퍼셉트론)로 바꿉니다. 출력은 여전히 Logit 1개이고 Loss도 <code>BCEWithLogitsLoss()</code>이므로, 모델 구조와 학습 설정이 서로 독립적이라는 점을 확인할 수 있습니다. 설정 선택 원리는 <a href="../../machine_learning/dist/ch04_training_setup_guide_v02.html">머신러닝 과정 4장</a>을 참고합니다.</p>
+</section><section class="section" id="s01"><h2><span class="num">01</span>전체 실습 흐름</h2><p>개념 흐름도 — 이 장 노트북의 공통 학습 절차 (개념도, 이름은 실제 코드 기준):</p>
+<div class="flow" role="list" aria-label="개념 흐름도"><div class="step"><code>heart.csv</code> 전처리 (원핫 인코딩·표준화)</div><div class="down" aria-hidden="true">↓</div><div class="step">MLP <code>Linear → ReLU → Linear → ReLU → Linear</code></div><div class="down" aria-hidden="true">↓</div><div class="step">Logit 1개 → <code>BCEWithLogitsLoss()</code></div><div class="down" aria-hidden="true">↓</div><div class="step"><code>backward()</code> → <code>optimizer.step()</code> 반복 학습</div><div class="down" aria-hidden="true">↓</div><div class="step"><code>torch.sigmoid</code> 확률 → 임계값 0.5 → 혼동행렬·평가지표</div></div>
+<p>노트북별 실습 순서:</p>
+<ol>
+<li><strong>ch01_1</strong> 심장질환 딥러닝 이진분류 — <code>heart.csv</code> 준비·원핫 인코딩·표준화 → MLP 모델 → 학습 → 혼동행렬·평가지표</li>
+</ol>
+<p>노트북 파일(<code>notebooks/</code> 폴더):</p>
 <ul>
-<li>원본 문서: <code>guide/ml_dl_training_setup_guide.md</code></li>
-<li>발표 자료: <code>guide/slides/</code> (테크트리 원본·수정본·도식화본)</li>
+<li><strong>ch01_1</strong> <code>ch01_1_heart_disease_dnn_classification.ipynb</code> (원본 <code>ch03_2_heart_disease_classification_DNN.ipynb</code>)</li>
 </ul>
-</section><section class="section" id="s01"><h2><span class="num">01</span>0. 가장 중요한 원칙</h2><p>머신러닝·딥러닝에서 설정을 결정하는 순서는 다음과 같다.</p>
-<blockquote>
-<p><strong>모델 종류보다 먼저 정답 Target(타깃)의 형태를 본다.</strong></p>
-</blockquote>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>문제 정의
-   ↓
-정답 Target 형태
-   ↓
-모델의 최종 출력 형태
-   ↓
-출력층
-   ↓
-Loss Function(손실함수)
-   ↓
-Optimizer(옵티마이저, 최적화 알고리즘)
-   ↓
-Learning Rate / Batch Size / Epoch
-   ↓
-Validation
-   ↓
-Metric(평가 지표)
+</section><section class="section" id="s02"><h2><span class="num">02</span>환경 확인</h2><ul>
+<li>필요 환경: Python 3, <code>numpy</code>, <code>pandas</code>, <code>scikit-learn</code>, <code>torch</code>, <code>matplotlib</code> · 데이터 <code>heart.csv</code>(노트북과 같은 폴더)</li>
+<li>Google Colab 또는 로컬 Jupyter에서 <code>notebooks/</code> 폴더를 작업 폴더로 열고 순서대로 실행합니다.</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>BASH · Ubuntu 터미널 · 예시 명령 · 미검증</span></div><pre class="src"><code># 필요한 패키지 설치 (로컬 실행 시)
+python -m pip install torch torchvision numpy pandas scikit-learn matplotlib
 </code></pre></div>
-<p>즉,</p>
+</section><section class="section" id="s03"><h2><span class="num">03</span>ch01_1 심장질환 딥러닝 이진분류</h2><p>노트북: <code>notebooks/ch01_1_heart_disease_dnn_classification.ipynb</code> · 원본 파일: <code>ch03_2_heart_disease_classification_DNN.ipynb</code> · 상태: 원본 · 실행 기록 있음 · 재실행 미검증</p>
+<h3>실제 CSV 데이터로 딥러닝 이진분류하기</h3>
+<h3>개요</h3>
 <ul>
-<li>MLP냐 CNN이냐가 먼저가 아니다.</li>
-<li><strong>회귀인지, 이진분류인지, 다중분류인지가 먼저다.</strong></li>
-<li>같은 다중분류라면 MLP와 CNN 모두 마지막 부분은 거의 동일하다.</li>
+<li><code>heart.csv</code>를 불러와 데이터 구조를 확인합니다.</li>
+<li><strong>(변경)</strong> 기존 로지스틱 분류의 단일 선형층을 Hidden Layer(은닉층)와 ReLU(렐루)가 있는 MLP(다층 퍼셉트론)로 확장합니다.</li>
+<li>Confusion Matrix(컨퓨전 매트릭스, 혼동행렬)와 임계값의 의미를 이해합니다.</li>
 </ul>
-<p>예:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>MNIST + MLP
-MNIST + CNN
-       ↓
-둘 다 10개 중 하나를 맞히는 다중분류
-       ↓
-출력 10개 Logit
-       ↓
-CrossEntropyLoss
-</code></pre></div>
-</section><section class="section" id="s02"><h2><span class="num">02</span>1. 문제 유형부터 판별</h2><h3>1.1 Regression(리그레션, 회귀)</h3>
-<p>정답이 연속적인 실수이다.</p>
-<p>예:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력
-집 크기, 방 개수, 위치
-        ↓
-모델
-        ↓
-예측값
-35000.5
-        ↓
-실제값
-36000.0
-</code></pre></div>
-<p>대표 손실함수:</p>
+<h3>1. 라이브러리와 CSV 파일 준비</h3>
+<p>다음 라이브러리를 사용합니다.</p>
 <ul>
-<li><code>nn.MSELoss()</code></li>
-<li><code>nn.L1Loss()</code></li>
+<li>Pandas(판다스): CSV 읽기와 표 형태 데이터 처리</li>
+<li>scikit-learn(사이킷런): 훈련·테스트 데이터 분할</li>
+<li>PyTorch(파이토치): 모델 학습</li>
+<li>Matplotlib(맷플롯립): 그래프 출력</li>
 </ul>
-<p>구조:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력 → 모델 → 실수 출력 → 실제 실수값 → MSE/L1
-</code></pre></div>
-<h3>1.2 Binary Classification(바이너리 클래시피케이션, 이진분류)</h3>
-<p>정답이 두 가지 중 하나이다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>0 : 정상
-1 : 이상
-</code></pre></div>
-<p>일반적인 PyTorch 구조:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력
- ↓
-모델
- ↓
-Logit 1개
- ↓
-BCEWithLogitsLoss
- ↓
-학습
-</code></pre></div>
-<p>추론할 때:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Logit
- ↓
-Sigmoid
- ↓
-확률
- ↓
-0.5 기준
- ↓
-0 또는 1
-</code></pre></div>
-<h3>1.3 Multi-class Classification(멀티 클래스 클래시피케이션, 다중분류)</h3>
-<p>여러 클래스 중 <strong>정확히 하나</strong>를 선택한다.</p>
-<p>MNIST라면:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>0 1 2 3 4 5 6 7 8 9
-          ↑
-      하나만 정답
-</code></pre></div>
-<p>10개 클래스라면:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력
- ↓
-모델
- ↓
-10개 Logit
- ↓
-CrossEntropyLoss
- ↓
-정답 클래스 번호
-</code></pre></div>
-<p>Target 예:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>y = torch.tensor([3, 7, 1], dtype=torch.long)
-</code></pre></div>
-<h3>1.4 Multi-label Classification(멀티 레이블 클래시피케이션, 다중레이블 분류)</h3>
-<p>한 데이터가 여러 클래스를 동시에 가질 수 있다.</p>
-<p>예:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>사진 1장
+<p>파일 이름은 <code>heart.csv</code> 또는 <code>heart(1).csv</code>를 사용할 수 있습니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_heart_disease_dnn_classification.ipynb · 코드 셀 1 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>from pathlib import Path
 
-사람       1
-자동차     1
-강아지     0
-신호등     1
-</code></pre></div>
-<p>각 클래스가 서로 독립적인 이진분류라고 생각하면 쉽다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>출력 C개 Logit
- ↓
-각 Logit에 독립적인 Sigmoid
- ↓
-BCEWithLogitsLoss
-</code></pre></div>
-<h3>1.5 Image Classification(이미지 분류)</h3>
-<p>중요한 점:</p>
-<blockquote>
-<p><strong>이미지 분류는 손실함수 자체를 결정하는 문제 유형이 아니다.</strong></p>
-</blockquote>
-<p>이미지는 <strong>입력 데이터의 종류</strong>이다.</p>
-<p>예:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>이미지 → CNN → 고양이/강아지
-</code></pre></div>
-<p>이면 이진분류이고,</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>이미지 → CNN → 숫자 0~9
-</code></pre></div>
-<p>이면 다중분류이다.</p>
-<p>따라서:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>이미지라는 사실
-      ↓
-CNN 등의 모델 구조 선택에 영향
+import numpy as np
+import pandas as pd
+import torch
+from torch import nn
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
 
-정답이 몇 종류인가
-      ↓
-Loss 선택에 영향
+torch.manual_seed(42)
+
+# 두 파일 이름 중 현재 폴더에 있는 파일을 사용합니다.
+data_path = Path(&quot;heart.csv&quot;)
+
+if not data_path.exists():
+    data_path = Path(&quot;heart(1).csv&quot;)
+
+# Colab에서 파일이 없으면 업로드합니다.
+if not data_path.exists():
+    try:
+        from google.colab import files
+        files.upload()
+
+        data_path = Path(&quot;heart.csv&quot;)
+
+        if not data_path.exists():
+            data_path = Path(&quot;heart(1).csv&quot;)
+
+    except ImportError:
+        pass
+
+if not data_path.exists():
+    raise FileNotFoundError(
+        &quot;현재 폴더에 heart.csv 또는 heart(1).csv를 넣어 주세요.&quot;
+    )
+
+heart_data = pd.read_csv(data_path)
+
+print(&quot;사용 파일:&quot;, data_path.name)
+print(&quot;데이터 shape:&quot;, heart_data.shape)
 </code></pre></div>
-<h3>1.6 Sequence Prediction(시퀀스 프리딕션, 순차 데이터 예측)</h3>
-<p>RNN/LSTM/Transformer에서 사용한다.</p>
-<p>하지만 Loss는 역시 <strong>예측 대상</strong>에 따라 달라진다.</p>
-<p>예:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>주가 예측
-→ 실수 예측
-→ MSELoss
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 1</span></div><pre>사용 파일: heart.csv
+데이터 shape: (303, 14)
+</pre></div>
+<h3>2. 데이터 구조 확인</h3>
+<p>데이터는 303행, 14열로 구성됩니다.</p>
+<ul>
+<li>입력 특성: 13개</li>
+<li>목표값: <code>target</code></li>
+<li><code>target=0</code>: 심장질환 없음</li>
+<li><code>target=1</code>: 심장질환 있음</li>
+</ul>
+<p>중복 행은 바로 삭제하지 않고 개수만 확인합니다.
+실무에서는 중복이 실제 반복 측정인지 입력 오류인지 확인한 뒤 처리합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_heart_disease_dnn_classification.ipynb · 코드 셀 2 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>print(&quot;앞부분 5행:&quot;)
+print(heart_data.head())
+
+print()
+print(&quot;결측값 수:&quot;, heart_data.isna().sum().sum())
+print(&quot;중복 행 수:&quot;, heart_data.duplicated().sum())
+
+print()
+print(&quot;target 클래스별 개수:&quot;)
+print(
+    heart_data[&quot;target&quot;]
+    .value_counts()
+    .sort_index()
+)
 </code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>문장 감정 긍정/부정
-→ 이진분류
-→ BCEWithLogitsLoss
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>다음 단어 예측
-→ 수만 개 단어 중 하나
-→ CrossEntropyLoss
-</code></pre></div>
-<p>따라서:</p>
-<blockquote>
-<p>RNN/LSTM/Transformer라고 특정 Loss를 사용하는 것이 아니다.</p>
-</blockquote>
-<h3>1.7 Reconstruction(리컨스트럭션, 입력 복원)</h3>
-<p>Autoencoder(오토인코더, 입력 복원 신경망)의 대표 문제이다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>원본 x
- ↓
-Encoder
- ↓
-압축 표현
- ↓
-Decoder
- ↓
-복원 x̂
-</code></pre></div>
-<p>목표:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>x̂ ≈ x
-</code></pre></div>
-<p>연속적인 픽셀값을 복원한다면:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>nn.MSELoss()
-</code></pre></div>
-<p>또는</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>nn.L1Loss()
-</code></pre></div>
-<p>를 사용할 수 있다.</p>
-<p>0~1 이진적인 값을 확률적으로 복원하는 문제라면 BCE 계열도 사용할 수 있다.</p>
-<p>즉 Autoencoder 역시 Loss가 하나로 고정되는 것은 아니다.</p>
-</section><section class="section" id="s03"><h2><span class="num">03</span>2. 출력층 결정</h2><p>핵심 표는 다음과 같다.</p>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 2</span></div><pre>앞부분 5행:
+   age  sex  cp  trestbps  chol  fbs  restecg  thalach  exang  oldpeak  slope  \
+0   63    1   3       145   233    1        0      150      0      2.3      0   
+1   37    1   2       130   250    0        1      187      0      3.5      0   
+2   41    0   1       130   204    0        0      172      0      1.4      2   
+3   56    1   1       120   236    0        1      178      0      0.8      2   
+4   57    0   0       120   354    0        1      163      1      0.6      2   
+
+   ca  thal  target  
+0   0     1       1  
+1   0     2       1  
+2   0     2       1  
+3   0     2       1  
+4   0     2       1  
+
+결측값 수: 0
+중복 행 수: 1
+
+target 클래스별 개수:
+target
+0    138
+1    165
+Name: count, dtype: int64
+</pre></div>
+<h3>3. 주요 열의 의미</h3>
 <table>
 <thead>
 <tr>
-  <th>문제</th>
-  <th style="text-align:right">출력 노드</th>
-  <th>최종 출력</th>
-  <th>모델 내부 Activation</th>
-  <th>대표 Loss</th>
+  <th>열 이름</th>
+  <th>의미</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-  <td>회귀</td>
-  <td style="text-align:right">예측값 개수</td>
-  <td>실수</td>
-  <td>보통 없음</td>
-  <td>MSELoss</td>
+  <td><code>age</code></td>
+  <td>나이</td>
 </tr>
 <tr>
-  <td>이진분류</td>
-  <td style="text-align:right">1</td>
-  <td>Logit</td>
-  <td>없음</td>
-  <td>BCEWithLogitsLoss</td>
+  <td><code>sex</code></td>
+  <td>성별 코드</td>
 </tr>
 <tr>
-  <td>다중분류</td>
-  <td style="text-align:right">클래스 수 C</td>
-  <td>C개 Logit</td>
-  <td>없음</td>
-  <td>CrossEntropyLoss</td>
+  <td><code>cp</code></td>
+  <td>Chest Pain(체스트 페인, 흉통) 유형</td>
 </tr>
 <tr>
-  <td>다중레이블</td>
-  <td style="text-align:right">클래스 수 C</td>
-  <td>C개 Logit</td>
-  <td>없음</td>
-  <td>BCEWithLogitsLoss</td>
+  <td><code>trestbps</code></td>
+  <td>안정 시 혈압</td>
+</tr>
+<tr>
+  <td><code>chol</code></td>
+  <td>혈중 콜레스테롤</td>
+</tr>
+<tr>
+  <td><code>fbs</code></td>
+  <td>공복 혈당 기준 초과 여부</td>
+</tr>
+<tr>
+  <td><code>restecg</code></td>
+  <td>안정 시 심전도 결과</td>
+</tr>
+<tr>
+  <td><code>thalach</code></td>
+  <td>최대 심박수</td>
+</tr>
+<tr>
+  <td><code>exang</code></td>
+  <td>운동 유발 협심증 여부</td>
+</tr>
+<tr>
+  <td><code>oldpeak</code></td>
+  <td>운동 후 ST 분절 저하</td>
+</tr>
+<tr>
+  <td><code>slope</code></td>
+  <td>ST 분절 기울기</td>
+</tr>
+<tr>
+  <td><code>ca</code></td>
+  <td>주요 혈관 수 코드</td>
+</tr>
+<tr>
+  <td><code>thal</code></td>
+  <td>Thalassemia(탈라세미아, 지중해빈혈 관련 검사) 코드</td>
+</tr>
+<tr>
+  <td><code>target</code></td>
+  <td>심장질환 여부</td>
 </tr>
 </tbody>
 </table>
-<p>여기서 매우 중요한 점이 있다.</p>
-<h3>은닉층과 출력층의 활성화 함수는 다른 문제다</h3>
-<p>MLP 예:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력
- ↓
-Linear
- ↓
-ReLU
- ↓
-Linear
- ↓
-ReLU
- ↓
-Linear
- ↓
-Logits
-</code></pre></div>
-<p>ReLU(렐루, 음수는 0으로 만들고 양수는 그대로 전달하는 활성화 함수)는 <strong>은닉층</strong>에 사용한다.</p>
-<p>반면 마지막 출력층은 Loss와 맞춰 설계한다.</p>
-</section><section class="section" id="s04"><h2><span class="num">04</span>3. PyTorch 주요 Loss Function</h2><h3>3.1 <code>nn.MSELoss()</code></h3>
-<p>MSE(Mean Squared Error, 평균제곱오차)</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>예측값과 실제값의 차이
-        ↓
-제곱
-        ↓
-평균
-</code></pre></div>
-<p>대표 용도:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Regression
-</code></pre></div>
-<p>예:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>prediction = model(x)
-
-loss_function = nn.MSELoss()
-loss = loss_function(prediction, y)
-</code></pre></div>
-<p>Target:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>dtype=torch.float32
-</code></pre></div>
-<p>특징:</p>
+<p><code>cp</code>, <code>restecg</code>, <code>slope</code>, <code>ca</code>, <code>thal</code>은 숫자로 저장되어 있지만 연속적인 측정값이 아니라 범주 코드입니다.</p>
+<h3>4. 입력과 목표값 분리</h3>
 <ul>
-<li>큰 오차에 강한 벌점을 줌</li>
-<li>이상치가 있으면 Loss가 크게 영향을 받음</li>
+<li>입력 <code>X</code>: <code>target</code>을 제외한 13개 특성</li>
+<li>목표값 <code>y</code>: <code>target</code></li>
 </ul>
-<h3>3.2 <code>nn.L1Loss()</code></h3>
-<p>MAE(Mean Absolute Error, 평균절대오차)에 해당한다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>|예측 - 실제|
-       ↓
-평균
-</code></pre></div>
-<p>장점:</p>
-<ul>
-<li>MSE보다 이상치의 영향을 덜 받는다.</li>
-</ul>
-<p>따라서:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>이상치가 적음
-→ MSE가 많이 사용됨
+<p>모델이 정답을 미리 보지 않도록 <code>target</code>은 입력에 포함하지 않습니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_heart_disease_dnn_classification.ipynb · 코드 셀 3 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>X = heart_data.drop(
+    columns=&quot;target&quot;
+).copy()
 
-이상치 영향이 큼
-→ L1Loss 고려
+y = heart_data[[&quot;target&quot;]].astype(
+    np.float32
+)
+
+print(&quot;원본 입력 shape:&quot;, X.shape)
+print(&quot;목표값 shape:&quot;, y.shape)
 </code></pre></div>
-<h3>3.3 <code>nn.BCELoss()</code></h3>
-<p>BCE(Binary Cross Entropy, 이진 교차 엔트로피)</p>
-<p>중요:</p>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 3</span></div><pre>원본 입력 shape: (303, 13)
+목표값 shape: (303, 1)
+</pre></div>
+<h3>5. 범주형 특성 원핫 인코딩</h3>
+<p>예를 들어 <code>cp</code>의 0, 1, 2, 3은 크기의 순서가 아니라 서로 다른 흉통 유형입니다.</p>
+<p>따라서 각 범주를 별도의 0과 1 열로 바꿉니다.</p>
+<ul>
+<li>연속형: <code>age</code>, <code>trestbps</code>, <code>chol</code>, <code>thalach</code>, <code>oldpeak</code></li>
+<li>이진형: <code>sex</code>, <code>fbs</code>, <code>exang</code></li>
+<li>다범주형: <code>cp</code>, <code>restecg</code>, <code>slope</code>, <code>ca</code>, <code>thal</code></li>
+</ul>
 <blockquote>
-<p><code>BCELoss()</code>는 입력으로 <strong>확률값</strong>을 받는다.</p>
+<p><strong>범주 코드는 이름표이지 측정량이 아닙니다.</strong></p>
 </blockquote>
-<p>따라서 모델이 Sigmoid까지 수행해야 한다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Linear
- ↓
-Sigmoid
- ↓
-0~1 확률
- ↓
-BCELoss
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_heart_disease_dnn_classification.ipynb · 코드 셀 4 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>continuous_columns = [
+    &quot;age&quot;,
+    &quot;trestbps&quot;,
+    &quot;chol&quot;,
+    &quot;thalach&quot;,
+    &quot;oldpeak&quot;,
+]
+
+categorical_columns = [
+    &quot;cp&quot;,
+    &quot;restecg&quot;,
+    &quot;slope&quot;,
+    &quot;ca&quot;,
+    &quot;thal&quot;,
+]
+
+X_encoded = pd.get_dummies(
+    X,
+    columns=categorical_columns,
+    dtype=np.float32,
+)
+
+X_encoded = X_encoded.astype(
+    np.float32
+)
+
+print(&quot;변환 전 shape:&quot;, X.shape)
+print(&quot;변환 후 shape:&quot;, X_encoded.shape)
+print(&quot;최종 입력 특성 수:&quot;, X_encoded.shape[1])
 </code></pre></div>
-<p>예:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>probability = torch.sigmoid(logit)
-loss = nn.BCELoss()(probability, y)
-</code></pre></div>
-<p>그러나 일반적으로는 이 방법보다 다음 방법을 권장한다.</p>
-<h3>3.4 <code>nn.BCEWithLogitsLoss()</code></h3>
-<p>실무적으로 이진분류에서 가장 중요한 Loss 중 하나이다.</p>
-<p>개념적으로:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>BCEWithLogitsLoss
-≈
-Sigmoid
-+
-Binary Cross Entropy
-</code></pre></div>
-<p>모델:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>self.output = nn.Linear(hidden_size, 1)
-</code></pre></div>
-<p>Forward:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>return self.output(x)
-</code></pre></div>
-<p>Sigmoid를 넣지 않는다.</p>
-<p>학습:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>loss_function = nn.BCEWithLogitsLoss()
-</code></pre></div>
-<p>구조:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Linear
- ↓
-Logit
- ↓
-BCEWithLogitsLoss
-</code></pre></div>
-<p>장점:</p>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 4</span></div><pre>변환 전 shape: (303, 13)
+변환 후 shape: (303, 27)
+최종 입력 특성 수: 27
+</pre></div>
+<h3>6. 훈련 데이터와 테스트 데이터 분리</h3>
 <ul>
-<li>수치적으로 더 안정적</li>
-<li>Sigmoid를 따로 계산할 필요 없음</li>
+<li>훈련 데이터: 80%</li>
+<li>테스트 데이터: 20%</li>
+<li><code>stratify=y</code>: 클래스 0과 1의 비율을 비슷하게 유지</li>
+<li><code>random_state=42</code>: 다시 실행해도 같은 분할 결과 사용</li>
 </ul>
-<p>따라서 PyTorch에서는 보통:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>이진분류
-→ BCEWithLogitsLoss
+<p>테스트 데이터는 모델 학습에 사용하지 않습니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_heart_disease_dnn_classification.ipynb · 코드 셀 5 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>X_train, X_test, y_train, y_test = train_test_split(
+    X_encoded,
+    y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y,
+)
+
+# 이후 값 변경을 안전하게 하기 위해 복사합니다.
+X_train = X_train.copy()
+X_test = X_test.copy()
+
+print(&quot;훈련 입력 shape:&quot;, X_train.shape)
+print(&quot;테스트 입력 shape:&quot;, X_test.shape)
+
+print()
+print(
+    &quot;훈련 target=1 비율:&quot;,
+    round(y_train[&quot;target&quot;].mean(), 4),
+)
+
+print(
+    &quot;테스트 target=1 비율:&quot;,
+    round(y_test[&quot;target&quot;].mean(), 4),
+)
 </code></pre></div>
-<p>를 우선한다.</p>
-<h3>3.5 <code>nn.CrossEntropyLoss()</code></h3>
-<p>Multi-class Classification의 대표 Loss이다.</p>
-<p>개념적으로:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>CrossEntropyLoss
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 5</span></div><pre>훈련 입력 shape: (242, 27)
+테스트 입력 shape: (61, 27)
+
+훈련 target=1 비율: 0.5455
+테스트 target=1 비율: 0.541
+</pre></div>
+<h3>7. 연속형 특성 표준화</h3>
+<p>연속형 특성은 숫자의 범위가 서로 다릅니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>x_{\mathrm{scaled}}
 =
-LogSoftmax
-+
-NLLLoss
+\frac{x-\mu_{\mathrm{train}}}
+{\sigma_{\mathrm{train}}}
 </code></pre></div>
-<p>따라서 모델에 Softmax를 넣지 않는다.</p>
-<p>정상 구조:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Linear(C)
- ↓
-Logits
- ↓
-CrossEntropyLoss
-</code></pre></div>
-<p>잘못된 구조:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Linear(C)
- ↓
-Softmax
- ↓
-CrossEntropyLoss
-</code></pre></div>
-<p>즉 Softmax를 중복 적용하는 문제가 생긴다.</p>
-<p>MNIST 10개 클래스:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>self.output = nn.Linear(hidden_size, 10)
-</code></pre></div>
-<p>Forward:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>return self.output(x)
-</code></pre></div>
-<p>Loss:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>loss_function = nn.CrossEntropyLoss()
-</code></pre></div>
-<p>Target:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>tensor([7, 2, 1, 9])
-</code></pre></div>
-<p>dtype:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>torch.long
-</code></pre></div>
-</section><section class="section" id="s05"><h2><span class="num">05</span>4. Loss와 출력층 연결</h2><table>
-<thead>
-<tr>
-  <th>문제</th>
-  <th>출력층</th>
-  <th>출력</th>
-  <th>Loss</th>
-  <th>Target</th>
-  <th>핵심 주의</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td>회귀</td>
-  <td><code>Linear(...,1)</code></td>
-  <td>실수</td>
-  <td><code>MSELoss</code></td>
-  <td>float</td>
-  <td>출력층 활성화 보통 없음</td>
-</tr>
-<tr>
-  <td>이진분류</td>
-  <td><code>Linear(...,1)</code></td>
-  <td>Logit</td>
-  <td><code>BCEWithLogitsLoss</code></td>
-  <td>float 0/1</td>
-  <td>Sigmoid 넣지 않음</td>
-</tr>
-<tr>
-  <td>이진분류 구식 구조</td>
-  <td>Linear + Sigmoid</td>
-  <td>확률</td>
-  <td><code>BCELoss</code></td>
-  <td>float 0/1</td>
-  <td>수치 안정성 낮음</td>
-</tr>
-<tr>
-  <td>다중분류</td>
-  <td><code>Linear(...,C)</code></td>
-  <td>C개 Logit</td>
-  <td><code>CrossEntropyLoss</code></td>
-  <td>long 클래스 번호</td>
-  <td>Softmax 넣지 않음</td>
-</tr>
-<tr>
-  <td>다중레이블</td>
-  <td><code>Linear(...,C)</code></td>
-  <td>C개 Logit</td>
-  <td><code>BCEWithLogitsLoss</code></td>
-  <td>float 0/1 배열</td>
-  <td>각 클래스 독립</td>
-</tr>
-</tbody>
-</table>
-<p>이 표는 거의 암기해도 좋다.</p>
-</section><section class="section" id="s06"><h2><span class="num">06</span>5. Optimizer 선택</h2><p>Loss와 Optimizer는 역할이 다르다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Loss
-→ 얼마나 틀렸는가 계산
-
-Backward
-→ 어느 방향으로 고쳐야 하는가 계산
-
-Optimizer
-→ W와 b를 실제로 수정
-</code></pre></div>
-<h3>5.1 SGD</h3>
-<p>SGD(Stochastic Gradient Descent, 확률적 경사하강법)는 가장 기본적인 Optimizer이다.</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>optimizer = torch.optim.SGD(
-    model.parameters(),
-    lr=0.01
-)
-</code></pre></div>
-<p>현재 학습 과정에서는 매우 중요하다.</p>
-<p>왜냐하면:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Loss
- ↓
-Gradient
- ↓
-W, b 업데이트
-</code></pre></div>
-<p>관계를 가장 직접적으로 볼 수 있기 때문이다.</p>
-<p>따라서:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>① Linear Regression
-② Logistic Regression
-③ Multi-class Classification
-</code></pre></div>
-<p>초기 학습에서는 SGD가 매우 좋은 선택이다.</p>
-<p>SGD가 단순하다고 성능이 나쁜 Optimizer라는 뜻은 아니다.</p>
-<p>잘 조정된 SGD + Momentum은 CNN 등에서도 매우 강력하다.</p>
-<h3>5.2 SGD + Momentum</h3>
-<p>Momentum(모멘텀, 이전 업데이트 방향을 함께 활용하는 방법)을 추가한다.</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>optimizer = torch.optim.SGD(
-    model.parameters(),
-    lr=0.01,
-    momentum=0.9
-)
-</code></pre></div>
-<p>기본 SGD:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>현재 Gradient만 보고 이동
-</code></pre></div>
-<p>Momentum:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>현재 Gradient
-+
-이전에 이동하던 방향
-        ↓
-더 안정적인 이동
-</code></pre></div>
-<p>특히 Loss 표면이 다음과 같을 때 효과적이다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>＼       /
- ＼     /
-  ＼   /
-   ＼ /
-</code></pre></div>
-<p>SGD가 좌우로 흔들리면서 이동한다면 Momentum이 진행 방향을 안정시키는 역할을 한다.</p>
-<h3>5.3 Adam</h3>
-<p>Adam(Adaptive Moment Estimation, 적응형 모멘트 추정)은 각 파라미터별로 Learning Rate를 자동 조정하는 성격이 있다.</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>optimizer = torch.optim.Adam(
-    model.parameters(),
-    lr=0.001
-)
-</code></pre></div>
-<p>장점:</p>
 <ul>
-<li>초기 설정이 비교적 쉬움</li>
-<li>빠르게 Loss가 감소하는 경우가 많음</li>
-<li>MLP, CNN, RNN/LSTM 실험에 편리함</li>
+<li>평균과 표준편차는 훈련 데이터에서만 계산</li>
+<li>테스트 데이터에는 훈련 데이터의 평균과 표준편차 적용</li>
+<li>이진형과 원핫 인코딩된 열은 0과 1을 그대로 유지</li>
 </ul>
-<p>따라서 새로운 딥러닝 모델의 초기 실험에서는 매우 자주 사용한다.</p>
-<h3>5.4 AdamW</h3>
-<p>AdamW(Adam with decoupled Weight Decay, 가중치 감소를 분리 적용한 Adam)는 Weight Decay를 Adam과 더 적절하게 결합한 방법이다.</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>optimizer = torch.optim.AdamW(
-    model.parameters(),
-    lr=0.001,
-    weight_decay=0.01
+<p>테스트 데이터의 통계량을 미리 사용하면 Data Leakage(데이터 리키지, 데이터 누출)가 발생합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_heart_disease_dnn_classification.ipynb · 코드 셀 6 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>train_mean = X_train[
+    continuous_columns
+].mean()
+
+train_std = X_train[
+    continuous_columns
+].std()
+
+train_std = train_std.replace(
+    0,
+    1,
+)
+
+X_train.loc[:, continuous_columns] = (
+    X_train[continuous_columns] - train_mean
+) / train_std
+
+X_test.loc[:, continuous_columns] = (
+    X_test[continuous_columns] - train_mean
+) / train_std
+
+print(&quot;표준화 후 훈련 평균:&quot;)
+print(
+    X_train[continuous_columns]
+    .mean()
+    .round(3)
+)
+
+print()
+print(&quot;표준화 후 훈련 표준편차:&quot;)
+print(
+    X_train[continuous_columns]
+    .std()
+    .round(3)
 )
 </code></pre></div>
-<p>특히:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Transformer
-대규모 신경망
-정규화가 필요한 딥러닝
-</code></pre></div>
-<p>에서 많이 사용한다.</p>
-<p>Transformer 계열에서는 AdamW가 매우 대표적인 초기 선택이다.</p>
-</section><section class="section" id="s07"><h2><span class="num">07</span>6. Optimizer를 어떻게 선택할 것인가</h2><p>초기 판단은 다음처럼 하면 충분하다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>학습 원리를 이해하고 싶은가?
-        ↓
-SGD
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 6</span></div><pre>표준화 후 훈련 평균:
+age        -0.0
+trestbps    0.0
+chol        0.0
+thalach     0.0
+oldpeak    -0.0
+dtype: float32
 
-SGD 진동을 줄이고 싶은가?
-        ↓
-SGD + Momentum
+표준화 후 훈련 표준편차:
+age         1.0
+trestbps    1.0
+chol        1.0
+thalach     1.0
+oldpeak     1.0
+dtype: float32
+</pre></div>
+<h3>8. Tensor로 변환</h3>
+<p>PyTorch 모델에 입력하기 위해 DataFrame(데이터프레임)을 Tensor로 변환합니다.</p>
+<ul>
+<li>입력 shape: <code>[데이터 수, 입력 특성 수]</code></li>
+<li>목표값 shape: <code>[데이터 수, 1]</code></li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_heart_disease_dnn_classification.ipynb · 코드 셀 7 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>X_train_tensor = torch.tensor(
+    X_train.to_numpy(),
+    dtype=torch.float32,
+)
 
-MLP/CNN/RNN을 빠르게 학습해보고 싶은가?
-        ↓
-Adam
+X_test_tensor = torch.tensor(
+    X_test.to_numpy(),
+    dtype=torch.float32,
+)
 
-Transformer 또는 Weight Decay를 적극적으로 적용하는가?
-        ↓
-AdamW
-</code></pre></div>
-<p>절대적인 규칙은 아니다.</p>
-</section><section class="section" id="s08"><h2><span class="num">08</span>7. SGD를 선택한 후 결정할 것</h2><p>Optimizer 이름을 정했다고 끝나는 것이 아니다.</p>
-<h3>Learning Rate</h3>
-<p>가장 중요한 Hyperparameter(하이퍼파라미터, 학습 전에 사용자가 정하는 값)이다.</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>lr=0.01
-</code></pre></div>
-<p>너무 큼:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Loss
- ↓ ↑ ↓ ↑
-진동
-</code></pre></div>
-<p>더 크면:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Loss → 폭발
-</code></pre></div>
-<p>너무 작음:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Loss
-───────＼
-        ＼
-         ＼
+y_train_tensor = torch.tensor(
+    y_train.to_numpy(),
+    dtype=torch.float32,
+)
 
-너무 천천히 감소
-</code></pre></div>
-<p>따라서 반드시 Loss 그래프를 본다.</p>
-<h3>Momentum</h3>
-<p>예:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>momentum=0.9
-</code></pre></div>
-<p>효과:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>SGD의 좌우 진동 감소
-+
-이전 이동 방향 유지
-+
-수렴 속도 개선 가능
-</code></pre></div>
-<p>너무 크거나 Learning Rate와 조합이 좋지 않으면 오히려 진동할 수도 있다.</p>
-<h3>Weight Decay</h3>
-<p>Weight Decay(웨이트 디케이, 큰 가중치에 제약을 주는 정규화)는 모델이 지나치게 복잡하게 학습하는 것을 억제한다.</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>weight_decay=1e-4
-</code></pre></div>
-<p>주로:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Train 성능 매우 좋음
-Validation 성능 나쁨
-        ↓
-Overfitting 의심
-        ↓
-Weight Decay 고려
-</code></pre></div>
-</section><section class="section" id="s09"><h2><span class="num">09</span>8. Batch Size</h2><p>Batch Size(배치 크기)는 한 번의 업데이트에 사용하는 데이터 수이다.</p>
-<p>예:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>전체 데이터 60,000개
+y_test_tensor = torch.tensor(
+    y_test.to_numpy(),
+    dtype=torch.float32,
+)
 
-Batch Size = 100
-        ↓
-1 Epoch당 약 600번 업데이트
-</code></pre></div>
-<p>작은 Batch:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Gradient 변동 ↑
-메모리 사용 ↓
-업데이트 횟수 ↑
-</code></pre></div>
-<p>큰 Batch:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Gradient 안정 ↑
-메모리 사용 ↑
-업데이트 횟수 ↓
-</code></pre></div>
-<p>Batch Size를 바꾸면 최적 Learning Rate도 달라질 수 있다.</p>
-</section><section class="section" id="s10"><h2><span class="num">10</span>9. Epoch</h2><p>Epoch(에폭, 전체 훈련 데이터를 한 번 학습하는 단위)</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Epoch 1
-→ 전체 데이터 한 번
+input_size = X_train_tensor.shape[1]
 
-Epoch 10
-→ 전체 데이터 열 번
+print(&quot;입력 특성 수:&quot;, input_size)
+print(
+    &quot;훈련 Tensor:&quot;,
+    X_train_tensor.shape,
+    y_train_tensor.shape,
+)
+print(
+    &quot;테스트 Tensor:&quot;,
+    X_test_tensor.shape,
+    y_test_tensor.shape,
+)
 </code></pre></div>
-<p>Epoch를 무조건 늘린다고 좋은 것이 아니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Train Loss ↓
-Validation Loss ↓
-→ 정상
-
-Train Loss ↓
-Validation Loss ↑
-→ Overfitting 시작
-</code></pre></div>
-<p>따라서 Epoch는 Validation과 함께 결정한다.</p>
-</section><section class="section" id="s11"><h2><span class="num">11</span>10. 데이터 전처리</h2><h3>Standardization</h3>
-<p>Standardization(스탠더다이제이션, 표준화):</p>
-<p>[
-x_{scaled} = \frac{x-\mu}{\sigma}
-]</p>
-<p>즉:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>평균 → 약 0
-표준편차 → 약 1
-</code></pre></div>
-<p>특징들의 단위 차이가 클 때 특히 중요하다.</p>
-<p>예:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>키          170
-몸무게       70
-연봉   50,000,000
-</code></pre></div>
-<p>그대로 사용하면 스케일 차이가 매우 크다.</p>
-</section><section class="section" id="s12"><h2><span class="num">12</span>11. Train 평균과 표준편차만 사용</h2><p>이 부분은 매우 중요하다.</p>
-<p>정상 과정:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Train
- ↓
-mean, std 계산
- ↓
-Train 변환
-Validation 변환
-Test 변환
-</code></pre></div>
-<p>즉:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>x_train_scaled = (x_train - train_mean) / train_std
-x_val_scaled   = (x_val   - train_mean) / train_std
-x_test_scaled  = (x_test  - train_mean) / train_std
-</code></pre></div>
-<p>잘못된 방식:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Test 데이터
- ↓
-Test mean/std 계산
- ↓
-Test 변환
-</code></pre></div>
-<p>이렇게 하면 Test 데이터의 정보를 미리 사용하게 된다.</p>
-<p>즉:</p>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 7</span></div><pre>입력 특성 수: 27
+훈련 Tensor: torch.Size([242, 27]) torch.Size([242, 1])
+테스트 Tensor: torch.Size([61, 27]) torch.Size([61, 1])
+</pre></div>
+<h3>9. 딥러닝 이진분류 모델</h3>
 <blockquote>
-<p>Data Leakage(데이터 리키지, 데이터 누출)가 발생한다.</p>
+<p><strong>(변경)</strong> 기존 <code>nn.Linear(input_size, 1)</code> 단일 계층에 Hidden Layer(은닉층)와 ReLU(렐루)를 추가합니다.</p>
 </blockquote>
-<p>Test는 마지막까지 <strong>처음 보는 데이터처럼 유지</strong>해야 한다.</p>
-</section><section class="section" id="s13"><h2><span class="num">13</span>12. Normalization과 Standardization</h2><p>두 용어는 상황에 따라 다르게 사용되지만 교육 단계에서는 다음 정도로 구분하면 좋다.</p>
-<p>Standardization:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>평균 0
-표준편차 1
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\text{Input} \rightarrow \text{Linear} \rightarrow \text{ReLU} \rightarrow \text{Linear} \rightarrow \text{ReLU} \rightarrow \text{Linear} \rightarrow \text{Logit}
 </code></pre></div>
-<p>Normalization(노멀라이제이션, 값의 범위를 일정하게 조정):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>예: 0~255
- ↓
-0~1
-</code></pre></div>
-<p>MNIST 예:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>pixel = pixel / 255.0
-</code></pre></div>
-</section><section class="section" id="s14"><h2><span class="num">14</span>13. Class Imbalance</h2><p>예:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>정상 9,900개
-암      100개
-</code></pre></div>
-<p>모델이 전부 정상이라고 해도:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Accuracy = 99%
-</code></pre></div>
-<p>따라서 Accuracy만 보면 매우 좋은 모델처럼 보인다.</p>
-<p>하지만 암 검출:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Recall = 0
-</code></pre></div>
-<p>일 수 있다.</p>
-<p>따라서 클래스 불균형에서는:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Precision
-Recall
-F1 Score
-</code></pre></div>
-<p>를 함께 봐야 한다.</p>
-</section><section class="section" id="s15"><h2><span class="num">15</span>14. Loss와 Metric은 다르다</h2><p>매우 중요한 구분이다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Loss
-→ 학습할 때 W와 b를 수정하기 위한 값
+<ul>
+<li><strong>(변경)</strong> 은닉층을 추가하여 여러 특성의 비선형 조합을 학습합니다.</li>
+<li><strong>(변경)</strong> 은닉층 뒤에 <code>ReLU()</code> 활성화 함수를 사용합니다.</li>
+<li>출력층은 이진분류이므로 Logit(로짓) 1개를 출력합니다.</li>
+<li>손실함수 <code>BCEWithLogitsLoss()</code>는 그대로 사용합니다.</li>
+<li>예측할 때만 <code>torch.sigmoid()</code>를 사용합니다.</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_heart_disease_dnn_classification.ipynb · 코드 셀 8 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code># ============================================================
+# (변경 전) Logistic Regression(로지스틱 회귀) 모델
+# 기존 코드는 삭제하지 않고 비교를 위해 주석으로 유지합니다.
+# ============================================================
+# torch.manual_seed(42)
+#
+# model = nn.Linear(
+#     input_size,
+#     1,
+# )
+#
+# loss_function = nn.BCEWithLogitsLoss()
+#
+# optimizer = torch.optim.SGD(
+#     model.parameters(),
+#     lr=0.05,
+# )
+#
+# print(model)
+# print(&quot;가중치 shape:&quot;, model.weight.shape)
+# print(&quot;편향 shape:&quot;, model.bias.shape)
+# ============================================================
+# (변경 후) Deep Learning(딥러닝) MLP(다층 퍼셉트론) 모델
+# 변경 핵심: Hidden Layer(은닉층) + ReLU(렐루) 추가
+# ============================================================
+torch.manual_seed(42)
 
-Metric
-→ 학습 결과를 사람이 평가하기 위한 값
-</code></pre></div>
-</section><section class="section" id="s16"><h2><span class="num">16</span>15. Regression 평가</h2><h3>MSE</h3>
-<p>오차 제곱 평균.</p>
-<p>작을수록 좋다.</p>
-<p>큰 오차에 민감하다.</p>
-<h3>MAE</h3>
-<p>오차 절대값 평균.</p>
-<p>단위가 원래 Target과 같다.</p>
-<p>예:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>실제 무게 단위 g
+# (변경) 단일 Linear 계층을 MLP 구조로 확장
+model = nn.Sequential(
+    nn.Linear(input_size, 32),
+    nn.ReLU(),
+    nn.Linear(32, 16),
+    nn.ReLU(),
+    nn.Linear(16, 1),
+)
 
-MAE = 80g
-</code></pre></div>
-<p>해석:</p>
-<blockquote>
-<p>평균적으로 약 80g 정도 틀린다.</p>
-</blockquote>
-<h3>RMSE</h3>
-<p>MSE에 제곱근을 취한다.</p>
-<p>원래 Target과 단위가 같아 해석하기 쉽다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>RMSE = 100g
-</code></pre></div>
-<h3>R²</h3>
-<p>R²(R-squared, 결정계수)는 모델이 데이터 변동을 얼마나 설명하는지를 나타낸다.</p>
-<p>보통:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>1에 가까움
-→ 설명력이 높음
-</code></pre></div>
-<p>MAE/MSE와는 다른 평가 지표이다.</p>
-<p>따라서:</p>
-<blockquote>
-<p>R²는 MAE나 MSE로부터 단순 변환한 값이 아니다.</p>
-</blockquote>
-</section><section class="section" id="s17"><h2><span class="num">17</span>16. Classification 평가</h2><h3>Accuracy</h3>
-<p>전체 예측 중 맞힌 비율.</p>
-<h3>Precision</h3>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>모델이 Positive라고 예측한 것 중
-실제로 Positive인 비율
-</code></pre></div>
-<h3>Recall</h3>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>실제 Positive 중
-모델이 찾아낸 비율
-</code></pre></div>
-<h3>F1 Score</h3>
-<p>Precision과 Recall을 함께 고려한다.</p>
-<p>특히 Class Imbalance가 있을 때 중요하다.</p>
-</section><section class="section" id="s18"><h2><span class="num">18</span>17. Validation으로 학습 상태 판단</h2><h3>정상 학습</h3>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Epoch →
-Train Loss       ↘
-Validation Loss  ↘
-</code></pre></div>
-<p>학습이 정상적으로 진행되고 있다.</p>
-</section><section class="section" id="s19"><h2><span class="num">19</span>18. Underfitting</h2><p>Underfitting(언더피팅, 과소적합):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Train Loss 높음
-Validation Loss 높음
-</code></pre></div>
-<p>의미:</p>
-<blockquote>
-<p>모델 자체가 충분히 학습하지 못했다.</p>
-</blockquote>
-<p>검토할 것:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Epoch 증가
-모델 크기 증가
-은닉층 증가
-노드 증가
-Learning Rate 조정
-</code></pre></div>
-</section><section class="section" id="s20"><h2><span class="num">20</span>19. Overfitting</h2><p>Overfitting(오버피팅, 과적합):</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Train Loss       계속 ↓
-Validation Loss      ↑
-</code></pre></div>
-<p>의미:</p>
-<blockquote>
-<p>훈련 데이터를 학습하는 것이 아니라 점점 암기하고 있다.</p>
-</blockquote>
-<p>대응:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Epoch 감소
-Early Stopping
-Weight Decay
-Dropout
-데이터 증가
-Data Augmentation
-모델 단순화
-</code></pre></div>
-</section><section class="section" id="s21"><h2><span class="num">21</span>20. MLP와 CNN은 Loss를 결정하지 않는다</h2><p>이 점은 반드시 구분한다.</p>
-<h3>문제 유형</h3>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Regression
-Binary Classification
-Multi-class Classification
-Multi-label Classification
-</code></pre></div>
-<p>이것이:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>출력층
-Activation
-Loss
-Metric
-</code></pre></div>
-<p>을 결정한다.</p>
-<h3>모델 구조</h3>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Linear Model
-MLP
-CNN
-RNN/LSTM
-Transformer
-</code></pre></div>
-<p>이것은:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력 특징을 어떻게 처리할 것인가
-</code></pre></div>
-<p>를 결정한다.</p>
-</section><section class="section" id="s22"><h2><span class="num">22</span>21. MNIST 예</h2><h3>MLP</h3>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>28×28
- ↓
-Flatten
- ↓
-784
- ↓
-Linear
- ↓
-ReLU
- ↓
-Linear
- ↓
-ReLU
- ↓
-Linear(10)
- ↓
-10 Logits
- ↓
-CrossEntropyLoss
-</code></pre></div>
-<h3>CNN</h3>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>28×28
- ↓
-Conv
- ↓
-ReLU
- ↓
-Pooling
- ↓
-Conv
- ↓
-ReLU
- ↓
-Flatten
- ↓
-Linear(10)
- ↓
-10 Logits
- ↓
-CrossEntropyLoss
-</code></pre></div>
-<p>앞부분은 다르다.</p>
-<p>하지만 마지막은 같다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>10개 중 하나를 선택
-        ↓
-10 Logits
-        ↓
-CrossEntropyLoss
-</code></pre></div>
-</section><section class="section" id="s23"><h2><span class="num">23</span>22. 이진분류와 다중분류의 핵심 비교</h2><div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>이진분류
+# 손실함수는 기존 이진분류와 동일
+loss_function = nn.BCEWithLogitsLoss()
 
-Linear(1)
- ↓
-Logit
- ↓
-BCEWithLogitsLoss
- ↓
-추론 시 Sigmoid
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>다중분류
+# Optimizer(옵티마이저)도 기존 구조를 그대로 사용
+optimizer = torch.optim.SGD(
+    model.parameters(),
+    lr=0.05,
+)
 
-Linear(C)
- ↓
-C개 Logit
- ↓
-CrossEntropyLoss
- ↓
-추론 시 argmax
+print(model)
+
+# (변경) MLP에서는 각 Linear 계층의 shape를 확인
+print(&quot;입력층 가중치 shape:&quot;, model[0].weight.shape)
+print(&quot;은닉층 가중치 shape:&quot;, model[2].weight.shape)
+print(&quot;출력층 가중치 shape:&quot;, model[4].weight.shape)
 </code></pre></div>
-<p>확률을 보고 싶다면:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>probability = torch.softmax(logits, dim=1)
+<h3>10. 모델 학습</h3>
+<p>학습 순서는 와 같습니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\text{로짓 계산}
+\rightarrow
+\text{손실 계산}
+\rightarrow
+\text{역전파}
+\rightarrow
+\text{가중치 갱신}
 </code></pre></div>
-<p>를 <strong>추론 단계에서</strong> 적용할 수 있다.</p>
-</section><section class="section" id="s24"><h2><span class="num">24</span>23. 가장 많이 하는 PyTorch 실수</h2><h4>실수 1. Sigmoid 중복</h4>
-<p>잘못된 구조:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Sigmoid
- ↓
-BCEWithLogitsLoss
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_heart_disease_dnn_classification.ipynb · 코드 셀 9 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>epochs = 2000
+loss_history = []
+
+model.train()
+
+for epoch in range(epochs):
+    # 1. 로짓 계산
+    logits = model(
+        X_train_tensor
+    )
+
+    # 2. BCE 손실 계산
+    loss = loss_function(
+        logits,
+        y_train_tensor,
+    )
+
+    # 3. 이전 기울기 초기화
+    optimizer.zero_grad()
+
+    # 4. 역전파
+    loss.backward()
+
+    # 5. 가중치 갱신
+    optimizer.step()
+
+    loss_history.append(
+        loss.item()
+    )
+
+print(&quot;처음 Loss:&quot;, loss_history[0])
+print(&quot;마지막 Loss:&quot;, loss_history[-1])
 </code></pre></div>
-<p><code>BCEWithLogitsLoss</code> 자체가 Sigmoid 계산을 포함하므로 중복이다.</p>
-<p>정상:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Logit → BCEWithLogitsLoss
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 9</span></div><pre>처음 Loss: 0.7883331179618835
+마지막 Loss: 0.30518838763237
+</pre></div>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_heart_disease_dnn_classification.ipynb · 코드 셀 10 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>plt.figure(figsize=(8, 5))
+plt.plot(loss_history)
+plt.xlabel(&quot;Epoch&quot;)
+plt.ylabel(&quot;BCE Loss&quot;)
+plt.title(&quot;Training Loss&quot;)
+plt.grid(alpha=0.3)
+plt.show()
 </code></pre></div>
-<h4>실수 2. Softmax 중복</h4>
-<p>잘못된 구조:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Softmax
- ↓
-CrossEntropyLoss
+<p>출력 그림 — 원본 노트북 기록 · 코드 셀 10:</p>
+<p><img src="img/ch01_1_c10_0.png" alt="ch01_1 심장질환 딥러닝 이진분류 — 코드 셀 10 출력 그림" /></p>
+<h3>11. 확률과 클래스 예측</h3>
+<p>예측 과정은 다음 순서입니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\text{Logit}
+\rightarrow
+\text{Sigmoid}
+\rightarrow
+\text{Probability}
+\rightarrow
+\text{Class}
 </code></pre></div>
-<p>정상:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Logits → CrossEntropyLoss
+<p>기본 임계값은 0.5입니다.</p>
+<ul>
+<li>확률 0.5 이상 → 클래스 1</li>
+<li>확률 0.5 미만 → 클래스 0</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_heart_disease_dnn_classification.ipynb · 코드 셀 11 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>threshold = 0.5
+
+model.eval()
+
+with torch.no_grad():
+    train_logits = model(
+        X_train_tensor
+    )
+
+    test_logits = model(
+        X_test_tensor
+    )
+
+    train_probabilities = torch.sigmoid(
+        train_logits
+    )
+
+    test_probabilities = torch.sigmoid(
+        test_logits
+    )
+
+    train_predictions = (
+        train_probabilities &gt;= threshold
+    ).float()
+
+    test_predictions = (
+        test_probabilities &gt;= threshold
+    ).float()
+
+print(&quot;테스트 예측 예시 10개&quot;)
+
+for actual, probability, predicted in zip(
+    y_test_tensor[:10],
+    test_probabilities[:10],
+    test_predictions[:10],
+):
+    print(
+        f&quot;실제 {int(actual.item())} | &quot;
+        f&quot;확률 {probability.item():.4f} | &quot;
+        f&quot;예측 {int(predicted.item())}&quot;
+    )
 </code></pre></div>
-<h4>실수 3. CrossEntropy Target을 One-hot으로 사용</h4>
-<p>일반적인 PyTorch 다중분류에서는:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>tensor([2, 0, 7, 1])
-</code></pre></div>
-<p>처럼 클래스 번호를 사용한다.</p>
-<p>dtype:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>torch.long
-</code></pre></div>
-<h4>실수 4. BCE Target을 long으로 사용</h4>
-<p><code>BCEWithLogitsLoss</code>에서는 보통:</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>tensor([[0.], [1.], [0.]])
-</code></pre></div>
-<p>처럼 float를 사용한다.</p>
-<h4>실수 5. 출력 Shape 불일치</h4>
-<p>이진분류:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>prediction : [N, 1]
-target     : [N, 1]
-</code></pre></div>
-<p>처럼 맞추는 것이 안전하다.</p>
-<h4>실수 6. Loss와 Accuracy 혼동</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Loss = 0.25
-</code></pre></div>
-<p>라고 해서 Accuracy가 75%라는 의미는 전혀 아니다.</p>
-</section><section class="section" id="s25"><h2><span class="num">25</span>24. 새로운 문제를 받았을 때 의사결정 순서</h2><div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>① 무엇을 예측하는가?
-        ↓
-② Target은 실수인가 클래스인가?
-        ↓
-③ 회귀인가 분류인가?
-        ↓
-④ 분류라면
-   이진 / 다중 / 다중레이블인가?
-        ↓
-⑤ 출력 노드 수 결정
-        ↓
-⑥ 출력층 Activation 결정
-        ↓
-⑦ Loss 결정
-        ↓
-⑧ 모델 구조 결정
-   Linear / MLP / CNN / RNN / Transformer
-        ↓
-⑨ Optimizer 결정
-        ↓
-⑩ Learning Rate 결정
-        ↓
-⑪ Batch Size 결정
-        ↓
-⑫ Epoch 결정
-        ↓
-⑬ 데이터 전처리
-        ↓
-⑭ Train / Validation
-        ↓
-⑮ Metric 평가
-        ↓
-⑯ Underfitting / Overfitting 판단
-        ↓
-⑰ Hyperparameter 조정
-</code></pre></div>
-</section><section class="section" id="s26"><h2><span class="num">26</span>25. 학습 유형별 최종 요약표</h2><table>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 11</span></div><pre>테스트 예측 예시 10개
+실제 0 | 확률 0.0148 | 예측 0
+실제 0 | 확률 0.0875 | 예측 0
+실제 0 | 확률 0.0035 | 예측 0
+실제 0 | 확률 0.9050 | 예측 1
+실제 0 | 확률 0.3307 | 예측 0
+실제 0 | 확률 0.0398 | 예측 0
+실제 1 | 확률 0.9536 | 예측 1
+실제 0 | 확률 0.1673 | 예측 0
+실제 1 | 확률 0.9946 | 예측 1
+실제 0 | 확률 0.4257 | 예측 0
+</pre></div>
+<h3>12. 혼동행렬과 평가지표</h3>
+<table>
 <thead>
 <tr>
-  <th>학습 유형</th>
-  <th>출력층</th>
-  <th>출력 Activation</th>
-  <th>Loss</th>
-  <th>교육용 기본</th>
-  <th>실전 초기 선택</th>
-  <th>주요 Metric</th>
-  <th>관찰</th>
+  <th>구분</th>
+  <th>의미</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-  <td>① Linear Regression</td>
-  <td>Linear(1)</td>
-  <td>없음</td>
-  <td>MSELoss</td>
-  <td>SGD</td>
-  <td>SGD / Adam</td>
-  <td>MAE, RMSE, R²</td>
-  <td>Loss 수렴</td>
+  <td>TP(티피)</td>
+  <td>실제 1을 1로 예측</td>
 </tr>
 <tr>
-  <td>② Logistic Regression</td>
-  <td>Linear(1)</td>
-  <td>없음</td>
-  <td>BCEWithLogitsLoss</td>
-  <td>SGD</td>
-  <td>SGD / Adam</td>
-  <td>Accuracy, F1</td>
-  <td>확률·경계</td>
+  <td>TN(티엔)</td>
+  <td>실제 0을 0으로 예측</td>
 </tr>
 <tr>
-  <td>③ Multi-class Classification</td>
-  <td>Linear(C)</td>
-  <td>없음</td>
-  <td>CrossEntropyLoss</td>
-  <td>SGD</td>
-  <td>SGD / Adam</td>
-  <td>Accuracy, F1</td>
-  <td>클래스별 성능</td>
+  <td>FP(에프피)</td>
+  <td>실제 0을 1로 잘못 예측</td>
 </tr>
 <tr>
-  <td>④ MLP 회귀</td>
-  <td>Linear(k)</td>
-  <td>없음</td>
-  <td>MSELoss</td>
-  <td>SGD</td>
-  <td>Adam</td>
-  <td>MAE, RMSE, R²</td>
-  <td>Train/Val Loss</td>
-</tr>
-<tr>
-  <td>⑤ MLP 이진분류</td>
-  <td>Linear(1)</td>
-  <td>없음</td>
-  <td>BCEWithLogitsLoss</td>
-  <td>SGD</td>
-  <td>Adam</td>
-  <td>Accuracy, Precision, Recall, F1</td>
-  <td>Train/Val</td>
-</tr>
-<tr>
-  <td>⑥ MLP 다중분류</td>
-  <td>Linear(C)</td>
-  <td>없음</td>
-  <td>CrossEntropyLoss</td>
-  <td>SGD</td>
-  <td>Adam</td>
-  <td>Accuracy, F1</td>
-  <td>Train/Val</td>
-</tr>
-<tr>
-  <td>⑦ CNN 다중분류</td>
-  <td>Linear(C)</td>
-  <td>없음</td>
-  <td>CrossEntropyLoss</td>
-  <td>SGD+Momentum</td>
-  <td>Adam 또는 SGD+Momentum</td>
-  <td>Accuracy, F1</td>
-  <td>Train/Val</td>
+  <td>FN(에프엔)</td>
+  <td>실제 1을 0으로 잘못 예측</td>
 </tr>
 </tbody>
 </table>
-</section><section class="section" id="s27"><h2><span class="num">27</span>26. ⑥~⑧까지 확장</h2><h3>RNN/LSTM</h3>
-<p>Loss가 RNN/LSTM 때문에 결정되는 것은 아니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>시계열 숫자 예측
-→ MSELoss
-
-감정 긍정/부정
-→ BCEWithLogitsLoss
-
-문자/단어 분류
-→ CrossEntropyLoss
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathrm{Accuracy}
+=
+\frac{TP+TN}
+{TP+TN+FP+FN}
 </code></pre></div>
-<p>Optimizer 초기 선택:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Adam
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathrm{Precision}
+=
+\frac{TP}
+{TP+FP}
 </code></pre></div>
-<p>이 편리하다.</p>
-<h3>Autoencoder</h3>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력 → Encoder → Latent → Decoder → 복원
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathrm{Recall}
+=
+\frac{TP}
+{TP+FN}
 </code></pre></div>
-<p>대표적으로:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>연속값 복원
-→ MSELoss / L1Loss
-
-이진적 데이터 복원
-→ BCE 계열
-</code></pre></div>
-<p>Optimizer:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Adam
-</code></pre></div>
-<p>이 초기 선택으로 많이 사용된다.</p>
-<h3>Transformer</h3>
-<p>대표적인 언어 모델:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>다음 Token 예측
-        ↓
-Vocabulary 중 하나 선택
-        ↓
-Multi-class Classification
-        ↓
-CrossEntropyLoss
-</code></pre></div>
-<p>대표 Optimizer:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>AdamW
-</code></pre></div>
-</section><section class="section" id="s28"><h2><span class="num">28</span>27. 전체 테크트리를 하나의 원리로 정리</h2><p>현재 테크트리는 사실 두 개의 축으로 이해해야 한다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>[문제 유형 축]
-
-Regression
-Binary Classification
-Multi-class Classification
-Multi-label Classification
-Reconstruction
-
-             ×
-
-[모델 구조 축]
-
-Linear
-MLP
-CNN
-RNN/LSTM
-Autoencoder
-Transformer
-</code></pre></div>
-<p>예를 들어:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>MLP + Regression
-MLP + Binary Classification
-MLP + Multi-class Classification
-
-CNN + Binary Classification
-CNN + Multi-class Classification
-
-RNN + Regression
-RNN + Classification
-
-Transformer + Multi-class Classification
-</code></pre></div>
-<p>처럼 조합된다.</p>
-<p>따라서:</p>
-<blockquote>
-<p><strong>MLP의 Loss는 무엇인가?</strong></p>
-</blockquote>
-<p>라는 질문 자체에는 하나의 답이 없다.</p>
-<p>정확한 질문은:</p>
-<blockquote>
-<p><strong>MLP를 이용하여 어떤 문제를 해결하는가?</strong></p>
-</blockquote>
-<p>이다.</p>
-</section><section class="section" id="s29"><h2><span class="num">29</span>28. 가장 먼저 외워야 할 4줄</h2><p>현재 단계에서는 사실 다음 네 줄을 가장 확실히 이해하면 된다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>회귀
-→ 실수 출력
-→ MSELoss
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>이진분류
-→ Logit 1개
-→ BCEWithLogitsLoss
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>다중분류
-→ C개 Logit
-→ CrossEntropyLoss
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>다중레이블
-→ C개 독립 Logit
-→ BCEWithLogitsLoss
-</code></pre></div>
-<p>그다음:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>학습 원리 이해
-→ SGD
-
-SGD 개선
-→ SGD + Momentum
-
-딥러닝 초기 실험
-→ Adam
-
-Transformer / Weight Decay 중심
-→ AdamW
-</code></pre></div>
-<p>로 연결하면 된다.</p>
-</section><section class="section" id="s30"><h2><span class="num">30</span>29. 최종 판단 공식</h2><p>새로운 문제를 만났을 때 Loss 이름부터 떠올리지 않는다.</p>
-<p>먼저 다음 질문을 한다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>&quot;정답 y가 어떻게 생겼는가?&quot;
-</code></pre></div>
-<h4>y가 실수</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>72.5
-104.2
-350.8
-</code></pre></div>
-<p>→ Regression<br />
-→ MSELoss / L1Loss</p>
-<h4>y가 0 또는 1</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>0
-1
-0
-1
-</code></pre></div>
-<p>→ Binary Classification<br />
-→ BCEWithLogitsLoss</p>
-<h4>y가 클래스 번호 하나</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>0
-7
-4
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>F1
+=
 2
-9
+\times
+\frac{
+\mathrm{Precision}
+\times
+\mathrm{Recall}
+}{
+\mathrm{Precision}
++
+\mathrm{Recall}
+}
 </code></pre></div>
-<p>→ Multi-class Classification<br />
-→ CrossEntropyLoss</p>
-<h4>y가 여러 개의 0/1</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>[1, 0, 1, 0]
+<p>의료 선별 문제에서는 실제 환자를 놓치는 FN을 줄이는 것이 중요하므로 Recall도 함께 확인합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_heart_disease_dnn_classification.ipynb · 코드 셀 12 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def calculate_metrics(
+    targets,
+    predictions,
+):
+    targets = targets.reshape(-1)
+    predictions = predictions.reshape(-1)
+
+    tp = int(
+        ((targets == 1) &amp; (predictions == 1)).sum()
+    )
+
+    tn = int(
+        ((targets == 0) &amp; (predictions == 0)).sum()
+    )
+
+    fp = int(
+        ((targets == 0) &amp; (predictions == 1)).sum()
+    )
+
+    fn = int(
+        ((targets == 1) &amp; (predictions == 0)).sum()
+    )
+
+    accuracy = (
+        tp + tn
+    ) / len(targets)
+
+    precision = tp / max(
+        tp + fp,
+        1,
+    )
+
+    recall = tp / max(
+        tp + fn,
+        1,
+    )
+
+    f1 = (
+        2 * precision * recall
+        / max(precision + recall, 1e-12)
+    )
+
+    return {
+        &quot;TP&quot;: tp,
+        &quot;TN&quot;: tn,
+        &quot;FP&quot;: fp,
+        &quot;FN&quot;: fn,
+        &quot;Accuracy&quot;: accuracy,
+        &quot;Precision&quot;: precision,
+        &quot;Recall&quot;: recall,
+        &quot;F1&quot;: f1,
+    }
+
+
+train_metrics = calculate_metrics(
+    y_train_tensor,
+    train_predictions,
+)
+
+test_metrics = calculate_metrics(
+    y_test_tensor,
+    test_predictions,
+)
+
+print(&quot;[훈련 데이터]&quot;)
+
+for name, value in train_metrics.items():
+    print(f&quot;{name:9s}: {value:.4f}&quot;)
+
+print()
+print(&quot;[테스트 데이터]&quot;)
+
+for name, value in test_metrics.items():
+    print(f&quot;{name:9s}: {value:.4f}&quot;)
 </code></pre></div>
-<p>→ Multi-label Classification<br />
-→ BCEWithLogitsLoss</p>
-<p>이 판단이 되면 그다음 출력층 구조도 거의 자동으로 결정된다.</p>
-</section><section class="section" id="s31"><h2><span class="num">31</span>핵심 정리</h2><div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Target 형태
-   ↓
-문제 유형
-   ↓
-출력 노드 수
-   ↓
-출력 Logit 형태
-   ↓
-Loss Function
-   ↓
-Optimizer
-   ↓
-Learning Rate / Batch / Epoch
-   ↓
-Validation
-   ↓
-Metric
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 12</span></div><pre>[훈련 데이터]
+TP       : 120.0000
+TN       : 91.0000
+FP       : 19.0000
+FN       : 12.0000
+Accuracy : 0.8719
+Precision: 0.8633
+Recall   : 0.9091
+F1       : 0.8856
+
+[테스트 데이터]
+TP       : 30.0000
+TN       : 21.0000
+FP       : 7.0000
+FN       : 3.0000
+Accuracy : 0.8361
+Precision: 0.8108
+Recall   : 0.9091
+F1       : 0.8571
+</pre></div>
+<h3>13. 테스트 데이터 혼동행렬</h3>
+<p>혼동행렬을 이용하면 맞은 예측과 잘못된 예측을 한눈에 확인할 수 있습니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_heart_disease_dnn_classification.ipynb · 코드 셀 13 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>confusion_matrix = np.array(
+    [
+        [
+            test_metrics[&quot;TN&quot;],
+            test_metrics[&quot;FP&quot;],
+        ],
+        [
+            test_metrics[&quot;FN&quot;],
+            test_metrics[&quot;TP&quot;],
+        ],
+    ]
+)
+
+plt.figure(figsize=(5, 4))
+
+plt.imshow(
+    confusion_matrix,
+)
+
+plt.xticks(
+    [0, 1],
+    [&quot;Predicted 0&quot;, &quot;Predicted 1&quot;],
+)
+
+plt.yticks(
+    [0, 1],
+    [&quot;Actual 0&quot;, &quot;Actual 1&quot;],
+)
+
+plt.xlabel(&quot;Predicted Class&quot;)
+plt.ylabel(&quot;Actual Class&quot;)
+plt.title(&quot;Test Confusion Matrix&quot;)
+
+for row in range(2):
+    for column in range(2):
+        plt.text(
+            column,
+            row,
+            confusion_matrix[row, column],
+            ha=&quot;center&quot;,
+            va=&quot;center&quot;,
+            fontsize=14,
+        )
+
+plt.colorbar()
+plt.tight_layout()
+plt.show()
 </code></pre></div>
-<p>머신러닝과 딥러닝의 학습 설정을 선택할 때 가장 중요한 통찰은 다음이다.</p>
-<blockquote>
-<p><strong>손실함수는 모델 이름이 아니라 정답과 출력의 관계로 결정한다.</strong></p>
-</blockquote>
-<blockquote>
-<p><strong>Optimizer는 문제 종류보다 학습 과정의 속도·안정성·일반화 특성을 보고 선택한다.</strong></p>
-</blockquote>
-<blockquote>
-<p><strong>Validation은 별도의 모델이 아니라 모든 학습에서 과소적합과 과적합을 판단하는 공통 축이다.</strong></p>
-</blockquote>
-<p>이 세 가지가 잡히면 Linear Regression → Logistic Regression → Multi-class → MLP → CNN → RNN/LSTM → Autoencoder → Transformer가 서로 별개 주제가 아니라 하나의 학습 체계로 연결된다.</p>
+<p>출력 그림 — 원본 노트북 기록 · 코드 셀 13:</p>
+<p><img src="img/ch01_1_c13_0.png" alt="ch01_1 심장질환 딥러닝 이진분류 — 코드 셀 13 출력 그림" /></p>
+<h3>14. 임계값에 따른 결과 비교</h3>
+<p>임계값을 낮추면 클래스 1로 판단하는 경우가 늘어납니다.</p>
+<ul>
+<li>Recall이 높아질 수 있음</li>
+<li>FP도 증가할 수 있음</li>
+</ul>
+<p>임계값을 높이면 클래스 1로 판단하는 경우가 줄어듭니다.</p>
+<ul>
+<li>FP가 줄어들 수 있음</li>
+<li>FN이 증가할 수 있음</li>
+</ul>
+<p>임계값은 정확도만 보고 결정하지 않고 문제의 목적과 오판 비용을 함께 고려합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_heart_disease_dnn_classification.ipynb · 코드 셀 14 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>for threshold in [0.3, 0.5, 0.7]:
+    threshold_predictions = (
+        test_probabilities &gt;= threshold
+    ).float()
+
+    metrics = calculate_metrics(
+        y_test_tensor,
+        threshold_predictions,
+    )
+
+    print(
+        f&quot;임계값 {threshold:.1f} | &quot;
+        f&quot;Accuracy {metrics['Accuracy']:.4f} | &quot;
+        f&quot;Precision {metrics['Precision']:.4f} | &quot;
+        f&quot;Recall {metrics['Recall']:.4f} | &quot;
+        f&quot;F1 {metrics['F1']:.4f}&quot;
+    )
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 14</span></div><pre>임계값 0.3 | Accuracy 0.7869 | Precision 0.7381 | Recall 0.9394 | F1 0.8267
+임계값 0.5 | Accuracy 0.8361 | Precision 0.8108 | Recall 0.9091 | F1 0.8571
+임계값 0.7 | Accuracy 0.7705 | Precision 0.8276 | Recall 0.7273 | F1 0.7742
+</pre></div>
+<h3>16. 핵심 정리</h3>
+<ul>
+<li><code>heart.csv</code>는 303개 데이터와 14개 열로 구성됩니다.</li>
+<li><strong>(변경)</strong> 단일 선형층 대신 <code>Linear → ReLU → Linear → ReLU → Linear</code> 구조의 MLP를 사용합니다.</li>
+<li>모델의 마지막 출력은 Logit(로짓) 1개이며 <code>BCEWithLogitsLoss()</code>로 학습합니다.</li>
+<li>학습 루프, Sigmoid(시그모이드) 확률 변환, 임계값 기반 예측, 혼동행렬과 평가지표 계산은 기존 이진분류와 동일합니다.</li>
+<li>현재 결과는 교육용 데이터 분석 결과이며 실제 의료 진단 결과가 아닙니다.</li>
+</ul>
+</section><section class="section" id="s04"><h2><span class="num">04</span>검증</h2><table>
+<thead>
+<tr>
+  <th>노트북</th>
+  <th>원본 실행 기록</th>
+  <th>이번 정리에서 재실행</th>
+  <th>모델 파일 이름 대응</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>ch01_1</td>
+  <td>있음</td>
+  <td>미검증</td>
+  <td>해당 없음</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>이 페이지의 실행 결과와 그림은 <strong>원본 노트북에 저장된 기록</strong>이며, 이번 정리 과정에서 다시 실행하지 않았습니다(재실행 미검증).</li>
+<li>모델 파일 이름 대응: 모델을 저장·불러오는 노트북은 파일 이름의 장 번호를 새 순번으로 함께 바꾸고, 저장하는 노트북과 불러오는 노트북의 이름이 같은지 스크립트로 확인했습니다(통과). 모델 파일을 쓰지 않는 노트북은 해당 없음입니다.</li>
+<li>노트북 안의 설명·코드·출력 순서는 원본을 그대로 따릅니다(STANDARD 8절: 코드·이미지·절 순서 임의 변경 금지).</li>
+<li>실행 결과 안에 찍힌 모델 저장 경로(예: <code>models/ch04_5_best_...</code>)는 원본 실행 당시의 옛 순번입니다. 코드는 새 순번으로 바꿨으므로 다시 실행하면 새 이름으로 저장됩니다.</li>
+</ul>
+<p><strong>완료 기준:</strong> 노트북을 순서대로 실행해 오류 없이 끝나고, 손실 감소와 평가 지표가 원본 기록과 비슷한 범위로 나오는지 확인합니다.</p>
 </section><div class="chapter-links" id="chapter-links"></div></main></div>
-<footer class="footer">PyTorch 머신러닝 기초 · v01  · 실습 결과는 실제 환경에서 검증</footer>
-<script>window.COURSE={"title": "PyTorch 머신러닝 기초", "short_title": "MACHINE LEARNING", "home_label": "전체 학습 안내서", "chapters": [{"id": "ch01", "number": 1, "title": "Tensor 기초", "file": "ch01_tensor_basics_v01.html"}, {"id": "ch02", "number": 2, "title": "선형회귀", "file": "ch02_linear_regression_v01.html"}, {"id": "ch03", "number": 3, "title": "로지스틱·Softmax 분류", "file": "ch03_classification_v01.html"}, {"id": "ch04", "number": 4, "title": "학습 설정 선택 기준", "file": "ch04_training_setup_guide_v01.html"}]};</script><script>/*
+<footer class="footer">PyTorch 딥러닝 실습 · v02  · 실습 결과는 실제 환경에서 검증</footer>
+<script>window.COURSE={"title": "PyTorch 딥러닝 실습", "short_title": "DEEP LEARNING", "home_label": "전체 학습 안내서", "chapters": [{"id": "ch01", "number": 1, "title": "심층 신경망 이진분류", "file": "ch01_dnn_binary_classification_v02.html"}, {"id": "ch02", "number": 2, "title": "MNIST MLP", "file": "ch02_mnist_mlp_v02.html"}, {"id": "ch03", "number": 3, "title": "Fashion-MNIST MLP", "file": "ch03_fashion_mnist_mlp_v02.html"}, {"id": "ch04", "number": 4, "title": "CNN", "file": "ch04_cnn_v02.html"}, {"id": "ch05", "number": 5, "title": "ResNet18·전이학습", "file": "ch05_resnet_transfer_learning_v02.html"}, {"id": "ch06", "number": 6, "title": "모델 저장·ONNX", "file": "ch06_model_deployment_v02.html"}, {"id": "ch07", "number": 7, "title": "CNN→YOLO 위치 추정", "file": "ch07_single_object_localization_v02.html"}]};</script><script>/*
  * 교육용 HTML 공통 동작 — 유지보수용 원본 (STANDARD 4·10.3·10.4)
  * 페이지 본문은 바꾸지 않고 탐색·이전/다음·모바일 메뉴·코드 복사만 덧붙인다.
  * 입력: 페이지의 window.COURSE (tools/guide/build_guides.py가 실제 존재하는 장만 넣음),
@@ -1885,7 +1530,11 @@ Metric
   box.append(el("summary", "", "전체 장 바로가기"));
   const chLinks = el("div", "course-ch-links");
   let currentChapter = null;
+  // 보조 장(07.1·12.3 등)은 같은 본 장을 보고 있을 때만 펼쳐 목록을 짧게 유지
+  const baseOf = (n) => String(n).split(".")[0];
+  const curBase = baseOf(pageNames.find((ch) => ch.id === current)?.number ?? "");
   pageNames.forEach((ch) => {
+    if (String(ch.number).includes(".") && baseOf(ch.number) !== curBase) return;
     const a = el("a", "course-ch-link");
     a.href = ch.file;
     a.append(el("span", "course-ch-num", numText(ch.number)), el("span", "", ch.title));

@@ -598,15 +598,34 @@ pre code {
   max-width: 100%;
   overflow-x: auto;
 }
+
+/* (추가) 실행 결과 상자: 코드 박스와 구분하고 복사 버튼은 두지 않습니다. */
+.outputblock {
+  border: 1px solid var(--line);
+  border-left: 3px solid #8a8f98;
+  margin: -6px 0 18px;
+  background: #ffffff;
+}
+.outputblock pre {
+  margin: 0;
+  padding: 13px 15px;
+  overflow: auto;
+  line-height: 1.6;
+  font-size: 0.78rem;
+  color: var(--ink-2);
+}
+.codebar span {
+  overflow-wrap: anywhere;
+}
 </style></head><body data-chapter="">
 <button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button><div class="shade" id="shade"></div>
 <header class="hero"><div class="hero-inner"><p class="kicker">MACHINE LEARNING</p><h1>PyTorch 머신러닝 기초</h1><p>NumPy와 PyTorch Tensor에서 출발해 선형회귀, 로지스틱·Softmax 분류, 학습 설정 선택 기준까지 단계별 노트북 실습으로 정리한 머신러닝 교재입니다.</p><div class="chips"><span class="chip">단계별 학습</span><span class="chip">실습 중심</span><span class="chip">GitHub Pages</span></div></div></header>
 <div class="wrap"><nav class="toc" id="course-nav" aria-label="장과 절 탐색"></nav><main class="content" id="main-content"><section class="section" id="intro"><h2><span class="num">00</span>과정 개요</h2><p>NumPy와 PyTorch Tensor에서 출발해 선형회귀, 로지스틱·Softmax 분류, 학습 설정 선택 기준까지 단계별 노트북 실습으로 정리한 머신러닝 교재입니다.</p></section>
 <section class="section" id="roadmap"><h2><span class="num">01</span>전체 학습 테크트리</h2><div class="flow"><div class="step"><strong>01 · Tensor 기초</strong> — NumPy 배열 → PyTorch Tensor → 연산 → 자동 미분</div><div class="down">↓</div><div class="step"><strong>02 · 선형회귀</strong> — 순전파·손실 → 비용 최소화 → 실제 데이터 → 주택가격 예측</div><div class="down">↓</div><div class="step"><strong>03 · 로지스틱·Softmax 분류</strong> — 이진분류 → 실제 CSV → 다중분류 → 학습 최적화</div><div class="down">↓</div><div class="step"><strong>04 · 학습 설정 선택 기준</strong> — Target 형태 → 출력층 → Loss → Optimizer → Metric</div></div></section>
-<section class="section" id="chapters"><h2><span class="num">02</span>장별 목차</h2><div class="chapter-grid"><a class="chapter-card" href="ch01_tensor_basics_v01.html"><span>CHAPTER 01</span><b>Tensor 기초</b><span>NumPy 배열 → PyTorch Tensor → 연산 → 자동 미분</span></a><a class="chapter-card" href="ch02_linear_regression_v01.html"><span>CHAPTER 02</span><b>선형회귀</b><span>순전파·손실 → 비용 최소화 → 실제 데이터 → 주택가격 예측</span></a><a class="chapter-card" href="ch03_classification_v01.html"><span>CHAPTER 03</span><b>로지스틱·Softmax 분류</b><span>이진분류 → 실제 CSV → 다중분류 → 학습 최적화</span></a><a class="chapter-card" href="ch04_training_setup_guide_v01.html"><span>CHAPTER 04</span><b>학습 설정 선택 기준</b><span>Target 형태 → 출력층 → Loss → Optimizer → Metric</span></a></div></section>
+<section class="section" id="chapters"><h2><span class="num">02</span>장별 목차</h2><div class="chapter-grid"><a class="chapter-card" href="ch01_tensor_basics_v02.html"><span>CHAPTER 01</span><b>Tensor 기초</b><span>NumPy 배열 → PyTorch Tensor → 연산 → 자동 미분</span></a><a class="chapter-card" href="ch02_linear_regression_v02.html"><span>CHAPTER 02</span><b>선형회귀</b><span>순전파·손실 → 비용 최소화 → 실제 데이터 → 주택가격 예측</span></a><a class="chapter-card" href="ch03_classification_v02.html"><span>CHAPTER 03</span><b>로지스틱·Softmax 분류</b><span>이진분류 → 실제 CSV → 다중분류 → 학습 최적화</span></a><a class="chapter-card" href="ch04_training_setup_guide_v02.html"><span>CHAPTER 04</span><b>학습 설정 선택 기준</b><span>Target 형태 → 출력층 → Loss → Optimizer → Metric</span></a></div></section>
 <section class="section" id="practice"><h2><span class="num">03</span>학습·검증 원칙</h2><p>개념 → 구조도 → 단계별 코드 → 예상 출력 → 검증 → 완료 기준 순서로 진행합니다. 실제 실행 결과와 교육용 예시는 명확히 구분합니다.</p><p>코드와 설정은 공식 문서를 우선하며, 외부 시스템을 수정하는 작업에는 사용자 승인 및 원본 보호를 적용합니다.</p></section><div class="chapter-links" id="chapter-links"></div></main></div>
-<footer class="footer">PyTorch 머신러닝 기초 · v01  · 실습 결과는 실제 환경에서 검증</footer>
-<script>window.COURSE={"title": "PyTorch 머신러닝 기초", "short_title": "MACHINE LEARNING", "home_label": "전체 학습 안내서", "chapters": [{"id": "ch01", "number": 1, "title": "Tensor 기초", "file": "ch01_tensor_basics_v01.html"}, {"id": "ch02", "number": 2, "title": "선형회귀", "file": "ch02_linear_regression_v01.html"}, {"id": "ch03", "number": 3, "title": "로지스틱·Softmax 분류", "file": "ch03_classification_v01.html"}, {"id": "ch04", "number": 4, "title": "학습 설정 선택 기준", "file": "ch04_training_setup_guide_v01.html"}]};</script><script>/*
+<footer class="footer">PyTorch 머신러닝 기초 · v02  · 실습 결과는 실제 환경에서 검증</footer>
+<script>window.COURSE={"title": "PyTorch 머신러닝 기초", "short_title": "MACHINE LEARNING", "home_label": "전체 학습 안내서", "chapters": [{"id": "ch01", "number": 1, "title": "Tensor 기초", "file": "ch01_tensor_basics_v02.html"}, {"id": "ch02", "number": 2, "title": "선형회귀", "file": "ch02_linear_regression_v02.html"}, {"id": "ch03", "number": 3, "title": "로지스틱·Softmax 분류", "file": "ch03_classification_v02.html"}, {"id": "ch04", "number": 4, "title": "학습 설정 선택 기준", "file": "ch04_training_setup_guide_v02.html"}]};</script><script>/*
  * 교육용 HTML 공통 동작 — 유지보수용 원본 (STANDARD 4·10.3·10.4)
  * 페이지 본문은 바꾸지 않고 탐색·이전/다음·모바일 메뉴·코드 복사만 덧붙인다.
  * 입력: 페이지의 window.COURSE (tools/guide/build_guides.py가 실제 존재하는 장만 넣음),
@@ -642,7 +661,11 @@ pre code {
   box.append(el("summary", "", "전체 장 바로가기"));
   const chLinks = el("div", "course-ch-links");
   let currentChapter = null;
+  // 보조 장(07.1·12.3 등)은 같은 본 장을 보고 있을 때만 펼쳐 목록을 짧게 유지
+  const baseOf = (n) => String(n).split(".")[0];
+  const curBase = baseOf(pageNames.find((ch) => ch.id === current)?.number ?? "");
   pageNames.forEach((ch) => {
+    if (String(ch.number).includes(".") && baseOf(ch.number) !== curBase) return;
     const a = el("a", "course-ch-link");
     a.href = ch.file;
     a.append(el("span", "course-ch-num", numText(ch.number)), el("span", "", ch.title));

@@ -598,15 +598,34 @@ pre code {
   max-width: 100%;
   overflow-x: auto;
 }
+
+/* (추가) 실행 결과 상자: 코드 박스와 구분하고 복사 버튼은 두지 않습니다. */
+.outputblock {
+  border: 1px solid var(--line);
+  border-left: 3px solid #8a8f98;
+  margin: -6px 0 18px;
+  background: #ffffff;
+}
+.outputblock pre {
+  margin: 0;
+  padding: 13px 15px;
+  overflow: auto;
+  line-height: 1.6;
+  font-size: 0.78rem;
+  color: var(--ink-2);
+}
+.codebar span {
+  overflow-wrap: anywhere;
+}
 </style></head><body data-chapter="">
 <button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button><div class="shade" id="shade"></div>
 <header class="hero"><div class="hero-inner"><p class="kicker">DEEP LEARNING</p><h1>PyTorch 딥러닝 실습</h1><p>은닉층이 있는 심층 신경망(MLP)에서 출발해 MNIST·Fashion-MNIST, CNN, ResNet18 전이학습, 모델 저장·ONNX 배포, 단일 객체 위치 추정까지 단계별 노트북 실습으로 정리한 딥러닝 교재입니다.</p><div class="chips"><span class="chip">단계별 학습</span><span class="chip">실습 중심</span><span class="chip">GitHub Pages</span></div></div></header>
 <div class="wrap"><nav class="toc" id="course-nav" aria-label="장과 절 탐색"></nav><main class="content" id="main-content"><section class="section" id="intro"><h2><span class="num">00</span>과정 개요</h2><p>은닉층이 있는 심층 신경망(MLP)에서 출발해 MNIST·Fashion-MNIST, CNN, ResNet18 전이학습, 모델 저장·ONNX 배포, 단일 객체 위치 추정까지 단계별 노트북 실습으로 정리한 딥러닝 교재입니다.</p></section>
 <section class="section" id="roadmap"><h2><span class="num">01</span>전체 학습 테크트리</h2><div class="flow"><div class="step"><strong>01 · 심층 신경망 이진분류</strong> — 단일 선형층 로지스틱 분류 → 은닉층·ReLU가 있는 MLP</div><div class="down">↓</div><div class="step"><strong>02 · MNIST MLP</strong> — 손글씨 숫자 분류 → Optimizer 비교 → 과적합·Dropout → 오류 분석</div><div class="down">↓</div><div class="step"><strong>03 · Fashion-MNIST MLP</strong> — 의류 이미지 학습·평가 → 저장 모델로 단일 이미지 예측</div><div class="down">↓</div><div class="step"><strong>04 · CNN</strong> — Fashion-MNIST CNN → 필터·특징맵 → CIFAR-10 기본·심층 CNN</div><div class="down">↓</div><div class="step"><strong>05 · ResNet18·전이학습</strong> — CIFAR-10 ResNet18 학습 → 사전학습 가중치 전이학습</div><div class="down">↓</div><div class="step"><strong>06 · 모델 저장·ONNX</strong> — state_dict 저장·복원 → 추론 함수 → ONNX 내보내기·Runtime 추론</div><div class="down">↓</div><div class="step"><strong>07 · CNN→YOLO 위치 추정</strong> — 분류 CNN → Bounding Box 회귀 → IoU → 함수·main() 구조</div></div></section>
-<section class="section" id="chapters"><h2><span class="num">02</span>장별 목차</h2><div class="chapter-grid"><a class="chapter-card" href="ch01_dnn_binary_classification_v01.html"><span>CHAPTER 01</span><b>심층 신경망 이진분류</b><span>단일 선형층 로지스틱 분류 → 은닉층·ReLU가 있는 MLP</span></a><a class="chapter-card" href="ch02_mnist_mlp_v01.html"><span>CHAPTER 02</span><b>MNIST MLP</b><span>손글씨 숫자 분류 → Optimizer 비교 → 과적합·Dropout → 오류 분석</span></a><a class="chapter-card" href="ch03_fashion_mnist_mlp_v01.html"><span>CHAPTER 03</span><b>Fashion-MNIST MLP</b><span>의류 이미지 학습·평가 → 저장 모델로 단일 이미지 예측</span></a><a class="chapter-card" href="ch04_cnn_v01.html"><span>CHAPTER 04</span><b>CNN</b><span>Fashion-MNIST CNN → 필터·특징맵 → CIFAR-10 기본·심층 CNN</span></a><a class="chapter-card" href="ch05_resnet_transfer_learning_v01.html"><span>CHAPTER 05</span><b>ResNet18·전이학습</b><span>CIFAR-10 ResNet18 학습 → 사전학습 가중치 전이학습</span></a><a class="chapter-card" href="ch06_model_deployment_v01.html"><span>CHAPTER 06</span><b>모델 저장·ONNX</b><span>state_dict 저장·복원 → 추론 함수 → ONNX 내보내기·Runtime 추론</span></a><a class="chapter-card" href="ch07_single_object_localization_v01.html"><span>CHAPTER 07</span><b>CNN→YOLO 위치 추정</b><span>분류 CNN → Bounding Box 회귀 → IoU → 함수·main() 구조</span></a></div></section>
+<section class="section" id="chapters"><h2><span class="num">02</span>장별 목차</h2><div class="chapter-grid"><a class="chapter-card" href="ch01_dnn_binary_classification_v02.html"><span>CHAPTER 01</span><b>심층 신경망 이진분류</b><span>단일 선형층 로지스틱 분류 → 은닉층·ReLU가 있는 MLP</span></a><a class="chapter-card" href="ch02_mnist_mlp_v02.html"><span>CHAPTER 02</span><b>MNIST MLP</b><span>손글씨 숫자 분류 → Optimizer 비교 → 과적합·Dropout → 오류 분석</span></a><a class="chapter-card" href="ch03_fashion_mnist_mlp_v02.html"><span>CHAPTER 03</span><b>Fashion-MNIST MLP</b><span>의류 이미지 학습·평가 → 저장 모델로 단일 이미지 예측</span></a><a class="chapter-card" href="ch04_cnn_v02.html"><span>CHAPTER 04</span><b>CNN</b><span>Fashion-MNIST CNN → 필터·특징맵 → CIFAR-10 기본·심층 CNN</span></a><a class="chapter-card" href="ch05_resnet_transfer_learning_v02.html"><span>CHAPTER 05</span><b>ResNet18·전이학습</b><span>CIFAR-10 ResNet18 학습 → 사전학습 가중치 전이학습</span></a><a class="chapter-card" href="ch06_model_deployment_v02.html"><span>CHAPTER 06</span><b>모델 저장·ONNX</b><span>state_dict 저장·복원 → 추론 함수 → ONNX 내보내기·Runtime 추론</span></a><a class="chapter-card" href="ch07_single_object_localization_v02.html"><span>CHAPTER 07</span><b>CNN→YOLO 위치 추정</b><span>분류 CNN → Bounding Box 회귀 → IoU → 함수·main() 구조</span></a></div></section>
 <section class="section" id="practice"><h2><span class="num">03</span>학습·검증 원칙</h2><p>개념 → 구조도 → 단계별 코드 → 예상 출력 → 검증 → 완료 기준 순서로 진행합니다. 실제 실행 결과와 교육용 예시는 명확히 구분합니다.</p><p>코드와 설정은 공식 문서를 우선하며, 외부 시스템을 수정하는 작업에는 사용자 승인 및 원본 보호를 적용합니다.</p></section><div class="chapter-links" id="chapter-links"></div></main></div>
-<footer class="footer">PyTorch 딥러닝 실습 · v01  · 실습 결과는 실제 환경에서 검증</footer>
-<script>window.COURSE={"title": "PyTorch 딥러닝 실습", "short_title": "DEEP LEARNING", "home_label": "전체 학습 안내서", "chapters": [{"id": "ch01", "number": 1, "title": "심층 신경망 이진분류", "file": "ch01_dnn_binary_classification_v01.html"}, {"id": "ch02", "number": 2, "title": "MNIST MLP", "file": "ch02_mnist_mlp_v01.html"}, {"id": "ch03", "number": 3, "title": "Fashion-MNIST MLP", "file": "ch03_fashion_mnist_mlp_v01.html"}, {"id": "ch04", "number": 4, "title": "CNN", "file": "ch04_cnn_v01.html"}, {"id": "ch05", "number": 5, "title": "ResNet18·전이학습", "file": "ch05_resnet_transfer_learning_v01.html"}, {"id": "ch06", "number": 6, "title": "모델 저장·ONNX", "file": "ch06_model_deployment_v01.html"}, {"id": "ch07", "number": 7, "title": "CNN→YOLO 위치 추정", "file": "ch07_single_object_localization_v01.html"}]};</script><script>/*
+<footer class="footer">PyTorch 딥러닝 실습 · v02  · 실습 결과는 실제 환경에서 검증</footer>
+<script>window.COURSE={"title": "PyTorch 딥러닝 실습", "short_title": "DEEP LEARNING", "home_label": "전체 학습 안내서", "chapters": [{"id": "ch01", "number": 1, "title": "심층 신경망 이진분류", "file": "ch01_dnn_binary_classification_v02.html"}, {"id": "ch02", "number": 2, "title": "MNIST MLP", "file": "ch02_mnist_mlp_v02.html"}, {"id": "ch03", "number": 3, "title": "Fashion-MNIST MLP", "file": "ch03_fashion_mnist_mlp_v02.html"}, {"id": "ch04", "number": 4, "title": "CNN", "file": "ch04_cnn_v02.html"}, {"id": "ch05", "number": 5, "title": "ResNet18·전이학습", "file": "ch05_resnet_transfer_learning_v02.html"}, {"id": "ch06", "number": 6, "title": "모델 저장·ONNX", "file": "ch06_model_deployment_v02.html"}, {"id": "ch07", "number": 7, "title": "CNN→YOLO 위치 추정", "file": "ch07_single_object_localization_v02.html"}]};</script><script>/*
  * 교육용 HTML 공통 동작 — 유지보수용 원본 (STANDARD 4·10.3·10.4)
  * 페이지 본문은 바꾸지 않고 탐색·이전/다음·모바일 메뉴·코드 복사만 덧붙인다.
  * 입력: 페이지의 window.COURSE (tools/guide/build_guides.py가 실제 존재하는 장만 넣음),
@@ -642,7 +661,11 @@ pre code {
   box.append(el("summary", "", "전체 장 바로가기"));
   const chLinks = el("div", "course-ch-links");
   let currentChapter = null;
+  // 보조 장(07.1·12.3 등)은 같은 본 장을 보고 있을 때만 펼쳐 목록을 짧게 유지
+  const baseOf = (n) => String(n).split(".")[0];
+  const curBase = baseOf(pageNames.find((ch) => ch.id === current)?.number ?? "");
   pageNames.forEach((ch) => {
+    if (String(ch.number).includes(".") && baseOf(ch.number) !== curBase) return;
     const a = el("a", "course-ch-link");
     a.href = ch.file;
     a.append(el("span", "course-ch-num", numText(ch.number)), el("span", "", ch.title));
