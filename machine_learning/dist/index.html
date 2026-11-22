@@ -617,13 +617,135 @@ pre code {
 .codebar span {
   overflow-wrap: anywhere;
 }
+
+/* (추가) 과정 INDEX: 숫자 요약·테크트리·장별 카드 (기준 디자인 ai-agent-engineering 첫 화면 구성) */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 18px 0;
+}
+.stat {
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--accent);
+  background: #fbfbf9;
+  padding: 12px 14px;
+}
+.stat b {
+  display: block;
+  font-size: 1.6rem;
+  color: var(--accent);
+}
+.stat span {
+  font-size: 0.8rem;
+  color: var(--ink-3);
+}
+.flow .lane {
+  display: grid;
+  gap: 4px;
+}
+.lane-label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+}
+.lane-items a {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+.lane-items a:hover {
+  color: var(--accent);
+}
+.flow .lane small {
+  color: var(--ink-3);
+}
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+.course-card {
+  border: 1px solid var(--line);
+  background: #fbfbf9;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.course-card h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+.course-card p {
+  margin: 0;
+  font-size: 0.86rem;
+}
+.card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.card-no {
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--soft);
+  padding: 2px 8px;
+}
+.card-meta {
+  font-size: 0.74rem;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+}
+.course-card .tools {
+  color: var(--ink-3);
+  font-size: 0.8rem;
+}
+.course-card .outcome b {
+  color: var(--accent);
+  margin-right: 6px;
+}
+.course-card details summary {
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: var(--ink-2);
+}
+.subtoc {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  font-size: 0.82rem;
+}
+.subtoc li {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  padding: 2px 0;
+}
+.subtoc .n {
+  font-family: "IBM Plex Mono", monospace;
+  color: var(--accent);
+}
+.course-card .start {
+  margin-top: auto;
+  align-self: flex-start;
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+@media (max-width: 860px) {
+  .card-grid,
+  .stats {
+    grid-template-columns: 1fr;
+  }
+}
 </style></head><body data-chapter="">
 <button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button><div class="shade" id="shade"></div>
-<header class="hero"><div class="hero-inner"><p class="kicker">MACHINE LEARNING</p><h1>PyTorch 머신러닝 기초</h1><p>NumPy와 PyTorch Tensor에서 출발해 선형회귀, 로지스틱·Softmax 분류, 학습 설정 선택 기준까지 단계별 노트북 실습으로 정리한 머신러닝 교재입니다.</p><div class="chips"><span class="chip">단계별 학습</span><span class="chip">실습 중심</span><span class="chip">GitHub Pages</span></div></div></header>
-<div class="wrap"><nav class="toc" id="course-nav" aria-label="장과 절 탐색"></nav><main class="content" id="main-content"><section class="section" id="intro"><h2><span class="num">00</span>과정 개요</h2><p>NumPy와 PyTorch Tensor에서 출발해 선형회귀, 로지스틱·Softmax 분류, 학습 설정 선택 기준까지 단계별 노트북 실습으로 정리한 머신러닝 교재입니다.</p></section>
-<section class="section" id="roadmap"><h2><span class="num">01</span>전체 학습 테크트리</h2><div class="flow"><div class="step"><strong>01 · Tensor 기초</strong> — NumPy 배열 → PyTorch Tensor → 연산 → 자동 미분</div><div class="down">↓</div><div class="step"><strong>02 · 선형회귀</strong> — 순전파·손실 → 비용 최소화 → 실제 데이터 → 주택가격 예측</div><div class="down">↓</div><div class="step"><strong>03 · 로지스틱·Softmax 분류</strong> — 이진분류 → 실제 CSV → 다중분류 → 학습 최적화</div><div class="down">↓</div><div class="step"><strong>04 · 학습 설정 선택 기준</strong> — Target 형태 → 출력층 → Loss → Optimizer → Metric</div></div></section>
-<section class="section" id="chapters"><h2><span class="num">02</span>장별 목차</h2><div class="chapter-grid"><a class="chapter-card" href="ch01_tensor_basics_v02.html"><span>CHAPTER 01</span><b>Tensor 기초</b><span>NumPy 배열 → PyTorch Tensor → 연산 → 자동 미분</span></a><a class="chapter-card" href="ch02_linear_regression_v02.html"><span>CHAPTER 02</span><b>선형회귀</b><span>순전파·손실 → 비용 최소화 → 실제 데이터 → 주택가격 예측</span></a><a class="chapter-card" href="ch03_classification_v02.html"><span>CHAPTER 03</span><b>로지스틱·Softmax 분류</b><span>이진분류 → 실제 CSV → 다중분류 → 학습 최적화</span></a><a class="chapter-card" href="ch04_training_setup_guide_v02.html"><span>CHAPTER 04</span><b>학습 설정 선택 기준</b><span>Target 형태 → 출력층 → Loss → Optimizer → Metric</span></a></div></section>
-<section class="section" id="practice"><h2><span class="num">03</span>학습·검증 원칙</h2><p>개념 → 구조도 → 단계별 코드 → 예상 출력 → 검증 → 완료 기준 순서로 진행합니다. 실제 실행 결과와 교육용 예시는 명확히 구분합니다.</p><p>코드와 설정은 공식 문서를 우선하며, 외부 시스템을 수정하는 작업에는 사용자 승인 및 원본 보호를 적용합니다.</p></section><div class="chapter-links" id="chapter-links"></div></main></div>
+<header class="hero"><div class="hero-inner"><p class="kicker">MACHINE LEARNING</p><h1>PyTorch 머신러닝 기초</h1><p>NumPy와 PyTorch Tensor에서 출발해 선형회귀, 로지스틱·Softmax 분류, 학습 설정 선택 기준까지 단계별 노트북 실습으로 정리한 머신러닝 교재입니다.</p><div class="chips"><span class="chip">총 4장</span><span class="chip">노트북 14개</span><span class="chip">세부 절 59개</span><span class="chip">PyTorch · Jupyter</span></div></div></header>
+<div class="wrap"><nav class="toc" id="course-nav" aria-label="장과 절 탐색"></nav><main class="content" id="main-content"><section class="section" id="intro"><h2><span class="num">00</span>과정 개요</h2><p>NumPy와 PyTorch Tensor에서 출발해 선형회귀, 로지스틱·Softmax 분류, 학습 설정 선택 기준까지 단계별 노트북 실습으로 정리한 머신러닝 교재입니다.</p><div class="stats"><div class="stat"><b>4</b><span>전체 학습 장</span></div><div class="stat"><b>14</b><span>실습 노트북</span></div><div class="stat"><b>59</b><span>세부 절 합계</span></div></div><h3>전체 학습의 최종 목적</h3><p>정답 Target(타깃)의 형태를 보고 출력층·Loss Function(손실함수)·Optimizer(최적화 알고리즘)·Metric(평가 지표)을 스스로 고르고, <strong>데이터 준비 → 순전파 → 손실 → 기울기 → 갱신 → 평가</strong> 과정을 PyTorch 코드로 구현하는 것이 이 과정의 목표입니다.</p>
+</section><section class="section" id="roadmap"><h2><span class="num">01</span>전체 학습 테크트리</h2><p>다음 구성도는 학습 진행의 중심 경로입니다. 각 장은 앞 장의 개념과 코드를 이어서 사용합니다.</p><div class="flow" role="list" aria-label="전체 학습 테크트리"><div class="step lane"><span class="lane-label">기초 도구</span><span class="lane-items"><a href="ch01_tensor_basics_v02.html">01 Tensor 기초</a></span><small>배열과 Tensor, 자동 미분</small></div><div class="down" aria-hidden="true">↓</div><div class="step lane"><span class="lane-label">회귀</span><span class="lane-items"><a href="ch02_linear_regression_v02.html">02 선형회귀</a></span><small>연속값을 예측하는 선형 모델</small></div><div class="down" aria-hidden="true">↓</div><div class="step lane"><span class="lane-label">분류</span><span class="lane-items"><a href="ch03_classification_v02.html">03 로지스틱·Softmax 분류</a></span><small>클래스를 고르는 선형 모델</small></div><div class="down" aria-hidden="true">↓</div><div class="step lane"><span class="lane-label">종합 판단</span><span class="lane-items"><a href="ch04_training_setup_guide_v02.html">04 학습 설정 선택 기준</a></span><small>문제 유형별 학습 설정 선택</small></div></div></section><section class="section" id="guide"><h2><span class="num">02</span>학습·실습·배포 안내</h2><div class="table-wrap"><table><thead><tr><th>구분</th><th>진행 기준</th></tr></thead><tbody><tr><td>기본 환경</td><td>Python 3 + PyTorch + Jupyter Notebook(또는 Google Colab)</td></tr><tr><td>실습 순서</td><td>배경 개념 → 개념 흐름도 → 코드 → 실행 결과 → 풀이 → 검증</td></tr><tr><td>노트북 위치</td><td>과정 폴더의 <code>notebooks/</code>를 작업 폴더로 열고 장 안 순번(<code>chNN_K</code>)대로 실행</td></tr><tr><td>실행 결과</td><td>페이지의 결과·그림은 원본 노트북에 저장된 기록이며, 다시 실행하지 않은 항목은 미검증으로 표시</td></tr><tr><td>공개 자료</td><td>로컬 경로·계정 정보를 점검해 가린 뒤 GitHub Pages로 배포</td></tr><tr><td>다음 과정</td><td><a href="../../deep_learning/dist/index.html">PyTorch 딥러닝 실습</a></td></tr></tbody></table></div></section><section class="section" id="chapters"><h2><span class="num">03</span>장별 학습 목차와 산출물</h2><p>각 장의 학습 목적, 주요 도구, 실습 산출물을 비교할 수 있습니다. 세부 목차는 실제 장 원고(<code>content/chNN.md</code>)의 절 제목과 순서를 그대로 반영합니다.</p><div class="card-grid"><article class="course-card"><div class="card-top"><span class="card-no">01</span><span class="card-meta">CHAPTER 01 · 기초</span></div><h3>Tensor 기초</h3><p>NumPy 배열 → PyTorch Tensor → 연산 → 자동 미분</p><p class="tools">NumPy · Tensor · Autograd</p><p class="outcome"><b>실습 산출물</b> Tensor 생성·변환·결합과 자동 미분 확인 코드</p><details><summary>세부 목차 펼쳐보기 · 00–06절 · 7개 절 · 노트북 3개</summary><ol class="subtoc"><li><span class="n">00</span>배경 개념</li><li><span class="n">01</span>전체 실습 흐름</li><li><span class="n">02</span>환경 확인</li><li><span class="n">03</span>ch01_1 NumPy와 PyTorch</li><li><span class="n">04</span>ch01_2 NumPy 배열과 PyTorch Tensor 이해하기</li><li><span class="n">05</span>ch01_3 PyTorch Tensor 연산</li><li><span class="n">06</span>검증</li></ol></details><a class="start" href="ch01_tensor_basics_v02.html">제01장 학습 시작 ↗</a></article><article class="course-card"><div class="card-top"><span class="card-no">02</span><span class="card-meta">CHAPTER 02 · 기초</span></div><h3>선형회귀</h3><p>순전파·손실 → 비용 최소화 → 실제 데이터 → 주택가격 예측</p><p class="tools">Linear Regression · MSE · Gradient Descent</p><p class="outcome"><b>실습 산출물</b> 선형회귀 학습 함수와 주택가격 예측 모델 (MAE·RMSE·잔차 분석)</p><details><summary>세부 목차 펼쳐보기 · 00–09절 · 10개 절 · 노트북 6개</summary><ol class="subtoc"><li><span class="n">00</span>배경 개념</li><li><span class="n">01</span>전체 실습 흐름</li><li><span class="n">02</span>환경 확인</li><li><span class="n">03</span>ch02_1 선형회귀의 순전파와 손실</li><li><span class="n">04</span>ch02_2 신경망 형식의 선형회귀</li><li><span class="n">05</span>ch02_3 비용함수 최소화</li><li><span class="n">06</span>ch02_4 실제 데이터로 선형회귀하기</li><li><span class="n">07</span>ch02_5 다중 선형회귀</li><li><span class="n">08</span>ch02_6 주택가격 예측</li><li><span class="n">09</span>검증</li></ol></details><a class="start" href="ch02_linear_regression_v02.html">제02장 학습 시작 ↗</a></article><article class="course-card"><div class="card-top"><span class="card-no">03</span><span class="card-meta">CHAPTER 03 · 핵심</span></div><h3>로지스틱·Softmax 분류</h3><p>이진분류 → 실제 CSV → 다중분류 → 학습 최적화</p><p class="tools">Logistic · Softmax · BCEWithLogitsLoss · CrossEntropyLoss</p><p class="outcome"><b>실습 산출물</b> 심장질환·붓꽃 분류 모델, 혼동행렬, 학습 최적화 비교 실험</p><details><summary>세부 목차 펼쳐보기 · 00–08절 · 9개 절 · 노트북 5개</summary><ol class="subtoc"><li><span class="n">00</span>배경 개념</li><li><span class="n">01</span>전체 실습 흐름</li><li><span class="n">02</span>환경 확인</li><li><span class="n">03</span>ch03_1 로지스틱 분류</li><li><span class="n">04</span>ch03_2 심장질환 이진분류</li><li><span class="n">05</span>ch03_3 Softmax 다중분류</li><li><span class="n">06</span>ch03_4 Iris 다중분류</li><li><span class="n">07</span>ch03_5 심장질환 모델 학습 최적화</li><li><span class="n">08</span>검증</li></ol></details><a class="start" href="ch03_classification_v02.html">제03장 학습 시작 ↗</a></article><article class="course-card"><div class="card-top"><span class="card-no">04</span><span class="card-meta">CHAPTER 04 · 종합</span></div><h3>학습 설정 선택 기준</h3><p>Target 형태 → 출력층 → Loss → Optimizer → Metric</p><p class="tools">Loss · Optimizer · Metric · Validation</p><p class="outcome"><b>실습 산출물</b> 문제 유형별 출력층·Loss·Optimizer·Metric 선택 기준표</p><details><summary>세부 목차 펼쳐보기 · 00–32절 · 33개 절 · 노트북 0개</summary><ol class="subtoc"><li><span class="n">00</span>이 장의 자료</li><li><span class="n">01</span>0. 가장 중요한 원칙</li><li><span class="n">02</span>1. 문제 유형부터 판별</li><li><span class="n">03</span>2. 출력층 결정</li><li><span class="n">04</span>3. PyTorch 주요 Loss Function</li><li><span class="n">05</span>4. Loss와 출력층 연결</li><li><span class="n">06</span>5. Optimizer 선택</li><li><span class="n">07</span>6. Optimizer를 어떻게 선택할 것인가</li><li><span class="n">08</span>7. SGD를 선택한 후 결정할 것</li><li><span class="n">09</span>8. Batch Size</li><li><span class="n">10</span>9. Epoch</li><li><span class="n">11</span>10. 데이터 전처리</li><li><span class="n">12</span>11. Train 평균과 표준편차만 사용</li><li><span class="n">13</span>12. Normalization과 Standardization</li><li><span class="n">14</span>13. Class Imbalance</li><li><span class="n">15</span>14. Loss와 Metric은 다르다</li><li><span class="n">16</span>15. Regression 평가</li><li><span class="n">17</span>16. Classification 평가</li><li><span class="n">18</span>17. Validation으로 학습 상태 판단</li><li><span class="n">19</span>18. Underfitting</li><li><span class="n">20</span>19. Overfitting</li><li><span class="n">21</span>20. MLP와 CNN은 Loss를 결정하지 않는다</li><li><span class="n">22</span>21. MNIST 예</li><li><span class="n">23</span>22. 이진분류와 다중분류의 핵심 비교</li><li><span class="n">24</span>23. 가장 많이 하는 PyTorch 실수</li><li><span class="n">25</span>24. 새로운 문제를 받았을 때 의사결정 순서</li><li><span class="n">26</span>25. 학습 유형별 최종 요약표</li><li><span class="n">27</span>26. ⑥~⑧까지 확장</li><li><span class="n">28</span>27. 전체 테크트리를 하나의 원리로 정리</li><li><span class="n">29</span>28. 가장 먼저 외워야 할 4줄</li><li><span class="n">30</span>29. 최종 판단 공식</li><li><span class="n">31</span>핵심 정리</li><li><span class="n">32</span>검증</li></ol></details><a class="start" href="ch04_training_setup_guide_v02.html">제04장 학습 시작 ↗</a></article></div></section><section class="section" id="practice"><h2><span class="num">04</span>학습·검증 원칙</h2><p>배경 개념 → 개념 흐름도 → 단계별 코드 → 실행 결과 → 풀이 → 검증 순서로 진행합니다. 원본 노트북의 실행 기록과 이번 정리에서 확인한 결과를 구분하고, 확인하지 않은 항목은 <b>미검증</b>으로 표시합니다. 판정은 통과·실패·미검증·해당 없음으로 나눕니다.</p></section><div class="chapter-links" id="chapter-links"></div></main></div>
 <footer class="footer">PyTorch 머신러닝 기초 · v02  · 실습 결과는 실제 환경에서 검증</footer>
 <script>window.COURSE={"title": "PyTorch 머신러닝 기초", "short_title": "MACHINE LEARNING", "home_label": "전체 학습 안내서", "chapters": [{"id": "ch01", "number": 1, "title": "Tensor 기초", "file": "ch01_tensor_basics_v02.html"}, {"id": "ch02", "number": 2, "title": "선형회귀", "file": "ch02_linear_regression_v02.html"}, {"id": "ch03", "number": 3, "title": "로지스틱·Softmax 분류", "file": "ch03_classification_v02.html"}, {"id": "ch04", "number": 4, "title": "학습 설정 선택 기준", "file": "ch04_training_setup_guide_v02.html"}]};</script><script>/*
  * 교육용 HTML 공통 동작 — 유지보수용 원본 (STANDARD 4·10.3·10.4)

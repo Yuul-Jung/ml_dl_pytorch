@@ -617,6 +617,130 @@ pre code {
 .codebar span {
   overflow-wrap: anywhere;
 }
+
+/* (추가) 과정 INDEX: 숫자 요약·테크트리·장별 카드 (기준 디자인 ai-agent-engineering 첫 화면 구성) */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 18px 0;
+}
+.stat {
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--accent);
+  background: #fbfbf9;
+  padding: 12px 14px;
+}
+.stat b {
+  display: block;
+  font-size: 1.6rem;
+  color: var(--accent);
+}
+.stat span {
+  font-size: 0.8rem;
+  color: var(--ink-3);
+}
+.flow .lane {
+  display: grid;
+  gap: 4px;
+}
+.lane-label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+}
+.lane-items a {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+.lane-items a:hover {
+  color: var(--accent);
+}
+.flow .lane small {
+  color: var(--ink-3);
+}
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+.course-card {
+  border: 1px solid var(--line);
+  background: #fbfbf9;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.course-card h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+.course-card p {
+  margin: 0;
+  font-size: 0.86rem;
+}
+.card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.card-no {
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--soft);
+  padding: 2px 8px;
+}
+.card-meta {
+  font-size: 0.74rem;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+}
+.course-card .tools {
+  color: var(--ink-3);
+  font-size: 0.8rem;
+}
+.course-card .outcome b {
+  color: var(--accent);
+  margin-right: 6px;
+}
+.course-card details summary {
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: var(--ink-2);
+}
+.subtoc {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  font-size: 0.82rem;
+}
+.subtoc li {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  padding: 2px 0;
+}
+.subtoc .n {
+  font-family: "IBM Plex Mono", monospace;
+  color: var(--accent);
+}
+.course-card .start {
+  margin-top: auto;
+  align-self: flex-start;
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+@media (max-width: 860px) {
+  .card-grid,
+  .stats {
+    grid-template-columns: 1fr;
+  }
+}
 </style></head><body data-chapter="ch02">
 <button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button><div class="shade" id="shade"></div>
 <header class="hero"><div class="hero-inner"><p class="kicker">DEEP LEARNING · CHAPTER 02</p><h1>제02장 · MNIST MLP</h1><p>손글씨 숫자 분류 → Optimizer 비교 → 과적합·Dropout → 오류 분석</p><div class="chips"><span class="chip">MNIST</span><span class="chip">DataLoader</span><span class="chip">Adam</span><span class="chip">Dropout</span></div></div></header>
