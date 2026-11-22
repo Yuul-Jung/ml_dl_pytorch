@@ -54,9 +54,43 @@ def page(title, kicker, desc, chips, body, chapter_id='', footer=''):
 <script>window.COURSE={course_data};</script><script>{SCRIPT}</script></body></html>'''
 
 
+# (추가) 수식: 원고의 ```math 블록과 `$...$` 인라인 수식을 MathML로 바꿔 브라우저가 수식으로 그리게 한다.
+# 변환은 빌드할 때 한 번만 하므로 페이지에 JavaScript·외부 수식 라이브러리가 필요 없다.
+# 변환에 실패한 수식은 원문 LaTeX를 코드 표기로 남기고, 실패 개수를 빌드 로그에 출력한다.
+MATH_FAIL = []
+
+
+def latex_to_mathml(tex, display):
+    from latex2mathml.converter import convert
+    tex = html.unescape(tex).strip()
+    try:
+        return convert(tex, display='block' if display else 'inline')
+    except Exception:
+        MATH_FAIL.append(tex)
+        return None
+
+
+def render_math(content):
+    def block(m):
+        mathml = latex_to_mathml(m.group(1), True)
+        if mathml is None:
+            return m.group(0)
+        return f'<div class="math-block" role="math" aria-label="{escape(html.unescape(m.group(1)).strip())}">{mathml}</div>'
+
+    def inline(m):
+        mathml = latex_to_mathml(m.group(1), False)
+        return m.group(0) if mathml is None else mathml
+
+    content = re.sub(r'<pre><code class="language-math">(.*?)</code></pre>', block, content, flags=re.S)
+    return re.sub(r'<code>\$([^<]+?)\$</code>', inline, content)
+
+
 # (추가) 코드 박스 제목 줄에 파일명·언어·검증 상태를 넣고(공통 코드 규칙 10절),
 # 실행 결과는 코드와 구분되는 출력 상자로, ```flow 블록은 단계 흐름도(.flow)로 바꾼다.
 def enhance_blocks(content):
+    content = render_math(content)
+    # (추가) 한글 조사 앞에서 닫히지 않는 굵은 글씨 표시(⟪b⟫)를 <strong>으로 바꾼다
+    content = content.replace('⟪b⟫', '<strong>').replace('⟪/b⟫', '</strong>')
     code_re = r'<p>코드 박스: (.*?)</p>\s*<pre><code(?: class="language-([^\"]+)")?>(.*?)</code></pre>'
     content = re.sub(code_re,
         lambda m: '<div class="codeblock"><div class="codebar"><span>' + (m.group(2) or 'text').upper()
@@ -188,6 +222,8 @@ def build():
     for p in OUT.glob('*.html'):
         if p.name not in expected: p.unlink()
     print('생성 완료:',len(expected),'개 HTML 파일')
+    # (추가) 수식 변환 실패 보고
+    print('수식 변환 실패:', len(MATH_FAIL), '개', *MATH_FAIL[:10], sep='\n  ' if MATH_FAIL else ' ')
     for name in sorted(expected):print(' ',OUT/name)
 
 if __name__=='__main__':build()

@@ -618,6 +618,23 @@ pre code {
   overflow-wrap: anywhere;
 }
 
+/* (추가) 수식(MathML): 블록 수식은 가운데 정렬, 넓으면 가로 스크롤 */
+.math-block {
+  margin: 14px 0;
+  padding: 10px 12px;
+  overflow-x: auto;
+  background: #fbfbf9;
+  border: 1px solid var(--line);
+  font-size: 1.08rem;
+}
+.math-block math {
+  display: block;
+  margin: 0 auto;
+}
+math {
+  font-family: "Latin Modern Math", "STIX Two Math", "Cambria Math", math;
+}
+
 /* (추가) 과정 INDEX: 숫자 요약·테크트리·장별 카드 (기준 디자인 ai-agent-engineering 첫 화면 구성) */
 .stats {
   display: grid;
@@ -1009,12 +1026,11 @@ Value
 → 실제 Tensor(텐서, 다차원 수치 배열)
 </code></pre></div>
 <p>저장 전 기준 출력은 다음과 같습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathbf{y}_{ref}=f_{\theta}(\mathbf{x})
-</code></pre></div>
+<div class="math-block" role="math" aria-label="\mathbf{y}_{ref}=f_{\theta}(\mathbf{x})"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>&#x1D432;</mi><mrow><mi>r</mi><mi>e</mi><mi>f</mi></mrow></msub><mo>&#x0003D;</mo><msub><mi>f</mi><mrow><mi>&#x003B8;</mi></mrow></msub><mo stretchy="false">&#x00028;</mo><mi>&#x1D431;</mi><mo stretchy="false">&#x00029;</mo></mrow></math></div>
 <ul>
-<li><code>\mathbf{x}</code>: 기준 입력</li>
-<li><code>f_{\theta}</code>: 가중치 <code>\theta</code>를 가진 모델</li>
-<li><code>\mathbf{y}_{ref}</code>: 저장 전 모델의 기준 출력</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x1D431;</mi></mrow></math>: 기준 입력</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>f</mi><mrow><mi>&#x003B8;</mi></mrow></msub></mrow></math>: 가중치 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x003B8;</mi></mrow></math>를 가진 모델</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>&#x1D432;</mi><mrow><mi>r</mi><mi>e</mi><mi>f</mi></mrow></msub></mrow></math>: 저장 전 모델의 기준 출력</li>
 </ul>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch06_1_model_save_load_inference.ipynb · 코드 셀 8 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>model_state = model.state_dict()
 
@@ -1138,17 +1154,15 @@ print(&quot;학습 모드   :&quot;, restored_model.training)
 </pre></div>
 <h4>9) 저장·복원 결과 비교</h4>
 <p>복원한 모델 출력:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathbf{y}_{load}=f_{\hat{\theta}}(\mathbf{x})
-</code></pre></div>
+<div class="math-block" role="math" aria-label="\mathbf{y}_{load}=f_{\hat{\theta}}(\mathbf{x})"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>&#x1D432;</mi><mrow><mi>l</mi><mi>o</mi><mi>a</mi><mi>d</mi></mrow></msub><mo>&#x0003D;</mo><msub><mi>f</mi><mrow><mover accent="true"><mrow><mi>&#x003B8;</mi></mrow><mo>&#x0005E;</mo></mover></mrow></msub><mo stretchy="false">&#x00028;</mo><mi>&#x1D431;</mi><mo stretchy="false">&#x00029;</mo></mrow></math></div>
 <p>최대 절대 오차:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>E_{\max}
+<div class="math-block" role="math" aria-label="E_{\max}
 =
 \max_i
 \left|
 y_{ref,i}-y_{load,i}
-\right|
-</code></pre></div>
-<p>가중치가 정확히 복원되면 <code>E_{\max}</code>는 0 또는 매우 작은 값입니다.</p>
+\right|"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>E</mi><mrow><mo>max</mo></mrow></msub><mo>&#x0003D;</mo><msub><mo>max</mo><mi>i</mi></msub><mrow><mo stretchy="true" fence="true" form="prefix">&#x0007C;</mo><msub><mi>y</mi><mrow><mi>r</mi><mi>e</mi><mi>f</mi><mo>&#x0002C;</mo><mi>i</mi></mrow></msub><mo>&#x02212;</mo><msub><mi>y</mi><mrow><mi>l</mi><mi>o</mi><mi>a</mi><mi>d</mi><mo>&#x0002C;</mo><mi>i</mi></mrow></msub><mo stretchy="true" fence="true" form="postfix">&#x0007C;</mo></mrow></mrow></math></div>
+<p>가중치가 정확히 복원되면 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>E</mi><mrow><mo>max</mo></mrow></msub></mrow></math>는 0 또는 매우 작은 값입니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch06_1_model_save_load_inference.ipynb · 코드 셀 11 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code># 검증용 입력을 CPU로 이동합니다.
 cpu_input = sample_input.detach().cpu()
 
@@ -1208,15 +1222,14 @@ with torch.inference_mode():
 </code></pre></div>
 <p>두 기능은 역할이 다르므로 추론할 때 함께 사용합니다.</p>
 <p>분류 모델은 Logit(로짓, 확률 변환 전 점수)을 출력합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>p_i
+<div class="math-block" role="math" aria-label="p_i
 =
 \frac{e^{z_i}}
-{\sum_{j=1}^{C}e^{z_j}}
-</code></pre></div>
+{\sum_{j=1}^{C}e^{z_j}}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>p</mi><mi>i</mi></msub><mo>&#x0003D;</mo><mfrac><mrow><msup><mi>e</mi><mrow><msub><mi>z</mi><mi>i</mi></msub></mrow></msup></mrow><mrow><msubsup><mo>&#x02211;</mo><mrow><mi>j</mi><mo>&#x0003D;</mo><mn>1</mn></mrow><mrow><mi>C</mi></mrow></msubsup><msup><mi>e</mi><mrow><msub><mi>z</mi><mi>j</mi></msub></mrow></msup></mrow></mfrac></mrow></math></div>
 <ul>
-<li><code>z_i</code>: <code>i</code>번째 클래스의 Logit</li>
-<li><code>p_i</code>: <code>i</code>번째 클래스의 예측 확률</li>
-<li><code>C</code>: 전체 클래스 수</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>z</mi><mi>i</mi></msub></mrow></math>: <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>i</mi></mrow></math>번째 클래스의 Logit</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>p</mi><mi>i</mi></msub></mrow></math>: <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>i</mi></mrow></math>번째 클래스의 예측 확률</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>C</mi></mrow></math>: 전체 클래스 수</li>
 </ul>
 <p>단일 이미지는 <code>(C, H, W)</code>, 배치 이미지는 <code>(N, C, H, W)</code> Shape를 사용합니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch06_1_model_save_load_inference.ipynb · 코드 셀 12 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def predict(model, input_tensor, class_names, device, top_k=5):
@@ -1352,13 +1365,12 @@ else:
 <div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 17</span></div><pre>IMAGE_PATH에 이미지 파일 경로를 지정하면 실행됩니다.
 </pre></div>
 <h4>16) 평균 추론 시간 측정</h4>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>T_{latency}
+<div class="math-block" role="math" aria-label="T_{latency}
 =
-\frac{t_{end}-t_{start}}{N}
-</code></pre></div>
+\frac{t_{end}-t_{start}}{N}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>T</mi><mrow><mi>l</mi><mi>a</mi><mi>t</mi><mi>e</mi><mi>n</mi><mi>c</mi><mi>y</mi></mrow></msub><mo>&#x0003D;</mo><mfrac><mrow><msub><mi>t</mi><mrow><mi>e</mi><mi>n</mi><mi>d</mi></mrow></msub><mo>&#x02212;</mo><msub><mi>t</mi><mrow><mi>s</mi><mi>t</mi><mi>a</mi><mi>r</mi><mi>t</mi></mrow></msub></mrow><mrow><mi>N</mi></mrow></mfrac></mrow></math></div>
 <ul>
-<li><code>N</code>: 반복 추론 횟수</li>
-<li><code>T_{latency}</code>: 한 번 추론하는 데 걸리는 평균 시간</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>N</mi></mrow></math>: 반복 추론 횟수</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>T</mi><mrow><mi>l</mi><mi>a</mi><mi>t</mi><mi>e</mi><mi>n</mi><mi>c</mi><mi>y</mi></mrow></msub></mrow></math>: 한 번 추론하는 데 걸리는 평균 시간</li>
 </ul>
 <p>GPU에서는 연산이 비동기로 실행될 수 있으므로 측정 전후에 동기화합니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch06_1_model_save_load_inference.ipynb · 코드 셀 18 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def measure_latency(model, input_tensor, device, warmup=5, repeat=20):
@@ -1723,12 +1735,11 @@ plt.show()
 <p><img src="img/ch06_2_c06_0.png" alt="ch06_2 PyTorch ONNX 내보내기와 Runtime 추론 — 코드 셀 6 출력 그림" /></p>
 <h4>4) 데이터 구조 확인</h4>
 <p>변환 전 PyTorch 출력은 ONNX 결과를 판단하는 기준입니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathbf{y}_{PT}=f_{\theta}(\mathbf{x})
-</code></pre></div>
+<div class="math-block" role="math" aria-label="\mathbf{y}_{PT}=f_{\theta}(\mathbf{x})"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>&#x1D432;</mi><mrow><mi>P</mi><mi>T</mi></mrow></msub><mo>&#x0003D;</mo><msub><mi>f</mi><mrow><mi>&#x003B8;</mi></mrow></msub><mo stretchy="false">&#x00028;</mo><mi>&#x1D431;</mi><mo stretchy="false">&#x00029;</mo></mrow></math></div>
 <ul>
-<li><code>\mathbf{x}</code>: 전처리된 입력 이미지</li>
-<li><code>f_{\theta}</code>: 학습된 가중치 <code>\theta</code>를 가진 ResNet18</li>
-<li><code>\mathbf{y}_{PT}</code>: PyTorch가 출력한 Logit(로짓, 확률 변환 전 점수)</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x1D431;</mi></mrow></math>: 전처리된 입력 이미지</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>f</mi><mrow><mi>&#x003B8;</mi></mrow></msub></mrow></math>: 학습된 가중치 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x003B8;</mi></mrow></math>를 가진 ResNet18</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>&#x1D432;</mi><mrow><mi>P</mi><mi>T</mi></mrow></msub></mrow></math>: PyTorch가 출력한 Logit(로짓, 확률 변환 전 점수)</li>
 </ul>
 <p>같은 입력을 ONNX Runtime에도 넣은 뒤 두 Logit을 비교합니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch06_2_onnx_export_runtime_inference.ipynb · 코드 셀 7 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>with torch.inference_mode():
@@ -1843,11 +1854,10 @@ Opset 버전     : 20
 → float32 확인
 → ONNX Runtime 입력
 </code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathbf{y}_{ORT}=g_{\theta}(\mathbf{x})
-</code></pre></div>
+<div class="math-block" role="math" aria-label="\mathbf{y}_{ORT}=g_{\theta}(\mathbf{x})"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>&#x1D432;</mi><mrow><mi>O</mi><mi>R</mi><mi>T</mi></mrow></msub><mo>&#x0003D;</mo><msub><mi>g</mi><mrow><mi>&#x003B8;</mi></mrow></msub><mo stretchy="false">&#x00028;</mo><mi>&#x1D431;</mi><mo stretchy="false">&#x00029;</mo></mrow></math></div>
 <ul>
-<li><code>g_{\theta}</code>: ONNX Runtime이 실행하는 변환 모델</li>
-<li><code>\mathbf{y}_{ORT}</code>: ONNX Runtime 출력</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>g</mi><mrow><mi>&#x003B8;</mi></mrow></msub></mrow></math>: ONNX Runtime이 실행하는 변환 모델</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>&#x1D432;</mi><mrow><mi>O</mi><mi>R</mi><mi>T</mi></mrow></msub></mrow></math>: ONNX Runtime 출력</li>
 </ul>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch06_2_onnx_export_runtime_inference.ipynb · 코드 셀 10 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>input_array = input_tensor.detach().cpu().numpy().astype(np.float32)
 
@@ -1868,24 +1878,22 @@ ONNX Top-1 Index: 258
 </pre></div>
 <h4>8) PyTorch·ONNX 출력 비교</h4>
 <p>최대 절대 오차:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>E_{\max}
+<div class="math-block" role="math" aria-label="E_{\max}
 =
 \max_i
 \left|
 y_{PT,i}-y_{ORT,i}
-\right|
-</code></pre></div>
+\right|"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>E</mi><mrow><mo>max</mo></mrow></msub><mo>&#x0003D;</mo><msub><mo>max</mo><mi>i</mi></msub><mrow><mo stretchy="true" fence="true" form="prefix">&#x0007C;</mo><msub><mi>y</mi><mrow><mi>P</mi><mi>T</mi><mo>&#x0002C;</mo><mi>i</mi></mrow></msub><mo>&#x02212;</mo><msub><mi>y</mi><mrow><mi>O</mi><mi>R</mi><mi>T</mi><mo>&#x0002C;</mo><mi>i</mi></mrow></msub><mo stretchy="true" fence="true" form="postfix">&#x0007C;</mo></mrow></mrow></math></div>
 <p>평균 절대 오차:</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>E_{\mathrm{mean}}
+<div class="math-block" role="math" aria-label="E_{\mathrm{mean}}
 =
 \frac{1}{C}
 \sum_{i=1}^{C}
 \left|
 y_{PT,i}-y_{ORT,i}
-\right|
-</code></pre></div>
+\right|"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>E</mi><mrow><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi></mrow></mrow></msub><mo>&#x0003D;</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>C</mi></mrow></mfrac><munderover><mo>&#x02211;</mo><mrow><mi>i</mi><mo>&#x0003D;</mo><mn>1</mn></mrow><mrow><mi>C</mi></mrow></munderover><mrow><mo stretchy="true" fence="true" form="prefix">&#x0007C;</mo><msub><mi>y</mi><mrow><mi>P</mi><mi>T</mi><mo>&#x0002C;</mo><mi>i</mi></mrow></msub><mo>&#x02212;</mo><msub><mi>y</mi><mrow><mi>O</mi><mi>R</mi><mi>T</mi><mo>&#x0002C;</mo><mi>i</mi></mrow></msub><mo stretchy="true" fence="true" form="postfix">&#x0007C;</mo></mrow></mrow></math></div>
 <ul>
-<li><code>C</code>: 전체 클래스 수</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>C</mi></mrow></math>: 전체 클래스 수</li>
 <li>값이 작을수록 두 Runtime의 출력이 가깝습니다.</li>
 <li>부동소수점 연산 순서가 달라 매우 작은 오차는 발생할 수 있습니다.</li>
 </ul>
@@ -1916,11 +1924,10 @@ PyTorch ↔ ONNX 출력 검증: 통과
 </pre></div>
 <h4>9) Top-5 결과 비교</h4>
 <p>분류 모델의 Logit을 Softmax(소프트맥스, 여러 클래스 점수를 확률로 변환하는 함수)로 변환합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>p_i
+<div class="math-block" role="math" aria-label="p_i
 =
 \frac{e^{z_i}}
-{\sum_{j=1}^{C}e^{z_j}}
-</code></pre></div>
+{\sum_{j=1}^{C}e^{z_j}}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>p</mi><mi>i</mi></msub><mo>&#x0003D;</mo><mfrac><mrow><msup><mi>e</mi><mrow><msub><mi>z</mi><mi>i</mi></msub></mrow></msup></mrow><mrow><msubsup><mo>&#x02211;</mo><mrow><mi>j</mi><mo>&#x0003D;</mo><mn>1</mn></mrow><mrow><mi>C</mi></mrow></msubsup><msup><mi>e</mi><mrow><msub><mi>z</mi><mi>j</mi></msub></mrow></msup></mrow></mfrac></mrow></math></div>
 <p>PyTorch와 ONNX Runtime의 Top-5 클래스 순서와 확률을 비교합니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch06_2_onnx_export_runtime_inference.ipynb · 코드 셀 12 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def print_top5(title, logits, class_names):
     probabilities = torch.softmax(torch.as_tensor(logits), dim=1)

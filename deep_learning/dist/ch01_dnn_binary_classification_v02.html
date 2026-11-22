@@ -618,6 +618,23 @@ pre code {
   overflow-wrap: anywhere;
 }
 
+/* (추가) 수식(MathML): 블록 수식은 가운데 정렬, 넓으면 가로 스크롤 */
+.math-block {
+  margin: 14px 0;
+  padding: 10px 12px;
+  overflow-x: auto;
+  background: #fbfbf9;
+  border: 1px solid var(--line);
+  font-size: 1.08rem;
+}
+.math-block math {
+  display: block;
+  margin: 0 auto;
+}
+math {
+  font-family: "Latin Modern Math", "STIX Two Math", "Cambria Math", math;
+}
+
 /* (추가) 과정 INDEX: 숫자 요약·테크트리·장별 카드 (기준 디자인 ai-agent-engineering 첫 화면 구성) */
 .stats {
   display: grid;
@@ -943,8 +960,8 @@ Name: count, dtype: int64
 <p><code>cp</code>, <code>restecg</code>, <code>slope</code>, <code>ca</code>, <code>thal</code>은 숫자로 저장되어 있지만 연속적인 측정값이 아니라 범주 코드입니다.</p>
 <h3>4. 입력과 목표값 분리</h3>
 <ul>
-<li>입력 <code>X</code>: <code>target</code>을 제외한 13개 특성</li>
-<li>목표값 <code>y</code>: <code>target</code></li>
+<li>입력 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>X</mi></mrow></math>: <code>target</code>을 제외한 13개 특성</li>
+<li>목표값 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>y</mi></mrow></math>: <code>target</code></li>
 </ul>
 <p>모델이 정답을 미리 보지 않도록 <code>target</code>은 입력에 포함하지 않습니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_heart_disease_dnn_classification.ipynb · 코드 셀 3 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>X = heart_data.drop(
@@ -1048,11 +1065,10 @@ print(
 </pre></div>
 <h3>7. 연속형 특성 표준화</h3>
 <p>연속형 특성은 숫자의 범위가 서로 다릅니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>x_{\mathrm{scaled}}
+<div class="math-block" role="math" aria-label="x_{\mathrm{scaled}}
 =
 \frac{x-\mu_{\mathrm{train}}}
-{\sigma_{\mathrm{train}}}
-</code></pre></div>
+{\sigma_{\mathrm{train}}}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>x</mi><mrow><mrow><mi mathvariant="normal">s</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow></mrow></msub><mo>&#x0003D;</mo><mfrac><mrow><mi>x</mi><mo>&#x02212;</mo><msub><mi>&#x003BC;</mi><mrow><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi></mrow></mrow></msub></mrow><mrow><msub><mi>&#x003C3;</mi><mrow><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi></mrow></mrow></msub></mrow></mfrac></mrow></math></div>
 <ul>
 <li>평균과 표준편차는 훈련 데이터에서만 계산</li>
 <li>테스트 데이터에는 훈련 데이터의 평균과 표준편차 적용</li>
@@ -1159,8 +1175,7 @@ print(
 <blockquote>
 <p><strong>(변경)</strong> 기존 <code>nn.Linear(input_size, 1)</code> 단일 계층에 Hidden Layer(은닉층)와 ReLU(렐루)를 추가합니다.</p>
 </blockquote>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\text{Input} \rightarrow \text{Linear} \rightarrow \text{ReLU} \rightarrow \text{Linear} \rightarrow \text{ReLU} \rightarrow \text{Linear} \rightarrow \text{Logit}
-</code></pre></div>
+<div class="math-block" role="math" aria-label="\text{Input} \rightarrow \text{Linear} \rightarrow \text{ReLU} \rightarrow \text{Linear} \rightarrow \text{ReLU} \rightarrow \text{Linear} \rightarrow \text{Logit}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>Input</mtext><mo>&#x02192;</mo><mtext>Linear</mtext><mo>&#x02192;</mo><mtext>ReLU</mtext><mo>&#x02192;</mo><mtext>Linear</mtext><mo>&#x02192;</mo><mtext>ReLU</mtext><mo>&#x02192;</mo><mtext>Linear</mtext><mo>&#x02192;</mo><mtext>Logit</mtext></mrow></math></div>
 <ul>
 <li><strong>(변경)</strong> 은닉층을 추가하여 여러 특성의 비선형 조합을 학습합니다.</li>
 <li><strong>(변경)</strong> 은닉층 뒤에 <code>ReLU()</code> 활성화 함수를 사용합니다.</li>
@@ -1222,14 +1237,13 @@ print(&quot;출력층 가중치 shape:&quot;, model[4].weight.shape)
 </code></pre></div>
 <h3>10. 모델 학습</h3>
 <p>학습 순서는 와 같습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\text{로짓 계산}
+<div class="math-block" role="math" aria-label="\text{로짓 계산}
 \rightarrow
 \text{손실 계산}
 \rightarrow
 \text{역전파}
 \rightarrow
-\text{가중치 갱신}
-</code></pre></div>
+\text{가중치 갱신}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>로짓&#x000A0;계산</mtext><mo>&#x02192;</mo><mtext>손실&#x000A0;계산</mtext><mo>&#x02192;</mo><mtext>역전파</mtext><mo>&#x02192;</mo><mtext>가중치&#x000A0;갱신</mtext></mrow></math></div>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_heart_disease_dnn_classification.ipynb · 코드 셀 9 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>epochs = 2000
 loss_history = []
 
@@ -1278,14 +1292,13 @@ plt.show()
 <p><img src="img/ch01_1_c10_0.png" alt="ch01_1 심장질환 딥러닝 이진분류 — 코드 셀 10 출력 그림" /></p>
 <h3>11. 확률과 클래스 예측</h3>
 <p>예측 과정은 다음 순서입니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\text{Logit}
+<div class="math-block" role="math" aria-label="\text{Logit}
 \rightarrow
 \text{Sigmoid}
 \rightarrow
 \text{Probability}
 \rightarrow
-\text{Class}
-</code></pre></div>
+\text{Class}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>Logit</mtext><mo>&#x02192;</mo><mtext>Sigmoid</mtext><mo>&#x02192;</mo><mtext>Probability</mtext><mo>&#x02192;</mo><mtext>Class</mtext></mrow></math></div>
 <p>기본 임계값은 0.5입니다.</p>
 <ul>
 <li>확률 0.5 이상 → 클래스 1</li>
@@ -1372,22 +1385,19 @@ for actual, probability, predicted in zip(
 </tr>
 </tbody>
 </table>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathrm{Accuracy}
+<div class="math-block" role="math" aria-label="\mathrm{Accuracy}
 =
 \frac{TP+TN}
-{TP+TN+FP+FN}
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathrm{Precision}
+{TP+TN+FP+FN}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mrow><mi mathvariant="normal">A</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">y</mi></mrow><mo>&#x0003D;</mo><mfrac><mrow><mi>T</mi><mi>P</mi><mo>&#x0002B;</mo><mi>T</mi><mi>N</mi></mrow><mrow><mi>T</mi><mi>P</mi><mo>&#x0002B;</mo><mi>T</mi><mi>N</mi><mo>&#x0002B;</mo><mi>F</mi><mi>P</mi><mo>&#x0002B;</mo><mi>F</mi><mi>N</mi></mrow></mfrac></mrow></math></div>
+<div class="math-block" role="math" aria-label="\mathrm{Precision}
 =
 \frac{TP}
-{TP+FP}
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathrm{Recall}
+{TP+FP}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mrow><mi mathvariant="normal">P</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">n</mi></mrow><mo>&#x0003D;</mo><mfrac><mrow><mi>T</mi><mi>P</mi></mrow><mrow><mi>T</mi><mi>P</mi><mo>&#x0002B;</mo><mi>F</mi><mi>P</mi></mrow></mfrac></mrow></math></div>
+<div class="math-block" role="math" aria-label="\mathrm{Recall}
 =
 \frac{TP}
-{TP+FN}
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>F1
+{TP+FN}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mrow><mi mathvariant="normal">R</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">l</mi></mrow><mo>&#x0003D;</mo><mfrac><mrow><mi>T</mi><mi>P</mi></mrow><mrow><mi>T</mi><mi>P</mi><mo>&#x0002B;</mo><mi>F</mi><mi>N</mi></mrow></mfrac></mrow></math></div>
+<div class="math-block" role="math" aria-label="F1
 =
 2
 \times
@@ -1399,8 +1409,7 @@ for actual, probability, predicted in zip(
 \mathrm{Precision}
 +
 \mathrm{Recall}
-}
-</code></pre></div>
+}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>F</mi><mn>1</mn><mo>&#x0003D;</mo><mn>2</mn><mo>&#x000D7;</mo><mfrac><mrow><mrow><mi mathvariant="normal">P</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">n</mi></mrow><mo>&#x000D7;</mo><mrow><mi mathvariant="normal">R</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">l</mi></mrow></mrow><mrow><mrow><mi mathvariant="normal">P</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">n</mi></mrow><mo>&#x0002B;</mo><mrow><mi mathvariant="normal">R</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">l</mi></mrow></mrow></mfrac></mrow></math></div>
 <p>의료 선별 문제에서는 실제 환자를 놓치는 FN을 줄이는 것이 중요하므로 Recall도 함께 확인합니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch01_1_heart_disease_dnn_classification.ipynb · 코드 셀 12 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def calculate_metrics(
     targets,

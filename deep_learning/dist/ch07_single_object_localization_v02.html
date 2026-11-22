@@ -618,6 +618,23 @@ pre code {
   overflow-wrap: anywhere;
 }
 
+/* (추가) 수식(MathML): 블록 수식은 가운데 정렬, 넓으면 가로 스크롤 */
+.math-block {
+  margin: 14px 0;
+  padding: 10px 12px;
+  overflow-x: auto;
+  background: #fbfbf9;
+  border: 1px solid var(--line);
+  font-size: 1.08rem;
+}
+.math-block math {
+  display: block;
+  margin: 0 auto;
+}
+math {
+  font-family: "Latin Modern Math", "STIX Two Math", "Cambria Math", math;
+}
+
 /* (추가) 과정 INDEX: 숫자 요약·테크트리·장별 카드 (기준 디자인 ai-agent-engineering 첫 화면 구성) */
 .stats {
   display: grid;
@@ -1926,7 +1943,7 @@ loss = class_loss + BOX_WEIGHT * box_loss
 <p>를 동시에 학습한다.</p>
 </section><section class="section" id="s04"><h2><span class="num">04</span>ch07_2 CNN → YOLO 연결 1단계 — 함수·main() 구조 정리본</h2><p>노트북: <code>notebooks/ch07_2_cnn_to_yolo_single_object_localization_main.ipynb</code> · 원본 파일: <code>ch07_2_cnn_to_yolo_single_object_localization.ipynb</code> · 상태: 원본 · 실행 기록 있음 · 재실행 미검증</p>
 <h3>함수 + <code>main()</code> 구조</h3>
-<p>기존 CNN(Classification, 분류)의 **무엇인가?**에 Bounding Box(바운딩 박스, 객체 위치)의 **어디인가?**를 추가한다.</p>
+<p>기존 CNN(Classification, 분류)의 <strong>무엇인가?</strong>에 Bounding Box(바운딩 박스, 객체 위치)의 <strong>어디인가?</strong>를 추가한다.</p>
 <div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>CNN Classification
         ↓
 Single Object Localization

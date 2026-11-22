@@ -64,7 +64,7 @@ jupyter notebook
 
 ```bash
 # 원고(content/*.md)나 course.json을 고친 뒤 과정 폴더에서 생성
-python -m pip install mistune
+python -m pip install mistune latex2mathml   # 수식은 빌드 때 MathML로 변환
 cd machine_learning
 python build.py        # dist/index.html, dist/chNN_*_v02.html 생성
 ```
@@ -90,6 +90,8 @@ GitHub Pages는 **main 브랜치 루트**로 게시합니다.
 - 실행 결과는 코드 박스와 구분되는 `OUTPUT` 상자로 표시하고 복사 버튼을 두지 않음
 - 장마다 `전체 실습 흐름`에 개념 흐름도(단계 상자 + ↓)를 두고, 단계 이름은 실제 코드의 함수·클래스 이름을 사용
 - 노트북 그림 폭 제한, 좁은 화면에서 긴 파일명 줄바꿈·넓은 표 가로 스크롤
+- 수식(`$...$`, `$$...$$`, `\[...\]`)은 빌드할 때 `latex2mathml`로 MathML로 바꿔 브라우저가 수식으로 표시 (JavaScript·외부 수식 라이브러리 불필요)
+- 한글 조사 바로 앞에서 닫히지 않는 굵은 글씨(`**무엇인가?**에`)를 굵게 표시되도록 보정
 
 ## 검증 상태
 
@@ -99,7 +101,8 @@ GitHub Pages는 **main 브랜치 루트**로 게시합니다.
 | 원본에 실행 결과가 없는 노트북 | 미검증 | 머신러닝 `ch01_1`~`ch01_3`, `ch03_5` |
 | 원본 실행 기록의 오류 | 실패 | 딥러닝 `ch03_2` 원본 기록에 `FileNotFoundError`(앞 노트북의 모델 파일 없이 실행). `ch03_1`을 먼저 실행하면 해결되는 순서 문제로, 코드는 바꾸지 않았습니다. |
 | 순번 변경 후 모델 파일 이름 대응 | 통과 | 딥러닝 노트북 13건의 저장·불러오기 이름이 같은 번호를 가리키는지 스크립트로 확인 |
-| HTML 생성 | 통과 | 두 과정 `build.py` 실행, HTML 13개 생성 |
+| HTML 생성 | 통과 | 두 과정 `build.py` 실행, HTML 13개 생성, 수식 변환 실패 0개 |
+| Markdown 깨짐 검사 | 통과 | 전체 13쪽 본문에서 코드·수식 밖에 남은 `$`, LaTeX 명령, `**`, 원시 태그, 표 구분선, 코드 울타리, 이미지 문법이 0건 (Chromium 자동 검사) |
 | 화면 폭 1366·390px 가로 넘침, 이미지 깨짐 | 통과 | Chromium(Playwright)로 전체 페이지 점검. 넓은 표는 표 안에서 가로 스크롤 |
 | 개인정보·로컬 경로 노출 | 통과 | 실행 결과의 로컬 사용자 경로를 `~`로 가림, 이메일·토큰 검색 결과 없음 |
 | GitHub Pages 실제 배포 | 통과 | [머신러닝](https://yuul-jung.github.io/ml_dl_pytorch/machine_learning/dist/index.html) · [딥러닝](https://yuul-jung.github.io/ml_dl_pytorch/deep_learning/dist/index.html) 접속 확인 |

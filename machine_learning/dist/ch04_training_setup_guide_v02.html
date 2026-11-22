@@ -618,6 +618,23 @@ pre code {
   overflow-wrap: anywhere;
 }
 
+/* (추가) 수식(MathML): 블록 수식은 가운데 정렬, 넓으면 가로 스크롤 */
+.math-block {
+  margin: 14px 0;
+  padding: 10px 12px;
+  overflow-x: auto;
+  background: #fbfbf9;
+  border: 1px solid var(--line);
+  font-size: 1.08rem;
+}
+.math-block math {
+  display: block;
+  margin: 0 auto;
+}
+math {
+  font-family: "Latin Modern Math", "STIX Two Math", "Cambria Math", math;
+}
+
 /* (추가) 과정 INDEX: 숫자 요약·테크트리·장별 카드 (기준 디자인 ai-agent-engineering 첫 화면 구성) */
 .stats {
   display: grid;
@@ -1386,9 +1403,7 @@ Validation Loss ↑
 <p>따라서 Epoch는 Validation과 함께 결정한다.</p>
 </section><section class="section" id="s11"><h2><span class="num">11</span>10. 데이터 전처리</h2><h3>Standardization</h3>
 <p>Standardization(스탠더다이제이션, 표준화):</p>
-<p>[
-x_{scaled} = \frac{x-\mu}{\sigma}
-]</p>
+<div class="math-block" role="math" aria-label="x_{scaled} = \frac{x-\mu}{\sigma}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>x</mi><mrow><mi>s</mi><mi>c</mi><mi>a</mi><mi>l</mi><mi>e</mi><mi>d</mi></mrow></msub><mo>&#x0003D;</mo><mfrac><mrow><mi>x</mi><mo>&#x02212;</mo><mi>&#x003BC;</mi></mrow><mrow><mi>&#x003C3;</mi></mrow></mfrac></mrow></math></div>
 <p>즉:</p>
 <div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>평균 → 약 0
 표준편차 → 약 1

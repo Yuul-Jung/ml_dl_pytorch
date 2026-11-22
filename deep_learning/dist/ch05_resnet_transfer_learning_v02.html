@@ -618,6 +618,23 @@ pre code {
   overflow-wrap: anywhere;
 }
 
+/* (추가) 수식(MathML): 블록 수식은 가운데 정렬, 넓으면 가로 스크롤 */
+.math-block {
+  margin: 14px 0;
+  padding: 10px 12px;
+  overflow-x: auto;
+  background: #fbfbf9;
+  border: 1px solid var(--line);
+  font-size: 1.08rem;
+}
+.math-block math {
+  display: block;
+  margin: 0 auto;
+}
+math {
+  font-family: "Latin Modern Math", "STIX Two Math", "Cambria Math", math;
+}
+
 /* (추가) 과정 INDEX: 숫자 요약·테크트리·장별 카드 (기준 디자인 ai-agent-engineering 첫 화면 구성) */
 .stats {
   display: grid;
@@ -815,26 +832,25 @@ from torchvision.models import resnet18
 → 혼동행렬·클래스별 정확도
 → 예측 결과·오답 분석
 </code></pre></div>
-<p>일반적인 CNN Block(씨엔엔 블록, 합성곱 계층 묶음)은 입력 <code>\mathbf{x}</code>를 여러 계층에 통과시킨 결과 <code>F(\mathbf{x})</code>를 다음 계층으로 전달합니다.</p>
+<p>일반적인 CNN Block(씨엔엔 블록, 합성곱 계층 묶음)은 입력 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x1D431;</mi></mrow></math>를 여러 계층에 통과시킨 결과 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>F</mi><mo stretchy="false">&#x00028;</mo><mi>&#x1D431;</mi><mo stretchy="false">&#x00029;</mo></mrow></math>를 다음 계층으로 전달합니다.</p>
 <div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>일반 블록
 x → Conv → BatchNorm → ReLU → Conv → BatchNorm → F(x)
 </code></pre></div>
-<p>Residual Block(레지듀얼 블록, 잔차 블록)은 원래 입력 <code>\mathbf{x}</code>를 변환 결과에 더합니다.</p>
+<p>Residual Block(레지듀얼 블록, 잔차 블록)은 원래 입력 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x1D431;</mi></mrow></math>를 변환 결과에 더합니다.</p>
 <div class="codeblock"><div class="codebar"><span>text</span></div><pre><code> ┌──────────── x ────────────┐
  │ ↓
 x → Conv → BN → ReLU → Conv → BN → F(x) → F(x) + x → ReLU
 </code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathbf{y}=F(\mathbf{x};\mathbf{W})+\mathbf{x}
-</code></pre></div>
+<div class="math-block" role="math" aria-label="\mathbf{y}=F(\mathbf{x};\mathbf{W})+\mathbf{x}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>&#x1D432;</mi><mo>&#x0003D;</mo><mi>F</mi><mo stretchy="false">&#x00028;</mo><mi>&#x1D431;</mi><mi>;</mi><mi>&#x1D416;</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0002B;</mo><mi>&#x1D431;</mi></mrow></math></div>
 <ul>
-<li><code>\mathbf{x}</code>: 블록에 들어온 원래 특징</li>
-<li><code>F(\mathbf{x};\mathbf{W})</code>: 합성곱 계층이 가중치 <code>\mathbf{W}</code>로 학습한 변화량</li>
-<li><code>\mathbf{y}</code>: 기존 특징과 새 특징을 더한 출력</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x1D431;</mi></mrow></math>: 블록에 들어온 원래 특징</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>F</mi><mo stretchy="false">&#x00028;</mo><mi>&#x1D431;</mi><mi>;</mi><mi>&#x1D416;</mi><mo stretchy="false">&#x00029;</mo></mrow></math>: 합성곱 계층이 가중치 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x1D416;</mi></mrow></math>로 학습한 변화량</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x1D432;</mi></mrow></math>: 기존 특징과 새 특징을 더한 출력</li>
 </ul>
 <blockquote>
 <p><strong>ResNet은 출력 전체를 새로 만드는 대신, 입력에 더할 변화량을 학습합니다.</strong></p>
 </blockquote>
-<p>입력과 <code>F(\mathbf{x})</code>의 Shape(셰이프, 텐서 크기)가 다르면 바로 더할 수 없습니다. 이때 Downsample(다운샘플, 크기와 채널을 맞추는 변환)이 입력의 Shape를 조정합니다.</p>
+<p>입력과 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>F</mi><mo stretchy="false">&#x00028;</mo><mi>&#x1D431;</mi><mo stretchy="false">&#x00029;</mo></mrow></math>의 Shape(셰이프, 텐서 크기)가 다르면 바로 더할 수 없습니다. 이때 Downsample(다운샘플, 크기와 채널을 맞추는 변환)이 입력의 Shape를 조정합니다.</p>
 <ul>
 <li><p><code>torch</code>: 텐서 연산과 모델 학습</p>
 </li>
@@ -1010,14 +1026,12 @@ print(&quot;시험 데이터:&quot;, len(test_dataset))
 <h4>9) 배치 데이터 확인</h4>
 <p>정규화된 이미지는 그대로 표시하면 색상이 어색하게 보입니다.</p>
 <p>정규화 식은 다음과 같습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathbf{x}_{norm}=\frac{\mathbf{x}-\boldsymbol{\mu}}{\boldsymbol{\sigma}}
-</code></pre></div>
+<div class="math-block" role="math" aria-label="\mathbf{x}_{norm}=\frac{\mathbf{x}-\boldsymbol{\mu}}{\boldsymbol{\sigma}}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>&#x1D431;</mi><mrow><mi>n</mi><mi>o</mi><mi>r</mi><mi>m</mi></mrow></msub><mo>&#x0003D;</mo><mfrac><mrow><mi>&#x1D431;</mi><mo>&#x02212;</mo><mrow><mi mathvariant="bold-italic">&#x003BC;</mi></mrow></mrow><mrow><mrow><mi mathvariant="bold-italic">&#x003C3;</mi></mrow></mrow></mfrac></mrow></math></div>
 <p>화면에 표시할 때는 역변환합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathbf{x}=\mathbf{x}_{norm}\boldsymbol{\sigma}+\boldsymbol{\mu}
-</code></pre></div>
+<div class="math-block" role="math" aria-label="\mathbf{x}=\mathbf{x}_{norm}\boldsymbol{\sigma}+\boldsymbol{\mu}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>&#x1D431;</mi><mo>&#x0003D;</mo><msub><mi>&#x1D431;</mi><mrow><mi>n</mi><mi>o</mi><mi>r</mi><mi>m</mi></mrow></msub><mrow><mi mathvariant="bold-italic">&#x003C3;</mi></mrow><mo>&#x0002B;</mo><mrow><mi mathvariant="bold-italic">&#x003BC;</mi></mrow></mrow></math></div>
 <ul>
-<li><code>\boldsymbol{\mu}</code>: 채널별 평균</li>
-<li><code>\boldsymbol{\sigma}</code>: 채널별 표준편차</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mrow><mi mathvariant="bold-italic">&#x003BC;</mi></mrow></mrow></math>: 채널별 평균</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mrow><mi mathvariant="bold-italic">&#x003C3;</mi></mrow></mrow></math>: 채널별 표준편차</li>
 </ul>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 11 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def denormalize_image(image):
     mean = torch.tensor(CIFAR10_MEAN).view(3, 1, 1)
@@ -1219,17 +1233,15 @@ logits : torch.Size([2, 10])
 <h4>12) 학습 함수 정의</h4>
 <p>모델은 각 클래스의 Logit(로짓, 정규화되지 않은 원시 점수)을 출력합니다.</p>
 <p><code>nn.CrossEntropyLoss()</code>는 Logit과 정답 클래스 번호를 받아 다중분류 손실을 계산합니다. 모델 출력에 Softmax(소프트맥스, 점수를 확률로 변환하는 함수)를 미리 적용하지 않습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>L=-\frac{1}{N}\sum_{i=1}^{N}\log p_{i,y_i}
-</code></pre></div>
+<div class="math-block" role="math" aria-label="L=-\frac{1}{N}\sum_{i=1}^{N}\log p_{i,y_i}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>L</mi><mo>&#x0003D;</mo><mo>&#x02212;</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>N</mi></mrow></mfrac><munderover><mo>&#x02211;</mo><mrow><mi>i</mi><mo>&#x0003D;</mo><mn>1</mn></mrow><mrow><mi>N</mi></mrow></munderover><mi>log</mi><msub><mi>p</mi><mrow><mi>i</mi><mo>&#x0002C;</mo><msub><mi>y</mi><mi>i</mi></msub></mrow></msub></mrow></math></div>
 <ul>
-<li><code>N</code>: 미니배치의 이미지 수</li>
-<li><code>y_i</code>: <code>i</code>번째 이미지의 실제 클래스</li>
-<li><code>p_{i,y_i}</code>: 실제 클래스에 대한 예측 확률</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>N</mi></mrow></math>: 미니배치의 이미지 수</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>y</mi><mi>i</mi></msub></mrow></math>: <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>i</mi></mrow></math>번째 이미지의 실제 클래스</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>p</mi><mrow><mi>i</mi><mo>&#x0002C;</mo><msub><mi>y</mi><mi>i</mi></msub></mrow></msub></mrow></math>: 실제 클래스에 대한 예측 확률</li>
 </ul>
 <p>정확도는 전체 이미지 중 정답을 맞힌 비율입니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\text{Accuracy}
-=\frac{\text{Correct Predictions}}{\text{Total Samples}}
-</code></pre></div>
+<div class="math-block" role="math" aria-label="\text{Accuracy}
+=\frac{\text{Correct Predictions}}{\text{Total Samples}}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mtext>Accuracy</mtext><mo>&#x0003D;</mo><mfrac><mrow><mtext>Correct&#x000A0;Predictions</mtext></mrow><mrow><mtext>Total&#x000A0;Samples</mtext></mrow></mfrac></mrow></math></div>
 <div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>model.train()
 → Forward
 → Loss 계산
@@ -1592,9 +1604,8 @@ print(&quot;예측 이미지 수:&quot;, len(test_predictions))
 <li>대각선 이외: 다른 클래스로 잘못 분류한 이미지 수</li>
 </ul>
 <p>클래스별 정확도는 다음과 같습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\text{Class Accuracy}_k
-=\frac{\text{Class }k\text{ Correct}}{\text{Class }k\text{ Total}}
-</code></pre></div>
+<div class="math-block" role="math" aria-label="\text{Class Accuracy}_k
+=\frac{\text{Class }k\text{ Correct}}{\text{Class }k\text{ Total}}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mtext>Class&#x000A0;Accuracy</mtext><mi>k</mi></msub><mo>&#x0003D;</mo><mfrac><mrow><mtext>Class&#x000A0;</mtext><mi>k</mi><mtext>&#x000A0;Correct</mtext></mrow><mrow><mtext>Class&#x000A0;</mtext><mi>k</mi><mtext>&#x000A0;Total</mtext></mrow></mfrac></mrow></math></div>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 22 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def build_confusion_matrix(true_labels, predicted_labels, num_classes=10):
     matrix = torch.zeros(num_classes, num_classes, dtype=torch.int64)
 
@@ -1912,25 +1923,22 @@ from torchvision.transforms import InterpolationMode
 → 뒤쪽 계층: 복잡한 객체 특징
 → fc: 최종 클래스 분류
 </code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathbf{z}=f_{\theta}(\mathbf{x})
-</code></pre></div>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\hat{\mathbf{y}}=g_{\phi}(\mathbf{z})
-</code></pre></div>
+<div class="math-block" role="math" aria-label="\mathbf{z}=f_{\theta}(\mathbf{x})"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>&#x1D433;</mi><mo>&#x0003D;</mo><msub><mi>f</mi><mrow><mi>&#x003B8;</mi></mrow></msub><mo stretchy="false">&#x00028;</mo><mi>&#x1D431;</mi><mo stretchy="false">&#x00029;</mo></mrow></math></div>
+<div class="math-block" role="math" aria-label="\hat{\mathbf{y}}=g_{\phi}(\mathbf{z})"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mover accent="true"><mrow><mi>&#x1D432;</mi></mrow><mo>&#x0005E;</mo></mover><mo>&#x0003D;</mo><msub><mi>g</mi><mrow><mi>&#x003D5;</mi></mrow></msub><mo stretchy="false">&#x00028;</mo><mi>&#x1D433;</mi><mo stretchy="false">&#x00029;</mo></mrow></math></div>
 <ul>
-<li><code>f_{\theta}</code>: 사전학습된 특징 추출부</li>
-<li><code>g_{\phi}</code>: 새로 교체한 분류층</li>
-<li>Feature Extraction에서는 <code>\theta</code>를 고정하고 <code>\phi</code>만 학습합니다.</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>f</mi><mrow><mi>&#x003B8;</mi></mrow></msub></mrow></math>: 사전학습된 특징 추출부</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>g</mi><mrow><mi>&#x003D5;</mi></mrow></msub></mrow></math>: 새로 교체한 분류층</li>
+<li>Feature Extraction에서는 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x003B8;</mi></mrow></math>를 고정하고 <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x003D5;</mi></mrow></math>만 학습합니다.</li>
 </ul>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>(\theta_{4},\phi)
+<div class="math-block" role="math" aria-label="(\theta_{4},\phi)
 \leftarrow
 (\theta_{4},\phi)
--\eta\nabla_{(\theta_{4},\phi)}\mathcal{L}
-</code></pre></div>
+-\eta\nabla_{(\theta_{4},\phi)}\mathcal{L}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mo stretchy="false">&#x00028;</mo><msub><mi>&#x003B8;</mi><mrow><mn>4</mn></mrow></msub><mo>&#x0002C;</mo><mi>&#x003D5;</mi><mo stretchy="false">&#x00029;</mo><mo>&#x02190;</mo><mo stretchy="false">&#x00028;</mo><msub><mi>&#x003B8;</mi><mrow><mn>4</mn></mrow></msub><mo>&#x0002C;</mo><mi>&#x003D5;</mi><mo stretchy="false">&#x00029;</mo><mo>&#x02212;</mo><mi>&#x003B7;</mi><msub><mo>&#x02207;</mo><mrow><mo stretchy="false">&#x00028;</mo><msub><mi>&#x003B8;</mi><mrow><mn>4</mn></mrow></msub><mo>&#x0002C;</mo><mi>&#x003D5;</mi><mo stretchy="false">&#x00029;</mo></mrow></msub><mi>&#x02112;</mi></mrow></math></div>
 <ul>
-<li><code>\theta_{4}</code>: <code>layer4</code>의 가중치</li>
-<li><code>\phi</code>: <code>fc</code>의 가중치</li>
-<li><code>\eta</code>: Learning Rate(러닝 레이트, 학습률)</li>
-<li><code>\mathcal{L}</code>: 손실함수</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>&#x003B8;</mi><mrow><mn>4</mn></mrow></msub></mrow></math>: <code>layer4</code>의 가중치</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x003D5;</mi></mrow></math>: <code>fc</code>의 가중치</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x003B7;</mi></mrow></math>: Learning Rate(러닝 레이트, 학습률)</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x02112;</mi></mrow></math>: 손실함수</li>
 </ul>
 <p>Fine-Tuning에서는 뒤쪽 특징 추출부와 분류층을 함께 조금씩 조정합니다.</p>
 <p>코랩에서 위에서부터 순서대로 실행합니다. GPU(지피유, 그래픽 처리 장치)가 있으면 자동으로 사용합니다.</p>
@@ -2122,15 +2130,14 @@ print(&quot;시험 데이터:&quot;, len(test_dataset))
 </pre></div>
 <h4>9) 배치 데이터 확인</h4>
 <p>정규화된 이미지를 화면에 표시하려면 다음 순서로 원래 범위에 가깝게 되돌립니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathbf{x}_{\mathrm{display}}
+<div class="math-block" role="math" aria-label="\mathbf{x}_{\mathrm{display}}
 =
 \mathbf{x}_{\mathrm{normalized}}\boldsymbol{\sigma}
 +
-\boldsymbol{\mu}
-</code></pre></div>
+\boldsymbol{\mu}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><msub><mi>&#x1D431;</mi><mrow><mrow><mi mathvariant="normal">d</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">y</mi></mrow></mrow></msub><mo>&#x0003D;</mo><msub><mi>&#x1D431;</mi><mrow><mrow><mi mathvariant="normal">n</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">z</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">d</mi></mrow></mrow></msub><mrow><mi mathvariant="bold-italic">&#x003C3;</mi></mrow><mo>&#x0002B;</mo><mrow><mi mathvariant="bold-italic">&#x003BC;</mi></mrow></mrow></math></div>
 <ul>
-<li><code>\boldsymbol{\mu}</code>: ImageNet 평균</li>
-<li><code>\boldsymbol{\sigma}</code>: ImageNet 표준편차</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mrow><mi mathvariant="bold-italic">&#x003BC;</mi></mrow></mrow></math>: ImageNet 평균</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mrow><mi mathvariant="bold-italic">&#x003C3;</mi></mrow></mrow></math>: ImageNet 표준편차</li>
 </ul>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 11 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def denormalize(image):
     mean = torch.tensor(IMAGENET_MEAN).view(3, 1, 1)
@@ -2221,15 +2228,14 @@ print(&quot;학습 대상:&quot;, model.fc)
 </pre></div>
 <h4>12) Loss 함수와 Optimizer 설정</h4>
 <p>다중분류에서는 Cross Entropy Loss(크로스 엔트로피 로스, 다중분류 손실함수)를 사용합니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathcal{L}
+<div class="math-block" role="math" aria-label="\mathcal{L}
 =
 -\frac{1}{N}
 \sum_{i=1}^{N}
-\log p_{i,y_i}
-</code></pre></div>
+\log p_{i,y_i}"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mi>&#x02112;</mi><mo>&#x0003D;</mo><mo>&#x02212;</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>N</mi></mrow></mfrac><munderover><mo>&#x02211;</mo><mrow><mi>i</mi><mo>&#x0003D;</mo><mn>1</mn></mrow><mrow><mi>N</mi></mrow></munderover><mi>log</mi><msub><mi>p</mi><mrow><mi>i</mi><mo>&#x0002C;</mo><msub><mi>y</mi><mi>i</mi></msub></mrow></msub></mrow></math></div>
 <ul>
-<li><code>N</code>: 미니배치 이미지 수</li>
-<li><code>p_{i,y_i}</code>: <code>i</code>번째 이미지의 정답 클래스 확률</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>N</mi></mrow></math>: 미니배치 이미지 수</li>
+<li><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><msub><mi>p</mi><mrow><mi>i</mi><mo>&#x0002C;</mo><msub><mi>y</mi><mi>i</mi></msub></mrow></msub></mrow></math>: <math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>i</mi></mrow></math>번째 이미지의 정답 클래스 확률</li>
 </ul>
 <p>동결된 Batch Normalization(배치 노멀라이제이션, 미니배치 정규화) 계층은 평가 모드로 유지하여 기존 평균과 분산이 바뀌지 않도록 합니다.</p>
 <div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 14 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>loss_function = nn.CrossEntropyLoss()
