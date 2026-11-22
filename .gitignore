@@ -1,0 +1,12 @@
+# Python 가상환경·캐시
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+
+# 노트북 실행 중 내려받는 데이터셋과 학습한 모델
+data/
+models/
+*.pth
+*.pt
+*.onnx
+*.zip
