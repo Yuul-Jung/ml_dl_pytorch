@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="NumPy 배열 → PyTorch Tensor → 연산 → 자동 미분"><title>제01장 · Tensor 기초 · PyTorch 머신러닝 기초</title>
+<meta name="description" content="CIFAR-10 ResNet18 학습 → 사전학습 가중치 전이학습"><title>제05장 · ResNet18·전이학습 · PyTorch 딥러닝 실습</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>/*
@@ -598,753 +598,2041 @@ pre code {
   max-width: 100%;
   overflow-x: auto;
 }
-</style></head><body data-chapter="ch01">
+
+/* (추가) 실행 결과 상자: 코드 박스와 구분하고 복사 버튼은 두지 않습니다. */
+.outputblock {
+  border: 1px solid var(--line);
+  border-left: 3px solid #8a8f98;
+  margin: -6px 0 18px;
+  background: #ffffff;
+}
+.outputblock pre {
+  margin: 0;
+  padding: 13px 15px;
+  overflow: auto;
+  line-height: 1.6;
+  font-size: 0.78rem;
+  color: var(--ink-2);
+}
+.codebar span {
+  overflow-wrap: anywhere;
+}
+</style></head><body data-chapter="ch05">
 <button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button><div class="shade" id="shade"></div>
-<header class="hero"><div class="hero-inner"><p class="kicker">MACHINE LEARNING · CHAPTER 01</p><h1>제01장 · Tensor 기초</h1><p>NumPy 배열 → PyTorch Tensor → 연산 → 자동 미분</p><div class="chips"><span class="chip">NumPy</span><span class="chip">Tensor</span><span class="chip">Autograd</span></div></div></header>
-<div class="wrap"><nav class="toc" id="course-nav" aria-label="장과 절 탐색"></nav><main class="content" id="main-content"><section class="section" id="s00"><h2><span class="num">00</span>배경 개념</h2><p>머신러닝 모델은 입력·가중치·출력을 모두 <strong>다차원 배열</strong>로 다룹니다. NumPy(넘파이, 수치 계산 라이브러리)의 <code>ndarray</code>와 PyTorch(파이토치, 딥러닝 프레임워크)의 <code>Tensor</code>(텐서, 다차원 배열)는 모양(shape)·자료형(dtype)·인덱싱 규칙이 거의 같아서, 먼저 두 도구를 같은 예제로 비교합니다.</p>
-<p>Tensor는 NumPy 배열과 달리 <strong>장치(device, CPU/GPU) 이동</strong>과 **Autograd(오토그래드, 자동 미분)**를 지원합니다. 이 두 기능이 다음 장의 경사하강법 학습을 가능하게 합니다.</p>
-</section><section class="section" id="s01"><h2><span class="num">01</span>전체 실습 흐름</h2><ol>
-<li><strong>ch01_1</strong> NumPy와 PyTorch — NumPy와 PyTorch의 역할 비교, 원소별 곱셈(<code>*</code>)과 행렬곱(<code>@</code>) 구분, 자동 미분 맛보기</li>
-<li><strong>ch01_2</strong> NumPy 배열과 PyTorch Tensor 이해하기 — Scalar·Vector·Matrix, 인덱싱·Boolean Mask·Broadcasting, NumPy → Tensor 변환</li>
-<li><strong>ch01_3</strong> PyTorch Tensor 연산 — Tensor 생성 함수, 메모리 공유, CPU/GPU 선택, <code>reshape</code>·<code>cat</code>·<code>stack</code></li>
+<header class="hero"><div class="hero-inner"><p class="kicker">DEEP LEARNING · CHAPTER 05</p><h1>제05장 · ResNet18·전이학습</h1><p>CIFAR-10 ResNet18 학습 → 사전학습 가중치 전이학습</p><div class="chips"><span class="chip">ResNet18</span><span class="chip">Transfer Learning</span><span class="chip">Fine-tuning</span></div></div></header>
+<div class="wrap"><nav class="toc" id="course-nav" aria-label="장과 절 탐색"></nav><main class="content" id="main-content"><section class="section" id="s00"><h2><span class="num">00</span>배경 개념</h2><p>ResNet(레즈넷, 잔차 신경망)은 Residual Connection(레지듀얼 커넥션, 잔차 연결)으로 입력을 출력에 더해 깊은 층에서도 기울기가 잘 전달되게 만든 CNN 구조입니다. 먼저 ResNet18을 CIFAR-10에 맞춰 학습·평가합니다.</p>
+<p>Transfer Learning(트랜스퍼 러닝, 전이학습)은 ImageNet(이미지넷, 대규모 이미지 데이터셋)으로 미리 학습한 가중치를 가져와 마지막 분류층을 새 클래스 수에 맞게 바꾼 뒤 학습하는 방법으로, 적은 학습으로도 높은 성능을 얻습니다.</p>
+</section><section class="section" id="s01"><h2><span class="num">01</span>전체 실습 흐름</h2><p>개념 흐름도 — 이 장 노트북의 공통 학습 절차 (개념도, 이름은 실제 코드 기준):</p>
+<div class="flow" role="list" aria-label="개념 흐름도"><div class="step">CIFAR-10 <code>DataLoader</code></div><div class="down" aria-hidden="true">↓</div><div class="step"><code>resnet18</code> 모델 생성 (잔차 연결)</div><div class="down" aria-hidden="true">↓</div><div class="step">분류층 <code>model.fc</code>를 10개 클래스로 교체</div><div class="down" aria-hidden="true">↓</div><div class="step">학습·검증 → 최적 모델 저장</div><div class="down" aria-hidden="true">↓</div><div class="step">사전학습 가중치로 전이학습 → 정확도·혼동행렬 비교</div></div>
+<p>노트북별 실습 순서:</p>
+<ol>
+<li><strong>ch05_1</strong> CIFAR-10 ResNet18 학습과 평가 — CIFAR-10 ResNet18 학습·평가와 최적 모델 저장</li>
+<li><strong>ch05_2</strong> ResNet18 전이학습 — 사전학습 ResNet18 전이학습: 전처리, 분류층 교체, 학습·평가</li>
 </ol>
 <p>노트북 파일(<code>notebooks/</code> 폴더):</p>
 <ul>
-<li><strong>ch01_1</strong> <code>ch01_1_numpy_torch.ipynb</code> (원본 <code>ch01_1_numpy_torch.ipynb</code>)</li>
-<li><strong>ch01_2</strong> <code>ch01_2_numpy_and_tensor.ipynb</code> (원본 <code>ch01_2_numpy_and_tensor.ipynb</code>)</li>
-<li><strong>ch01_3</strong> <code>ch01_3_tensor_operations.ipynb</code> (원본 <code>ch01_3_tensor_operations.ipynb</code>)</li>
+<li><strong>ch05_1</strong> <code>ch05_1_cifar10_resnet18_training_evaluation.ipynb</code> (원본 <code>ch05_5_CIFAR10_ResNet18_Training_Evaluation.ipynb</code>)</li>
+<li><strong>ch05_2</strong> <code>ch05_2_resnet18_transfer_learning.ipynb</code> (원본 <code>ch05_6_ResNet18_Transfer_Learning.ipynb</code>)</li>
 </ul>
 </section><section class="section" id="s02"><h2><span class="num">02</span>환경 확인</h2><ul>
-<li>필요 환경: Python 3, <code>numpy</code>, <code>torch</code></li>
+<li>필요 환경: Python 3, <code>torch</code>, <code>torchvision</code>, <code>matplotlib</code> · GPU 권장 · 사전학습 가중치 내려받기 필요</li>
 <li>Google Colab 또는 로컬 Jupyter에서 <code>notebooks/</code> 폴더를 작업 폴더로 열고 순서대로 실행합니다.</li>
 </ul>
-<div class="codeblock"><div class="codebar"><span>bash</span></div><pre><code># 필요한 패키지 설치 (로컬 실행 시)
+<div class="codeblock"><div class="codebar"><span>BASH · Ubuntu 터미널 · 예시 명령 · 미검증</span></div><pre class="src"><code># 필요한 패키지 설치 (로컬 실행 시)
 python -m pip install torch torchvision numpy pandas scikit-learn matplotlib
 </code></pre></div>
-</section><section class="section" id="s03"><h2><span class="num">03</span>ch01_1 NumPy와 PyTorch</h2><p>노트북: <code>notebooks/ch01_1_numpy_torch.ipynb</code> · 원본 파일: <code>ch01_1_numpy_torch.ipynb</code> · 상태: 원본에 실행 기록 없음 · 미검증</p>
-<p>NumPy(넘파이, 수치 계산 라이브러리)와 PyTorch(파이토치, 딥러닝 프레임워크)의 기본 사용법을 같은 예제로 비교합니다.</p>
+</section><section class="section" id="s03"><h2><span class="num">03</span>ch05_1 CIFAR-10 ResNet18 학습과 평가</h2><p>노트북: <code>notebooks/ch05_1_cifar10_resnet18_training_evaluation.ipynb</code> · 원본 파일: <code>ch05_5_CIFAR10_ResNet18_Training_Evaluation.ipynb</code> · 상태: 원본 · 실행 기록 있음 · 재실행 미검증</p>
 <h3>개요</h3>
 <ul>
-<li>NumPy의 <code>ndarray</code>(엔디에레이, 다차원 배열)와 PyTorch의 <code>Tensor</code>(텐서, 다차원 배열)를 구분합니다.</li>
-<li>PyTorch의 <code>Autograd</code>(오토그래드, 자동 미분)를 간단히 확인합니다.</li>
+<li>Residual Connection(레지듀얼 커넥션, 잔차 연결)의 원리를 이해합니다.</li>
+<li>훈련·검증·시험 데이터의 역할을 구분합니다.</li>
 </ul>
-<h3>1. NumPy와 PyTorch의 역할</h3>
-<table>
-<thead>
-<tr>
-  <th>구분</th>
-  <th>NumPy</th>
-  <th>PyTorch</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td>핵심 자료형</td>
-  <td><code>ndarray</code></td>
-  <td><code>Tensor</code></td>
-</tr>
-<tr>
-  <td>주요 목적</td>
-  <td>수치 계산, 데이터 처리</td>
-  <td>딥러닝 모델 작성과 학습</td>
-</tr>
-<tr>
-  <td>자동 미분</td>
-  <td>지원하지 않음</td>
-  <td>지원</td>
-</tr>
-<tr>
-  <td>GPU 연산</td>
-  <td>기본적으로 CPU 중심</td>
-  <td>GPU 연산 지원</td>
-</tr>
-<tr>
-  <td>기본 문법</td>
-  <td>배열 중심</td>
-  <td>NumPy와 매우 유사</td>
-</tr>
-</tbody>
-</table>
-<p>파일명: <code>ch01_1_numpy_torch.ipynb</code> · 코드 셀 1 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>import numpy as np
+<h3>공통 설정</h3>
+<p>데이터·모델·이미지 폴더 위치를 지정합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 1 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>from pathlib import Path
+
+DATA_DIR = Path(&quot;data&quot;)
+MODEL_DIR = Path(&quot;models&quot;)
+PNG_DIR = Path(&quot;png&quot;)
+
+DATA_DIR.mkdir(exist_ok=True)
+
+MODEL_DIR.mkdir(exist_ok=True)
+PNG_DIR.mkdir(exist_ok=True)
+
+print(&quot;데이터 폴더:&quot;, DATA_DIR)
+print(&quot;모델 폴더  :&quot;, MODEL_DIR)
+print(&quot;이미지 폴더:&quot;, PNG_DIR)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 1</span></div><pre>데이터 폴더: data
+모델 폴더  : models
+이미지 폴더: png
+</pre></div>
+<h3>공통 import</h3>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 2 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>import random
+import time
+from pathlib import Path
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
-
-print(&quot;NumPy version :&quot;, np.__version__)
-print(&quot;PyTorch version:&quot;, torch.__version__)
+import torch.nn as nn
+from torch.utils.data import DataLoader, Subset
+from torchvision import datasets, transforms
+from torchvision.models import resnet18
 </code></pre></div>
-<h3>2. 배열과 텐서 만들기</h3>
+<h4>1) 빠른 실행</h4>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>CIFAR-10 데이터 준비
+→ 훈련·검증·시험 데이터 구성
+→ CIFAR-10용 ResNet18 생성
+→ Residual Block과 Shape 확인
+→ 모델 학습
+→ 최고 모델 저장
+→ 시험 세트 최종 평가
+→ 혼동행렬·클래스별 정확도
+→ 예측 결과·오답 분석
+</code></pre></div>
+<p>일반적인 CNN Block(씨엔엔 블록, 합성곱 계층 묶음)은 입력 <code>\mathbf{x}</code>를 여러 계층에 통과시킨 결과 <code>F(\mathbf{x})</code>를 다음 계층으로 전달합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>일반 블록
+x → Conv → BatchNorm → ReLU → Conv → BatchNorm → F(x)
+</code></pre></div>
+<p>Residual Block(레지듀얼 블록, 잔차 블록)은 원래 입력 <code>\mathbf{x}</code>를 변환 결과에 더합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code> ┌──────────── x ────────────┐
+ │ ↓
+x → Conv → BN → ReLU → Conv → BN → F(x) → F(x) + x → ReLU
+</code></pre></div>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathbf{y}=F(\mathbf{x};\mathbf{W})+\mathbf{x}
+</code></pre></div>
 <ul>
-<li><code>dtype</code>(디타입, 데이터 자료형)은 숫자를 저장하는 방식을 나타냅니다.</li>
-<li>딥러닝에서는 일반적으로 <code>float32</code>(플로트 서티투, 32비트 실수형)를 많이 사용합니다.</li>
-<li>두 자료형은 겉모습이 비슷하지만 서로 다른 라이브러리의 객체입니다.</li>
+<li><code>\mathbf{x}</code>: 블록에 들어온 원래 특징</li>
+<li><code>F(\mathbf{x};\mathbf{W})</code>: 합성곱 계층이 가중치 <code>\mathbf{W}</code>로 학습한 변화량</li>
+<li><code>\mathbf{y}</code>: 기존 특징과 새 특징을 더한 출력</li>
 </ul>
-<p>파일명: <code>ch01_1_numpy_torch.ipynb</code> · 코드 셀 2 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code># 같은 데이터를 NumPy 배열과 PyTorch 텐서로 만듭니다.
-numbers = [1, 2, 3, 4]
-
-np_array = np.array(numbers, dtype=np.float32)
-torch_tensor = torch.tensor(numbers, dtype=torch.float32)
-
-print(&quot;NumPy 배열 :&quot;, np_array)
-print(&quot;PyTorch 텐서:&quot;, torch_tensor)
-
-print(&quot;NumPy 자료형 :&quot;, np_array.dtype)
-print(&quot;PyTorch 자료형:&quot;, torch_tensor.dtype)
-</code></pre></div>
-<h3>3. 기본 연산 비교</h3>
-<p><code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>는 기본적으로 <strong>원소별 연산</strong>입니다.</p>
 <blockquote>
-<p><strong>원소별 연산은 각 원소에 같은 계산을 적용합니다.</strong></p>
+<p><strong>ResNet은 출력 전체를 새로 만드는 대신, 입력에 더할 변화량을 학습합니다.</strong></p>
 </blockquote>
-<p>파일명: <code>ch01_1_numpy_torch.ipynb</code> · 코드 셀 3 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code># 두 라이브러리의 기본 연산 문법은 거의 같습니다.
-print(&quot;[NumPy]&quot;)
-print(&quot;더하기 :&quot;, np_array + 10)
-print(&quot;곱하기 :&quot;, np_array * 2)
-print(&quot;합계   :&quot;, np_array.sum())
-print(&quot;평균   :&quot;, np_array.mean())
-
-print(&quot;\n[PyTorch]&quot;)
-print(&quot;더하기 :&quot;, torch_tensor + 10)
-print(&quot;곱하기 :&quot;, torch_tensor * 2)
-print(&quot;합계   :&quot;, torch_tensor.sum())
-print(&quot;평균   :&quot;, torch_tensor.mean())
-</code></pre></div>
-<h3>4. Shape, 인덱싱, Reshape</h3>
+<p>입력과 <code>F(\mathbf{x})</code>의 Shape(셰이프, 텐서 크기)가 다르면 바로 더할 수 없습니다. 이때 Downsample(다운샘플, 크기와 채널을 맞추는 변환)이 입력의 Shape를 조정합니다.</p>
 <ul>
-<li><code>shape</code>(셰이프, 데이터 모양)의 <code>(2, 3)</code>은 <strong>2행 3열</strong>을 의미합니다.</li>
-<li>인덱스는 <code>0</code>부터 시작합니다.</li>
-<li><code>reshape</code>는 데이터의 값과 개수는 유지하고 모양만 바꿉니다.</li>
-<li>원소가 6개이므로 <code>(3, 2)</code>, <code>(1, 6)</code>, <code>(6, 1)</code> 등으로 변경할 수 있습니다.</li>
+<li><p><code>torch</code>: 텐서 연산과 모델 학습</p>
+</li>
+<li><p><code>torch.nn</code>: 신경망 계층과 손실함수</p>
+</li>
+<li><p><code>torchvision.datasets</code>: CIFAR-10 데이터셋</p>
+</li>
+<li><p><code>torchvision.transforms</code>: 이미지 전처리와 데이터 증강</p>
+</li>
+<li><p><code>torchvision.models.resnet18</code>: ResNet18 모델 생성</p>
+</li>
+<li><p><code>DataLoader</code>: 미니배치 구성</p>
+</li>
+<li><p><code>Subset</code>: 지정한 인덱스만 선택</p>
+</li>
+<li><p><code>QUICK_RUN = True</code>: 일부 데이터와 3 Epoch로 코드 흐름 확인</p>
+</li>
+<li><p><code>QUICK_RUN = False</code>: 전체 데이터와 40 Epoch로 본 학습</p>
+</li>
 </ul>
-<p>파일명: <code>ch01_1_numpy_torch.ipynb</code> · 코드 셀 4 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code># 2행 3열 데이터
-data = [[1, 2, 3],
-        [4, 5, 6]]
+<p>빠른 실행 결과는 최종 정확도 비교용이 아닙니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 3 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>SEED = 42
 
-np_matrix = np.array(data)
-torch_matrix = torch.tensor(data)
+random.seed(SEED)
 
-print(&quot;NumPy shape :&quot;, np_matrix.shape)
-print(&quot;PyTorch shape:&quot;, torch_matrix.shape)
+np.random.seed(SEED)
 
-# 첫 번째 행, 두 번째 열의 값
-print(&quot;NumPy 값 :&quot;, np_matrix[0, 1])
-print(&quot;PyTorch 값:&quot;, torch_matrix[0, 1])
-
-# 2행 3열을 3행 2열로 변경
-print(&quot;\nNumPy reshape&quot;)
-print(np_matrix.reshape(3, 2))
-
-print(&quot;\nPyTorch reshape&quot;)
-print(torch_matrix.reshape(3, 2))
+torch.manual_seed(SEED)
 </code></pre></div>
-<h3>5. 원소별 곱셈과 행렬곱 구분</h3>
-<ul>
-<li><code>*</code> : Element-wise multiplication(원소별 곱셈)</li>
-<li><code>@</code> : Matrix multiplication(행렬곱)</li>
-</ul>
-<p>두 연산은 결과가 다르므로 반드시 구분해야 합니다.</p>
-<p>파일명: <code>ch01_1_numpy_torch.ipynb</code> · 코드 셀 5 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>a_np = np.array([[1, 2],
-                 [3, 4]])
-
-b_np = np.array([[5, 6],
-                 [7, 8]])
-
-a_torch = torch.tensor(a_np)
-b_torch = torch.tensor(b_np)
-
-# 원소별 곱셈: 같은 위치의 원소끼리 곱합니다.
-print(&quot;NumPy 원소별 곱셈&quot;)
-print(a_np * b_np)
-
-print(&quot;\nPyTorch 원소별 곱셈&quot;)
-print(a_torch * b_torch)
-
-# 행렬곱: 행과 열을 곱하여 새로운 행렬을 만듭니다.
-print(&quot;\nNumPy 행렬곱&quot;)
-print(a_np @ b_np)
-
-print(&quot;\nPyTorch 행렬곱&quot;)
-print(a_torch @ b_torch)
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 3</span></div><pre>&lt;torch._C.Generator at 0x76ef72d8ba50&gt;
+</pre></div>
+<h4>2) 실행 장치 확인</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 4 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(SEED)
 </code></pre></div>
-<h3>6. NumPy와 PyTorch 사이의 변환</h3>
-<ul>
-<li><code>torch.tensor(np_data)</code>는 NumPy 배열의 값을 이용해 새 텐서를 만듭니다.</li>
-<li>CPU 텐서는 <code>.numpy()</code>로 NumPy 배열로 변환할 수 있습니다.</li>
-<li><code>.copy()</code>를 붙이면 원본 텐서와 독립된 NumPy 배열을 만들 수 있어 초보 실습에서 혼선을 줄일 수 있습니다.</li>
-</ul>
-<p>파일명: <code>ch01_1_numpy_torch.ipynb</code> · 코드 셀 6 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code># NumPy 배열 → PyTorch 텐서
-np_data = np.array([10, 20, 30], dtype=np.float32)
-tensor_data = torch.tensor(np_data)
+<h4>3) 실행 장치 확인</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 5 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>device = torch.device(&quot;cuda&quot; if torch.cuda.is_available() else &quot;cpu&quot;)
 
-# PyTorch 텐서 → NumPy 배열
-back_to_numpy = tensor_data.numpy().copy()
+QUICK_RUN = True
 
-print(&quot;원본 NumPy :&quot;, np_data)
-print(&quot;PyTorch 변환:&quot;, tensor_data)
-print(&quot;다시 NumPy :&quot;, back_to_numpy)
+BATCH_SIZE = 128
+
+EPOCHS = 3 if QUICK_RUN else 40
+
+LEARNING_RATE = 0.1
+
+MOMENTUM = 0.9
+
+WEIGHT_DECAY = 5e-4
+
+PATIENCE = 3 if QUICK_RUN else 10
+
+VALIDATION_SIZE = 5_000
+
+NUM_WORKERS = 2
+
+CIFAR10_MEAN = (0.4914, 0.4822, 0.4465)
+
+CIFAR10_STD = (0.2470, 0.2435, 0.2616)
+
+class_names = [
+    &quot;airplane&quot;, &quot;automobile&quot;, &quot;bird&quot;, &quot;cat&quot;, &quot;deer&quot;,
+    &quot;dog&quot;, &quot;frog&quot;, &quot;horse&quot;, &quot;ship&quot;, &quot;truck&quot;,
+]
+
+class_names_ko = [
+    &quot;비행기&quot;, &quot;자동차&quot;, &quot;새&quot;, &quot;고양이&quot;, &quot;사슴&quot;,
+    &quot;개&quot;, &quot;개구리&quot;, &quot;말&quot;, &quot;배&quot;, &quot;트럭&quot;,
+]
+
+print(&quot;PyTorch 버전:&quot;, torch.__version__)
+
+print(&quot;실행 장치:&quot;, device)
+
+print(&quot;Quick Run:&quot;, QUICK_RUN)
+
+print(&quot;Epoch:&quot;, EPOCHS)
 </code></pre></div>
-<h3>7. PyTorch의 자동 미분</h3>
-<p>함수는 다음과 같습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>y = x^2 + 2x
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 5</span></div><pre>PyTorch 버전: 2.13.0+cu130
+실행 장치: cuda
+Quick Run: True
+Epoch: 3
+</pre></div>
+<h4>4) 데이터 분리</h4>
+<p>CIFAR-10 공식 훈련 데이터 50,000개에서 검증 데이터 5,000개를 분리합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>공식 훈련 데이터 50,000개
+├─ 훈련 데이터 45,000개
+└─ 검증 데이터 5,000개
+
+공식 시험 데이터 10,000개
+└─ 최종 시험 데이터 10,000개
 </code></pre></div>
-<p>미분 결과는 다음과 같습니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\frac{dy}{dx} = 2x + 2
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>RandomCrop
+→ RandomHorizontalFlip
+→ ToTensor
+→ Normalize
 </code></pre></div>
-<p><code>x = 3</code>을 대입하면 기울기는 <code>8</code>입니다. PyTorch는 <code>backward()</code>를 실행하여 이 값을 자동으로 계산합니다.</p>
-<blockquote>
-<p><strong>자동 미분은 신경망 학습에 필요한 기울기를 자동으로 계산합니다.</strong></p>
-</blockquote>
-<p>파일명: <code>ch01_1_numpy_torch.ipynb</code> · 코드 셀 7 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code># x에 대한 계산 과정을 추적하도록 설정합니다.
-x = torch.tensor(3.0, requires_grad=True)
-
-# y = x² + 2x
-y = x**2 + 2*x
-
-# y를 x로 미분합니다. dy/dx
-y.backward()
-
-print(&quot;x =&quot;, x.item())
-print(&quot;y =&quot;, y.item())
-print(&quot;dy/dx =&quot;, x.grad.item())
+<p>훈련 데이터에만 무작위 변형을 적용하여 다양한 이미지를 학습하게 합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>ToTensor
+→ Normalize
 </code></pre></div>
-<h3>8. 미니 실습: 센서 데이터 정규화</h3>
-<p>파일명: <code>ch01_1_numpy_torch.ipynb</code> · 코드 셀 8 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code># 센서 측정값을 0~1 범위로 변환합니다.
-sensor_values = [20.0, 30.0, 40.0, 50.0]
+<p>검증과 시험 데이터는 성능을 공정하게 측정해야 하므로 무작위 변형을 적용하지 않습니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 6 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>train_transform = transforms.Compose([
+    transforms.RandomCrop(32, padding=4),
+    transforms.RandomHorizontalFlip(),
+    transforms.ToTensor(),
+    transforms.Normalize(CIFAR10_MEAN, CIFAR10_STD),
+])
 
-# NumPy
-np_sensor = np.array(sensor_values, dtype=np.float32)
-np_normalized = (np_sensor - np_sensor.min()) / (np_sensor.max() - np_sensor.min())
+evaluation_transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize(CIFAR10_MEAN, CIFAR10_STD),
+])
 
-# PyTorch
-torch_sensor = torch.tensor(sensor_values, dtype=torch.float32)
-torch_normalized = (
-    (torch_sensor - torch_sensor.min())
-    / (torch_sensor.max() - torch_sensor.min())
+train_source = datasets.CIFAR10(
+    root=str(DATA_DIR / &quot;torchvision&quot;), train=True, download=True, transform=train_transform
 )
 
-print(&quot;NumPy 결과 :&quot;, np_normalized)
-print(&quot;PyTorch 결과:&quot;, torch_normalized)
+validation_source = datasets.CIFAR10(
+    root=str(DATA_DIR / &quot;torchvision&quot;), train=True, download=False, transform=evaluation_transform
+)
 
-# 두 결과가 같은지 확인합니다.
-print(&quot;결과 일치:&quot;, np.allclose(np_normalized, torch_normalized.numpy()))
+test_dataset = datasets.CIFAR10(
+    root=str(DATA_DIR / &quot;torchvision&quot;), train=False, download=True, transform=evaluation_transform
+)
+
+generator = torch.Generator().manual_seed(SEED)
+
+indices = torch.randperm(len(train_source), generator=generator).tolist()
+
+train_indices = indices[:-VALIDATION_SIZE]
+
+validation_indices = indices[-VALIDATION_SIZE:]
 </code></pre></div>
-<h3>9. 핵심 정리</h3>
+<h4>5) 데이터 분리</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 7 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>if QUICK_RUN:
+    train_indices = train_indices[:5_000]
+    validation_indices = validation_indices[:1_000]
+    test_dataset = Subset(test_dataset, range(2_000))
+</code></pre></div>
+<h4>6) 데이터 분리</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 8 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>train_dataset = Subset(train_source, train_indices)
+
+validation_dataset = Subset(validation_source, validation_indices)
+</code></pre></div>
+<h4>7) 실행 장치 확인</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 9 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def make_loader(dataset, shuffle):
+    return DataLoader(
+        dataset,
+        batch_size=BATCH_SIZE,
+        shuffle=shuffle,
+        num_workers=NUM_WORKERS,
+        pin_memory=torch.cuda.is_available(),
+    )
+</code></pre></div>
+<h4>8) DataLoader 준비</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 10 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>train_loader = make_loader(train_dataset, shuffle=True)
+
+validation_loader = make_loader(validation_dataset, shuffle=False)
+
+test_loader = make_loader(test_dataset, shuffle=False)
+
+print(&quot;훈련 데이터:&quot;, len(train_dataset))
+
+print(&quot;검증 데이터:&quot;, len(validation_dataset))
+
+print(&quot;시험 데이터:&quot;, len(test_dataset))
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 10</span></div><pre>훈련 데이터: 5000
+검증 데이터: 1000
+시험 데이터: 2000
+</pre></div>
+<h4>9) 배치 데이터 확인</h4>
+<p>정규화된 이미지는 그대로 표시하면 색상이 어색하게 보입니다.</p>
+<p>정규화 식은 다음과 같습니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathbf{x}_{norm}=\frac{\mathbf{x}-\boldsymbol{\mu}}{\boldsymbol{\sigma}}
+</code></pre></div>
+<p>화면에 표시할 때는 역변환합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathbf{x}=\mathbf{x}_{norm}\boldsymbol{\sigma}+\boldsymbol{\mu}
+</code></pre></div>
 <ul>
-<li>NumPy의 기본 단위는 <code>ndarray</code>, PyTorch의 기본 단위는 <code>Tensor</code>입니다.</li>
-<li><code>*</code>는 원소별 곱셈이고, <code>@</code>는 행렬곱입니다.</li>
-<li>PyTorch는 자동 미분을 지원하므로 딥러닝 모델 학습에 사용할 수 있습니다.</li>
+<li><code>\boldsymbol{\mu}</code>: 채널별 평균</li>
+<li><code>\boldsymbol{\sigma}</code>: 채널별 표준편차</li>
 </ul>
-</section><section class="section" id="s04"><h2><span class="num">04</span>ch01_2 NumPy 배열과 PyTorch Tensor 이해하기</h2><p>노트북: <code>notebooks/ch01_2_numpy_and_tensor.ipynb</code> · 원본 파일: <code>ch01_2_numpy_and_tensor.ipynb</code> · 상태: 원본에 실행 기록 없음 · 미검증</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 11 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def denormalize_image(image):
+    mean = torch.tensor(CIFAR10_MEAN).view(3, 1, 1)
+    std = torch.tensor(CIFAR10_STD).view(3, 1, 1)
+    return (image.cpu() * std + mean).clamp(0, 1)
+
+sample_images, sample_labels = next(iter(train_loader))
+
+plt.figure(figsize=(12, 6))
+
+for index in range(12):
+    image = denormalize_image(sample_images[index]).permute(1, 2, 0)
+    label = sample_labels[index].item()
+
+    plt.subplot(3, 4, index + 1)
+    plt.imshow(image)
+    plt.title(f&quot;{class_names_ko[label]}\n({class_names[label]})&quot;)
+    plt.axis(&quot;off&quot;)
+
+plt.tight_layout()
+
+plt.show()
+</code></pre></div>
+<p>출력 그림 — 원본 노트북 기록 · 코드 셀 11:</p>
+<p><img src="img/ch05_1_c11_0.png" alt="ch05_1 CIFAR-10 ResNet18 학습과 평가 — 코드 셀 11 출력 그림" /></p>
+<h4>10) 모델 구성</h4>
+<p>기본 <code>resnet18()</code>은 ImageNet(이미지넷, 대규모 이미지 데이터셋)의 큰 이미지를 기준으로 설계되었습니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>기본 입력부
+7×7 Conv, stride=2
+→ 3×3 MaxPool, stride=2
+</code></pre></div>
+<p>32×32 CIFAR-10 이미지에 그대로 적용하면 공간 크기가 초반에 너무 빠르게 줄어듭니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>CIFAR-10용 입력부
+3×3 Conv, stride=1
+→ MaxPool 제거
+</code></pre></div>
+<p>마지막 출력층은 CIFAR-10의 10개 클래스에 맞춥니다.</p>
+<p><code>weights=None</code>은 사전학습 가중치를 사용하지 않고 처음부터 학습한다는 뜻입니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 12 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def create_cifar10_resnet18(num_classes=10):
+    model = resnet18(weights=None, num_classes=num_classes)
+
+    # CIFAR-10의 32×32 이미지에 맞게 입력부 수정
+    model.conv1 = nn.Conv2d(
+        3, 64, kernel_size=3, stride=1, padding=1, bias=False
+    )
+    model.maxpool = nn.Identity()
+
+    return model
+
+model = create_cifar10_resnet18().to(device)
+
+print(model)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 12</span></div><pre>ResNet(
+  (conv1): Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+  (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+  (relu): ReLU(inplace=True)
+  (maxpool): Identity()
+  (layer1): Sequential(
+    (0): BasicBlock(
+      (conv1): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+      (relu): ReLU(inplace=True)
+      (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+    )
+    (1): BasicBlock(
+      (conv1): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+      (relu): ReLU(inplace=True)
+      (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+    )
+  )
+  (layer2): Sequential(
+    (0): BasicBlock(
+      (conv1): Conv2d(64, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+      (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+      (relu): ReLU(inplace=True)
+      (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+      (downsample): Sequential(
+        (0): Conv2d(64, 128, kernel_size=(1, 1), stride=(2, 2), bias=False)
+        (1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+      )
+    )
+    (1): BasicBlock(
+      (conv1): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+      (relu): ReLU(inplace=True)
+      (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+    )
+... (이하 44줄 생략, 전체 내용은 노트북 참고)
+</pre></div>
+<h4>11) 모델 파라미터 확인</h4>
+<p>ResNet18의 첫 번째 BasicBlock(베이식 블록, 기본 잔차 블록)은 입력과 출력 Shape가 같으므로 입력을 그대로 더합니다.</p>
+<p><code>layer2[0]</code>은 채널 수와 공간 크기가 바뀌므로 Downsample 경로를 사용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력 : [N, 3, 32, 32]
+conv1 : [N, 64, 32, 32]
+layer1 : [N, 64, 32, 32]
+layer2 : [N, 128, 16, 16]
+layer3 : [N, 256, 8, 8]
+layer4 : [N, 512, 4, 4]
+avgpool : [N, 512, 1, 1]
+flatten : [N, 512]
+fc : [N, 10]
+</code></pre></div>
+<p>공간 크기는 줄어들고 채널 수는 증가합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>공간 크기: 32 → 16 → 8 → 4 → 1
+채널 수 : 64 → 128 → 256 → 512
+</code></pre></div>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 13 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>print(&quot;===== layer1[0] =====&quot;)
+
+print(model.layer1[0])
+
+print(&quot;Downsample:&quot;, model.layer1[0].downsample)
+
+print(&quot;\n===== layer2[0] =====&quot;)
+
+print(model.layer2[0])
+
+print(&quot;Downsample:&quot;, model.layer2[0].downsample)
+
+x = torch.randn(2, 3, 32, 32, device=device)
+
+model.eval()
+
+with torch.inference_mode():
+    x = model.conv1(x)
+    print(&quot;\nconv1  :&quot;, x.shape)
+
+    x = model.relu(model.bn1(x))
+    x = model.maxpool(x)
+
+    x = model.layer1(x)
+    print(&quot;layer1 :&quot;, x.shape)
+
+    x = model.layer2(x)
+    print(&quot;layer2 :&quot;, x.shape)
+
+    x = model.layer3(x)
+    print(&quot;layer3 :&quot;, x.shape)
+
+    x = model.layer4(x)
+    print(&quot;layer4 :&quot;, x.shape)
+
+    x = model.avgpool(x)
+    print(&quot;avgpool:&quot;, x.shape)
+
+    x = torch.flatten(x, 1)
+    print(&quot;flatten:&quot;, x.shape)
+
+    logits = model.fc(x)
+    print(&quot;logits :&quot;, logits.shape)
+
+parameter_count = sum(parameter.numel() for parameter in model.parameters())
+
+print(f&quot;\n전체 파라미터: {parameter_count:,}개&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 13</span></div><pre>===== layer1[0] =====
+BasicBlock(
+  (conv1): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+  (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+  (relu): ReLU(inplace=True)
+  (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+  (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+)
+Downsample: None
+
+===== layer2[0] =====
+BasicBlock(
+  (conv1): Conv2d(64, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+  (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+  (relu): ReLU(inplace=True)
+  (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+  (bn2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+  (downsample): Sequential(
+    (0): Conv2d(64, 128, kernel_size=(1, 1), stride=(2, 2), bias=False)
+    (1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+  )
+)
+Downsample: Sequential(
+  (0): Conv2d(64, 128, kernel_size=(1, 1), stride=(2, 2), bias=False)
+  (1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, bias=True, track_running_stats=True)
+)
+
+conv1  : torch.Size([2, 64, 32, 32])
+layer1 : torch.Size([2, 64, 32, 32])
+layer2 : torch.Size([2, 128, 16, 16])
+layer3 : torch.Size([2, 256, 8, 8])
+layer4 : torch.Size([2, 512, 4, 4])
+avgpool: torch.Size([2, 512, 1, 1])
+flatten: torch.Size([2, 512])
+logits : torch.Size([2, 10])
+
+전체 파라미터: 11,173,962개
+</pre></div>
+<h4>12) 학습 함수 정의</h4>
+<p>모델은 각 클래스의 Logit(로짓, 정규화되지 않은 원시 점수)을 출력합니다.</p>
+<p><code>nn.CrossEntropyLoss()</code>는 Logit과 정답 클래스 번호를 받아 다중분류 손실을 계산합니다. 모델 출력에 Softmax(소프트맥스, 점수를 확률로 변환하는 함수)를 미리 적용하지 않습니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>L=-\frac{1}{N}\sum_{i=1}^{N}\log p_{i,y_i}
+</code></pre></div>
+<ul>
+<li><code>N</code>: 미니배치의 이미지 수</li>
+<li><code>y_i</code>: <code>i</code>번째 이미지의 실제 클래스</li>
+<li><code>p_{i,y_i}</code>: 실제 클래스에 대한 예측 확률</li>
+</ul>
+<p>정확도는 전체 이미지 중 정답을 맞힌 비율입니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\text{Accuracy}
+=\frac{\text{Correct Predictions}}{\text{Total Samples}}
+</code></pre></div>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>model.train()
+→ Forward
+→ Loss 계산
+→ 기울기 초기화
+→ Backpropagation
+→ 가중치 갱신
+</code></pre></div>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>model.eval()
+→ torch.inference_mode()
+→ Forward
+→ Loss·Accuracy 계산
+</code></pre></div>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 14 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def train_one_epoch(model, data_loader, loss_function, optimizer):
+    model.train()
+
+    total_loss = 0.0
+    total_correct = 0
+    total_samples = 0
+
+    for images, labels in data_loader:
+        images = images.to(device)
+        labels = labels.to(device)
+
+        optimizer.zero_grad()
+
+        logits = model(images)
+        loss = loss_function(logits, labels)
+
+        loss.backward()
+        optimizer.step()
+
+        batch_size = labels.size(0)
+        total_loss += loss.item() * batch_size
+        total_correct += (logits.argmax(dim=1) == labels).sum().item()
+        total_samples += batch_size
+
+    average_loss = total_loss / total_samples
+    accuracy = total_correct / total_samples
+
+    return average_loss, accuracy
+</code></pre></div>
+<h4>13) 평가 함수 정의</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 15 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def evaluate(model, data_loader, loss_function):
+    model.eval()
+
+    total_loss = 0.0
+    total_correct = 0
+    total_samples = 0
+
+    with torch.inference_mode():
+        for images, labels in data_loader:
+            images = images.to(device)
+            labels = labels.to(device)
+
+            logits = model(images)
+            loss = loss_function(logits, labels)
+
+            batch_size = labels.size(0)
+            total_loss += loss.item() * batch_size
+            total_correct += (logits.argmax(dim=1) == labels).sum().item()
+            total_samples += batch_size
+
+    average_loss = total_loss / total_samples
+    accuracy = total_correct / total_samples
+
+    return average_loss, accuracy
+</code></pre></div>
+<h4>14) 모델 구성</h4>
+<ul>
+<li><code>nn.CrossEntropyLoss()</code></li>
+<li>다중분류 문제에 사용</li>
+<li>모델은 10개 클래스의 Logit을 출력</li>
+</ul>
+<p>SGD(에스지디, 확률적 경사하강법)에 Momentum(모멘텀, 이전 이동 방향 활용)과 Weight Decay(웨이트 디케이, 가중치 감쇠)를 적용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>SGD
++ Momentum
++ Weight Decay
+</code></pre></div>
+<p><code>CosineAnnealingLR</code>(코사인 어닐링 러닝 레이트, 코사인 곡선형 학습률 조정기)은 Epoch가 진행될수록 학습률을 부드럽게 낮춥니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 16 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>loss_function = nn.CrossEntropyLoss()
+
+optimizer = torch.optim.SGD(
+    model.parameters(),
+    lr=LEARNING_RATE,
+    momentum=MOMENTUM,
+    weight_decay=WEIGHT_DECAY,
+)
+
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+    optimizer,
+    T_max=EPOCHS,
+    eta_min=1e-4,
+)
+
+BEST_MODEL_PATH = MODEL_DIR / &quot;ch05_1_best_cifar10_resnet18.pt&quot;
+
+print(&quot;손실함수:&quot;, loss_function)
+
+print(&quot;Optimizer:&quot;, optimizer.__class__.__name__)
+
+print(&quot;Scheduler:&quot;, scheduler.__class__.__name__)
+
+print(&quot;저장 경로:&quot;, BEST_MODEL_PATH)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 16</span></div><pre>손실함수: CrossEntropyLoss()
+Optimizer: SGD
+Scheduler: CosineAnnealingLR
+저장 경로: models/ch05_5_best_cifar10_resnet18.pt
+</pre></div>
+<h4>15) 학습 기록과 최적 모델 준비</h4>
+<p>각 Epoch(에포크, 전체 훈련 데이터 1회 학습)에서 다음 값을 기록합니다.</p>
+<ul>
+<li>훈련 손실</li>
+<li>훈련 정확도</li>
+<li>검증 손실</li>
+<li>검증 정확도</li>
+<li>학습률</li>
+</ul>
+<p>검증 정확도가 가장 높아질 때 체크포인트를 저장합니다.</p>
+<blockquote>
+<p><strong>시험 데이터는 모델 선택에 사용하지 않습니다.</strong></p>
+</blockquote>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 17 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>history = {
+    &quot;train_loss&quot;: [],
+    &quot;train_accuracy&quot;: [],
+    &quot;validation_loss&quot;: [],
+    &quot;validation_accuracy&quot;: [],
+    &quot;learning_rate&quot;: [],
+}
+
+best_validation_accuracy = 0.0
+
+best_epoch = 0
+
+epochs_without_improvement = 0
+
+start_time = time.time()
+</code></pre></div>
+<h4>16) 모델 저장</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 18 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>for epoch in range(EPOCHS):
+    current_lr = optimizer.param_groups[0][&quot;lr&quot;]
+
+    train_loss, train_accuracy = train_one_epoch(
+        model, train_loader, loss_function, optimizer
+    )
+
+    validation_loss, validation_accuracy = evaluate(
+        model, validation_loader, loss_function
+    )
+
+    history[&quot;train_loss&quot;].append(train_loss)
+    history[&quot;train_accuracy&quot;].append(train_accuracy)
+    history[&quot;validation_loss&quot;].append(validation_loss)
+    history[&quot;validation_accuracy&quot;].append(validation_accuracy)
+    history[&quot;learning_rate&quot;].append(current_lr)
+
+    if validation_accuracy &gt; best_validation_accuracy:
+        best_validation_accuracy = validation_accuracy
+        best_epoch = epoch + 1
+        epochs_without_improvement = 0
+
+        checkpoint = {
+            &quot;model_name&quot;: &quot;cifar10_resnet18&quot;,
+            &quot;model_state_dict&quot;: model.state_dict(),
+            &quot;num_classes&quot;: 10,
+            &quot;class_names&quot;: class_names,
+            &quot;cifar10_mean&quot;: CIFAR10_MEAN,
+            &quot;cifar10_std&quot;: CIFAR10_STD,
+            &quot;best_epoch&quot;: best_epoch,
+            &quot;best_validation_accuracy&quot;: best_validation_accuracy,
+        }
+
+        torch.save(checkpoint, BEST_MODEL_PATH)
+    else:
+        epochs_without_improvement += 1
+
+    scheduler.step()
+
+    print(
+        f&quot;Epoch {epoch + 1:02d}/{EPOCHS} | &quot;
+        f&quot;Train Loss {train_loss:.4f} | &quot;
+        f&quot;Train Acc {train_accuracy * 100:.2f}% | &quot;
+        f&quot;Val Loss {validation_loss:.4f} | &quot;
+        f&quot;Val Acc {validation_accuracy * 100:.2f}% | &quot;
+        f&quot;LR {current_lr:.6f}&quot;
+    )
+
+    if epochs_without_improvement &gt;= PATIENCE:
+        print(f&quot;Early Stopping: {PATIENCE}개 Epoch 동안 성능 개선 없음&quot;)
+        break
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 18</span></div><pre>Epoch 01/3 | Train Loss 3.4618 | Train Acc 11.48% | Val Loss 2.4061 | Val Acc 14.80% | LR 0.100000
+Epoch 02/3 | Train Loss 2.2561 | Train Acc 15.02% | Val Loss 2.2595 | Val Acc 18.50% | LR 0.075025
+Epoch 03/3 | Train Loss 2.1182 | Train Acc 18.76% | Val Loss 2.1085 | Val Acc 21.40% | LR 0.025075
+</pre></div>
+<h4>17) 모델 불러오기</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 19 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>best_checkpoint = torch.load(
+    BEST_MODEL_PATH,
+    map_location=device,
+    weights_only=True,
+)
+
+model.load_state_dict(best_checkpoint[&quot;model_state_dict&quot;])
+
+model.to(device)
+
+elapsed_minutes = (time.time() - start_time) / 60
+
+print(&quot;\n최고 검증 Epoch:&quot;, best_epoch)
+
+print(f&quot;최고 검증 정확도: {best_validation_accuracy * 100:.2f}%&quot;)
+
+print(f&quot;전체 학습 시간: {elapsed_minutes:.2f}분&quot;)
+
+print(&quot;최고 모델 저장:&quot;, BEST_MODEL_PATH)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 19</span></div><pre>
+최고 검증 Epoch: 3
+최고 검증 정확도: 21.40%
+전체 학습 시간: 0.16분
+최고 모델 저장: models/ch05_5_best_cifar10_resnet18.pt
+</pre></div>
+<h4>18) 모델 구성</h4>
+<ul>
+<li><p>훈련 손실과 검증 손실이 함께 감소하면 안정적인 학습</p>
+</li>
+<li><p>훈련 손실만 감소하고 검증 손실이 증가하면 과적합 가능성</p>
+</li>
+<li><p>훈련 정확도와 검증 정확도의 차이가 작으면 일반화가 양호</p>
+</li>
+<li><p>두 정확도의 차이가 계속 커지면 과적합 가능성</p>
+</li>
+</ul>
+<p>Cosine Annealing(코사인 어닐링)은 학습률을 갑자기 낮추지 않고 부드럽게 감소시킵니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 20 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>epochs_completed = len(history[&quot;train_loss&quot;])
+
+epoch_axis = range(1, epochs_completed + 1)
+
+plt.figure(figsize=(7, 4))
+
+plt.plot(epoch_axis, history[&quot;train_loss&quot;], label=&quot;Train&quot;)
+
+plt.plot(epoch_axis, history[&quot;validation_loss&quot;], label=&quot;Validation&quot;)
+
+plt.xlabel(&quot;Epoch&quot;)
+
+plt.ylabel(&quot;Loss&quot;)
+
+plt.title(&quot;CIFAR-10 ResNet18 Loss&quot;)
+
+plt.legend()
+
+plt.tight_layout()
+
+plt.show()
+
+plt.figure(figsize=(7, 4))
+
+plt.plot(epoch_axis, history[&quot;train_accuracy&quot;], label=&quot;Train&quot;)
+
+plt.plot(epoch_axis, history[&quot;validation_accuracy&quot;], label=&quot;Validation&quot;)
+
+plt.xlabel(&quot;Epoch&quot;)
+
+plt.ylabel(&quot;Accuracy&quot;)
+
+plt.title(&quot;CIFAR-10 ResNet18 Accuracy&quot;)
+
+plt.legend()
+
+plt.tight_layout()
+
+plt.show()
+
+plt.figure(figsize=(7, 4))
+
+plt.plot(epoch_axis, history[&quot;learning_rate&quot;])
+
+plt.xlabel(&quot;Epoch&quot;)
+
+plt.ylabel(&quot;Learning Rate&quot;)
+
+plt.title(&quot;Cosine Learning Rate Schedule&quot;)
+
+plt.tight_layout()
+
+plt.show()
+</code></pre></div>
+<p>출력 그림 — 원본 노트북 기록 · 코드 셀 20:</p>
+<p><img src="img/ch05_1_c20_0.png" alt="ch05_1 CIFAR-10 ResNet18 학습과 평가 — 코드 셀 20 출력 그림" /></p>
+<p><img src="img/ch05_1_c20_1.png" alt="ch05_1 CIFAR-10 ResNet18 학습과 평가 — 코드 셀 20 출력 그림" /></p>
+<p><img src="img/ch05_1_c20_2.png" alt="ch05_1 CIFAR-10 ResNet18 학습과 평가 — 코드 셀 20 출력 그림" /></p>
+<h4>19) 예측 결과 수집 함수</h4>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Train Set
+→ 가중치 학습
+
+Validation Set
+→ 최고 모델 선택
+
+Test Set
+→ 최종 일반화 성능 평가
+</code></pre></div>
+<p>시험 데이터 전체에서 다음 값을 수집합니다.</p>
+<ul>
+<li>실제 클래스</li>
+<li>예측 클래스</li>
+<li>예측 확률</li>
+<li>화면 표시용 이미지</li>
+</ul>
+<p><code>torch.softmax()</code>는 결과를 분석할 때만 Logit을 확률로 변환합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 21 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>test_loss, test_accuracy = evaluate(model, test_loader, loss_function)
+
+print(f&quot;시험 손실: {test_loss:.4f}&quot;)
+
+print(f&quot;시험 정확도: {test_accuracy * 100:.2f}%&quot;)
+
+def collect_predictions(model, data_loader):
+    model.eval()
+
+    all_images = []
+    all_labels = []
+    all_predictions = []
+    all_confidences = []
+
+    with torch.inference_mode():
+        for images, labels in data_loader:
+            logits = model(images.to(device))
+            probabilities = torch.softmax(logits, dim=1)
+            confidences, predictions = probabilities.max(dim=1)
+
+            all_images.append(images.cpu())
+            all_labels.append(labels.cpu())
+            all_predictions.append(predictions.cpu())
+            all_confidences.append(confidences.cpu())
+
+    return (
+        torch.cat(all_images),
+        torch.cat(all_labels),
+        torch.cat(all_predictions),
+        torch.cat(all_confidences),
+    )
+
+test_images, test_labels, test_predictions, test_confidences = (
+    collect_predictions(model, test_loader)
+)
+
+print(&quot;예측 이미지 수:&quot;, len(test_predictions))
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 21</span></div><pre>시험 손실: 2.0745
+시험 정확도: 21.65%
+예측 이미지 수: 2000
+</pre></div>
+<h4>20) Confusion Matrix 준비</h4>
+<p>Confusion Matrix(컨퓨전 매트릭스, 혼동행렬)는 실제 클래스와 예측 클래스의 관계를 나타냅니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>행 → 실제 클래스
+열 → 예측 클래스
+</code></pre></div>
+<ul>
+<li>대각선: 올바르게 분류한 이미지 수</li>
+<li>대각선 이외: 다른 클래스로 잘못 분류한 이미지 수</li>
+</ul>
+<p>클래스별 정확도는 다음과 같습니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\text{Class Accuracy}_k
+=\frac{\text{Class }k\text{ Correct}}{\text{Class }k\text{ Total}}
+</code></pre></div>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 22 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def build_confusion_matrix(true_labels, predicted_labels, num_classes=10):
+    matrix = torch.zeros(num_classes, num_classes, dtype=torch.int64)
+
+    for true_label, predicted_label in zip(true_labels, predicted_labels):
+        matrix[true_label, predicted_label] += 1
+
+    return matrix
+</code></pre></div>
+<h4>21) 모델 구성</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 23 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>confusion_matrix = build_confusion_matrix(test_labels, test_predictions)
+
+plt.figure(figsize=(9, 8))
+
+plt.imshow(confusion_matrix.numpy())
+
+plt.colorbar()
+
+plt.xticks(range(10), class_names, rotation=45, ha=&quot;right&quot;)
+
+plt.yticks(range(10), class_names)
+
+plt.xlabel(&quot;Predicted Class&quot;)
+
+plt.ylabel(&quot;True Class&quot;)
+
+plt.title(&quot;CIFAR-10 ResNet18 Confusion Matrix&quot;)
+
+for row in range(10):
+    for column in range(10):
+        plt.text(
+            column,
+            row,
+            confusion_matrix[row, column].item(),
+            ha=&quot;center&quot;,
+            va=&quot;center&quot;,
+            fontsize=7,
+        )
+
+plt.tight_layout()
+
+plt.show()
+
+class_correct = confusion_matrix.diag()
+
+class_total = confusion_matrix.sum(dim=1)
+
+class_accuracy = class_correct.float() / class_total.clamp_min(1)
+
+print(&quot;===== 클래스별 정확도 =====&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 23</span></div><pre>===== 클래스별 정확도 =====
+</pre></div>
+<p>출력 그림 — 원본 노트북 기록 · 코드 셀 23:</p>
+<p><img src="img/ch05_1_c23_0.png" alt="ch05_1 CIFAR-10 ResNet18 학습과 평가 — 코드 셀 23 출력 그림" /></p>
+<h4>22) 클래스별 정확도 확인</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 24 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>for index, accuracy in enumerate(class_accuracy):
+    print(f&quot;{class_names_ko[index]:4s}: {accuracy.item() * 100:6.2f}%&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 24</span></div><pre>비행기 :  40.31%
+자동차 :   0.51%
+새   :   0.51%
+고양이 :   0.00%
+사슴  :  20.20%
+개   :  24.32%
+개구리 :  35.19%
+말   :   5.70%
+배   :  26.27%
+트럭  :  60.59%
+</pre></div>
+<h4>23) 모델 구성</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 25 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>plt.figure(figsize=(11, 5))
+
+plt.bar(class_names, class_accuracy.numpy() * 100)
+
+plt.xticks(rotation=45, ha=&quot;right&quot;)
+
+plt.ylabel(&quot;Class Accuracy (%)&quot;)
+
+plt.title(&quot;CIFAR-10 ResNet18 Class Accuracy&quot;)
+
+plt.tight_layout()
+
+plt.show()
+
+confusion_errors = confusion_matrix.clone()
+
+confusion_errors.fill_diagonal_(0)
+
+flat_index = confusion_errors.argmax().item()
+
+true_index = flat_index // 10
+
+predicted_index = flat_index % 10
+
+print(
+    &quot;가장 많이 혼동한 방향:&quot;,
+    f&quot;{class_names_ko[true_index]} → {class_names_ko[predicted_index]}&quot;,
+)
+
+print(&quot;혼동 이미지 수:&quot;, confusion_errors[true_index, predicted_index].item())
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 25</span></div><pre>가장 많이 혼동한 방향: 자동차 → 트럭
+혼동 이미지 수: 110
+</pre></div>
+<p>출력 그림 — 원본 노트북 기록 · 코드 셀 25:</p>
+<p><img src="img/ch05_1_c25_0.png" alt="ch05_1 CIFAR-10 ResNet18 학습과 평가 — 코드 셀 25 출력 그림" /></p>
+<h4>24) 결과 시각화</h4>
+<p>예측 이미지에서 다음 정보를 함께 확인합니다.</p>
+<ul>
+<li>실제 클래스</li>
+<li>예측 클래스</li>
+<li>예측 확률</li>
+</ul>
+<p>정답 여부뿐 아니라 모델이 얼마나 확신했는지도 확인합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 26 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>num_examples = min(20, len(test_images))
+
+plt.figure(figsize=(14, 10))
+
+for index in range(num_examples):
+    image = denormalize_image(test_images[index]).permute(1, 2, 0)
+    true_label = test_labels[index].item()
+    predicted_label = test_predictions[index].item()
+    confidence = test_confidences[index].item()
+
+    plt.subplot(4, 5, index + 1)
+    plt.imshow(image)
+    plt.title(
+        f&quot;True: {class_names[true_label]}\n&quot;
+        f&quot;Pred: {class_names[predicted_label]}\n&quot;
+        f&quot;{confidence * 100:.1f}%&quot;,
+        fontsize=8,
+    )
+    plt.axis(&quot;off&quot;)
+
+plt.tight_layout()
+
+plt.show()
+</code></pre></div>
+<p>출력 그림 — 원본 노트북 기록 · 코드 셀 26:</p>
+<p><img src="img/ch05_1_c26_0.png" alt="ch05_1 CIFAR-10 ResNet18 학습과 평가 — 코드 셀 26 출력 그림" /></p>
+<h4>25) 결과 시각화</h4>
+<p>오답 이미지를 직접 확인하면 숫자만으로는 알기 어려운 문제를 발견할 수 있습니다.</p>
+<ul>
+<li>객체가 작거나 흐린 이미지</li>
+<li>배경과 객체의 색상이 비슷한 이미지</li>
+<li>클래스 사이의 외형이 비슷한 이미지</li>
+<li>모델이 높은 확률로 잘못 판단한 이미지</li>
+</ul>
+<p>특히 높은 확률로 틀린 이미지는 모델이 잘못된 특징을 강하게 학습했을 가능성을 보여줍니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 27 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>incorrect_indices = torch.where(test_predictions != test_labels)[0]
+
+if len(incorrect_indices) &gt; 0:
+    # 확신도가 높은 오답부터 정렬
+    error_confidences = test_confidences[incorrect_indices]
+    order = torch.argsort(error_confidences, descending=True)
+    selected_indices = incorrect_indices[order]
+
+    num_errors = min(24, len(selected_indices))
+    plt.figure(figsize=(14, 12))
+
+    for index in range(num_errors):
+        data_index = selected_indices[index].item()
+
+        image = denormalize_image(test_images[data_index]).permute(1, 2, 0)
+        true_label = test_labels[data_index].item()
+        predicted_label = test_predictions[data_index].item()
+        confidence = test_confidences[data_index].item()
+
+        plt.subplot(4, 6, index + 1)
+        plt.imshow(image)
+        plt.title(
+            f&quot;{class_names[true_label]} → {class_names[predicted_label]}\n&quot;
+            f&quot;{confidence * 100:.1f}%&quot;,
+            fontsize=8,
+        )
+        plt.axis(&quot;off&quot;)
+
+    plt.tight_layout()
+    plt.show()
+
+print(&quot;전체 오답 수:&quot;, len(incorrect_indices))
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 27</span></div><pre>전체 오답 수: 1567
+</pre></div>
+<p>출력 그림 — 원본 노트북 기록 · 코드 셀 27:</p>
+<p><img src="img/ch05_1_c27_0.png" alt="ch05_1 CIFAR-10 ResNet18 학습과 평가 — 코드 셀 27 출력 그림" /></p>
+<h4>26) 모델 구성</h4>
+<p>체크포인트에는 모델 가중치와 실습에 필요한 설정을 함께 저장했습니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>같은 ResNet18 구조 생성
+→ 체크포인트 불러오기
+→ model_state_dict 적용
+→ model.eval()
+→ 예측
+</code></pre></div>
+<p><code>weights_only=True</code>를 사용하여 텐서와 단순 설정값으로 구성된 체크포인트를 안전한 방식으로 불러옵니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_1_cifar10_resnet18_training_evaluation.ipynb · 코드 셀 28 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>loaded_checkpoint = torch.load(
+    BEST_MODEL_PATH,
+    map_location=device,
+    weights_only=True,
+)
+
+restored_model = create_cifar10_resnet18(
+    num_classes=loaded_checkpoint[&quot;num_classes&quot;]
+).to(device)
+
+restored_model.load_state_dict(loaded_checkpoint[&quot;model_state_dict&quot;])
+
+restored_model.eval()
+
+sample_images, sample_labels = next(iter(test_loader))
+
+with torch.inference_mode():
+    logits = restored_model(sample_images.to(device))
+    predictions = logits.argmax(dim=1).cpu()
+
+correct_count = (predictions == sample_labels).sum().item()
+
+print(&quot;저장 모델:&quot;, loaded_checkpoint[&quot;model_name&quot;])
+
+print(&quot;최고 Epoch:&quot;, loaded_checkpoint[&quot;best_epoch&quot;])
+
+print(
+    &quot;최고 검증 정확도:&quot;,
+    f&quot;{loaded_checkpoint['best_validation_accuracy'] * 100:.2f}%&quot;,
+)
+
+print(&quot;첫 미니배치 정답 수:&quot;, correct_count, &quot;/&quot;, len(sample_labels))
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 28</span></div><pre>저장 모델: cifar10_resnet18
+최고 Epoch: 3
+최고 검증 정확도: 21.40%
+첫 미니배치 정답 수: 25 / 128
+</pre></div>
+<h3>핵심 정리</h3>
+<ul>
+<li><code>resnet18(weights=None)</code>은 사전학습 없이 CIFAR-10으로 처음부터 학습합니다.</li>
+<li>32×32 입력에 맞게 첫 합성곱 계층을 조정하고 초기 MaxPool을 제거합니다.</li>
+<li>Residual 연결은 <code>y = F(x) + x</code>이며 shape가 다르면 Downsample로 맞춥니다.</li>
+</ul>
+</section><section class="section" id="s04"><h2><span class="num">04</span>ch05_2 ResNet18 전이학습</h2><p>노트북: <code>notebooks/ch05_2_resnet18_transfer_learning.ipynb</code> · 원본 파일: <code>ch05_6_ResNet18_Transfer_Learning.ipynb</code> · 상태: 원본 · 실행 기록 있음 · 재실행 미검증</p>
 <h3>개요</h3>
 <ul>
-<li>Python(파이썬) 리스트와 NumPy(넘파이) 배열의 차이를 이해합니다.</li>
-<li>NumPy 배열을 PyTorch Tensor(파이토치 텐서, 다차원 배열)로 변환합니다.</li>
+<li>사전학습된 ResNet18을 불러옵니다.</li>
+<li>Feature Extraction(피처 익스트랙션, 특징 추출)으로 <code>fc</code>만 학습합니다.</li>
 </ul>
-<h3>1. NumPy와 PyTorch 불러오기</h3>
-<ul>
-<li>NumPy는 <code>np</code>라는 짧은 이름으로 사용합니다.</li>
-<li>PyTorch는 <code>torch</code>라는 이름으로 사용합니다.</li>
-</ul>
-<p>파일명: <code>ch01_2_numpy_and_tensor.ipynb</code> · 코드 셀 1 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>import numpy as np
+<h3>공통 설정</h3>
+<p>데이터·모델·이미지 폴더 위치를 지정합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 1 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>from pathlib import Path
+
+DATA_DIR = Path(&quot;data&quot;)
+MODEL_DIR = Path(&quot;models&quot;)
+PNG_DIR = Path(&quot;png&quot;)
+
+DATA_DIR.mkdir(exist_ok=True)
+
+MODEL_DIR.mkdir(exist_ok=True)
+PNG_DIR.mkdir(exist_ok=True)
+
+print(&quot;데이터 폴더:&quot;, DATA_DIR)
+print(&quot;모델 폴더  :&quot;, MODEL_DIR)
+print(&quot;이미지 폴더:&quot;, PNG_DIR)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 1</span></div><pre>데이터 폴더: data
+모델 폴더  : models
+이미지 폴더: png
+</pre></div>
+<h3>공통 import</h3>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 2 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>import copy
+import random
+import time
+from pathlib import Path
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader, Subset
+from torchvision import datasets, transforms
+from torchvision.models import ResNet18_Weights, resnet18
+from torchvision.transforms import InterpolationMode
 </code></pre></div>
-<h3>2. Python 리스트와 NumPy 배열 비교</h3>
-<p>Python 리스트에서 <code>+</code>는 두 리스트를 이어 붙입니다.
-NumPy 배열에서 <code>+</code>는 같은 위치의 숫자를 더합니다.</p>
-<blockquote>
-<p><strong>NumPy 배열은 같은 위치의 원소끼리 수치 연산을 수행합니다.</strong></p>
-</blockquote>
-<p>파일명: <code>ch01_2_numpy_and_tensor.ipynb</code> · 코드 셀 2 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code># Python 리스트
-list_a = [1, 2, 3]
-list_b = [10, 20, 30]
-
-# NumPy 배열
-array_a = np.array([1, 2, 3])
-array_b = np.array([10, 20, 30])
-
-print(&quot;Python 리스트 + :&quot;, list_a + list_b)
-print(&quot;NumPy 배열 +    :&quot;, array_a + array_b)
+<h4>1) 실행 장치 확인</h4>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>ImageNet 사전학습 ResNet18
+→ CIFAR-10용 fc 교체
+→ 1단계: fc만 학습
+→ 2단계: layer4 + fc 미세조정
+→ 시험 성능 비교
+→ 혼동행렬과 오답 분석
+→ 모델 저장·복원
 </code></pre></div>
-<h3>3. Scalar·Vector·Matrix 구분</h3>
 <table>
 <thead>
 <tr>
-  <th>구분</th>
-  <th>의미</th>
-  <th>예시 shape</th>
+  <th>단계</th>
+  <th>학습 범위</th>
+  <th>목적</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-  <td>Scalar(스칼라)</td>
-  <td>값 1개</td>
-  <td><code>()</code></td>
+  <td>Feature Extraction</td>
+  <td><code>fc</code></td>
+  <td>기존 특징을 그대로 사용하여 빠르게 분류</td>
 </tr>
 <tr>
-  <td>Vector(벡터)</td>
-  <td>1차원 데이터</td>
-  <td><code>(3,)</code></td>
-</tr>
-<tr>
-  <td>Matrix(매트릭스)</td>
-  <td>2차원 데이터</td>
-  <td><code>(2, 2)</code></td>
-</tr>
-<tr>
-  <td>Tensor(텐서)</td>
-  <td>3차원 이상의 데이터까지 포함</td>
-  <td><code>(2, 3, 4)</code></td>
+  <td>Fine-Tuning</td>
+  <td><code>layer4 + fc</code></td>
+  <td>고급 특징을 CIFAR-10에 맞게 조정</td>
 </tr>
 </tbody>
 </table>
+<p>ResNet18의 앞쪽 계층은 선, 경계, 색상처럼 여러 이미지에 공통으로 나타나는 특징을 학습합니다. 뒤쪽 계층은 사물의 형태처럼 더 복잡한 특징을 학습합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>입력 이미지
+→ 앞쪽 계층: 선·경계·색상
+→ 중간 계층: 질감·부분 형태
+→ 뒤쪽 계층: 복잡한 객체 특징
+→ fc: 최종 클래스 분류
+</code></pre></div>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathbf{z}=f_{\theta}(\mathbf{x})
+</code></pre></div>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\hat{\mathbf{y}}=g_{\phi}(\mathbf{z})
+</code></pre></div>
 <ul>
-<li><code>ndim</code>은 차원의 개수입니다.</li>
-<li><code>shape</code>는 각 차원에 몇 개의 값이 있는지를 나타냅니다.</li>
+<li><code>f_{\theta}</code>: 사전학습된 특징 추출부</li>
+<li><code>g_{\phi}</code>: 새로 교체한 분류층</li>
+<li>Feature Extraction에서는 <code>\theta</code>를 고정하고 <code>\phi</code>만 학습합니다.</li>
 </ul>
-<p>파일명: <code>ch01_2_numpy_and_tensor.ipynb</code> · 코드 셀 3 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>scalar = np.array(7)
-vector = np.array([1, 2, 3])
-matrix = np.array([[1, 2], [3, 4]])
-
-print(&quot;Scalar → ndim:&quot;, scalar.ndim, &quot;, shape:&quot;, scalar.shape)
-print(&quot;Vector → ndim:&quot;, vector.ndim, &quot;, shape:&quot;, vector.shape)
-print(&quot;Matrix → ndim:&quot;, matrix.ndim, &quot;, shape:&quot;, matrix.shape)
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>(\theta_{4},\phi)
+\leftarrow
+(\theta_{4},\phi)
+-\eta\nabla_{(\theta_{4},\phi)}\mathcal{L}
 </code></pre></div>
-<h3>4. 2차원 배열 읽기</h3>
-<p>다음 배열은 3행 2열 구조입니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>X =
-\begin{bmatrix}
-22.5 &amp; 0.10 \\
-31.0 &amp; 0.45 \\
-36.0 &amp; 0.90
-\end{bmatrix}
-</code></pre></div>
-<p>각 행은 하나의 측정 데이터이고, 각 열은 측정 항목입니다.</p>
 <ul>
-<li>첫 번째 열: 온도</li>
-<li>두 번째 열: 진동</li>
+<li><code>\theta_{4}</code>: <code>layer4</code>의 가중치</li>
+<li><code>\phi</code>: <code>fc</code>의 가중치</li>
+<li><code>\eta</code>: Learning Rate(러닝 레이트, 학습률)</li>
+<li><code>\mathcal{L}</code>: 손실함수</li>
 </ul>
-<p>파일명: <code>ch01_2_numpy_and_tensor.ipynb</code> · 코드 셀 4 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>sensor_data = np.array(
-    [
-        [22.5, 0.10],
-        [31.0, 0.45],
-        [36.0, 0.90],
-    ],
-    dtype=np.float32,
-)
+<p>Fine-Tuning에서는 뒤쪽 특징 추출부와 분류층을 함께 조금씩 조정합니다.</p>
+<p>코랩에서 위에서부터 순서대로 실행합니다. GPU(지피유, 그래픽 처리 장치)가 있으면 자동으로 사용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 3 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>SEED = 42
 
-print(sensor_data)
-print(&quot;차원 수:&quot;, sensor_data.ndim)
-print(&quot;shape:&quot;, sensor_data.shape)
-print(&quot;자료형:&quot;, sensor_data.dtype)
+random.seed(SEED)
+
+np.random.seed(SEED)
+
+torch.manual_seed(SEED)
+
+if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(SEED)
+
+device = torch.device(&quot;cuda&quot; if torch.cuda.is_available() else &quot;cpu&quot;)
+
+print(&quot;PyTorch 버전:&quot;, torch.__version__)
+
+print(&quot;실행 장치:&quot;, device)
 </code></pre></div>
-<h3>5. Indexing으로 원하는 값 선택하기</h3>
-<p>인덱스는 <code>0</code>부터 시작합니다.</p>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 3</span></div><pre>PyTorch 버전: 2.13.0+cu130
+실행 장치: cuda
+</pre></div>
+<h4>2) 실습 설정</h4>
 <ul>
-<li><code>sensor_data[0]</code> : 첫 번째 행</li>
-<li><code>sensor_data[:, 0]</code> : 모든 행의 첫 번째 열</li>
-<li><code>sensor_data[1, 0]</code> : 두 번째 행의 첫 번째 값</li>
-</ul>
-<p>파일명: <code>ch01_2_numpy_and_tensor.ipynb</code> · 코드 셀 5 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>print(&quot;첫 번째 측정 데이터:&quot;, sensor_data[0])
-print(&quot;모든 온도값:&quot;, sensor_data[:, 0])
-print(&quot;모든 진동값:&quot;, sensor_data[:, 1])
-print(&quot;두 번째 온도값:&quot;, sensor_data[1, 0])
-</code></pre></div>
-<h3>6. Boolean Mask로 조건에 맞는 값 선택하기</h3>
-<p>Boolean Mask(불리언 마스크)는 조건의 결과인 <code>True</code>와 <code>False</code>를 이용해 필요한 값만 선택합니다.</p>
-<p>다음 예제에서는 온도가 30℃ 이상인 데이터만 선택합니다.</p>
-<p>파일명: <code>ch01_2_numpy_and_tensor.ipynb</code> · 코드 셀 6 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>temperatures = sensor_data[:, 0]
-
-high_mask = temperatures &gt;= 30.0
-high_temperatures = temperatures[high_mask]
-
-print(&quot;30℃ 이상 여부:&quot;, high_mask)
-print(&quot;30℃ 이상 온도:&quot;, high_temperatures)
-</code></pre></div>
-<h3>7. 간단한 Broadcasting 이해하기</h3>
-<p>Broadcasting(브로드캐스팅, 작은 데이터를 큰 배열에 맞춰 자동 확장하는 기능)을 사용하면 모든 값에 같은 숫자를 더하거나 곱할 수 있습니다.</p>
-<p>센서 보정값 <code>1.5</code>를 모든 온도에 더해 보겠습니다.</p>
-<p>파일명: <code>ch01_2_numpy_and_tensor.ipynb</code> · 코드 셀 7 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>temperature_offset = 1.5
-corrected_temperatures = temperatures + temperature_offset
-
-print(&quot;보정 전:&quot;, temperatures)
-print(&quot;보정 후:&quot;, corrected_temperatures)
-</code></pre></div>
-<h3>8. NumPy 배열을 PyTorch Tensor로 변환하기</h3>
-<p><code>torch.from_numpy()</code>를 사용하면 NumPy 배열을 Tensor로 변환할 수 있습니다.</p>
-<p>두 자료형은 모양이 비슷하지만 소속 라이브러리가 다릅니다.</p>
-<ul>
-<li>NumPy: <code>ndarray</code></li>
-<li>PyTorch: <code>Tensor</code></li>
-</ul>
-<p>파일명: <code>ch01_2_numpy_and_tensor.ipynb</code> · 코드 셀 8 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>sensor_tensor = torch.from_numpy(sensor_data)
-
-print(sensor_tensor)
-print(&quot;자료형:&quot;, type(sensor_tensor))
-print(&quot;dim:&quot;, sensor_tensor.dim())
-print(&quot;shape:&quot;, sensor_tensor.shape)
-print(&quot;dtype:&quot;, sensor_tensor.dtype)
-</code></pre></div>
-<h3>9. NumPy와 Tensor의 속성 비교</h3>
-<table>
-<thead>
-<tr>
-  <th>확인 항목</th>
-  <th>NumPy 배열</th>
-  <th>PyTorch Tensor</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td>차원 수</td>
-  <td><code>ndim</code></td>
-  <td><code>dim()</code></td>
-</tr>
-<tr>
-  <td>모양</td>
-  <td><code>shape</code></td>
-  <td><code>shape</code></td>
-</tr>
-<tr>
-  <td>자료형</td>
-  <td><code>dtype</code></td>
-  <td><code>dtype</code></td>
-</tr>
-<tr>
-  <td>저장 장치</td>
-  <td>별도 확인 없음</td>
-  <td><code>device</code></td>
-</tr>
-</tbody>
-</table>
-<p>PyTorch Tensor는 CPU(씨피유) 또는 GPU(지피유)에 저장할 수 있으므로 <code>device</code> 속성이 있습니다.</p>
-<p>파일명: <code>ch01_2_numpy_and_tensor.ipynb</code> · 코드 셀 9 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>print(&quot;NumPy ndim :&quot;, sensor_data.ndim)
-print(&quot;Tensor dim :&quot;, sensor_tensor.dim())
-
-print(&quot;NumPy shape:&quot;, sensor_data.shape)
-print(&quot;Tensor shape:&quot;, sensor_tensor.shape)
-
-print(&quot;Tensor device:&quot;, sensor_tensor.device)
-</code></pre></div>
-<h3>10. 미니 실습: 센서 데이터 판정하기</h3>
-<p>온도와 진동 데이터를 Tensor로 변환한 뒤 다음 조건을 확인합니다.</p>
-<ul>
-<li>온도 35℃ 이상</li>
-<li>진동 0.7 이상</li>
-</ul>
-<p>두 조건이 모두 참이면 점검이 필요한 데이터로 판정합니다.</p>
-<p>파일명: <code>ch01_2_numpy_and_tensor.ipynb</code> · 코드 셀 10 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>practice_data = np.array(
-    [
-        [24.0, 0.20],
-        [34.0, 0.55],
-        [38.0, 0.85],
-    ],
-    dtype=np.float32,
-)
-
-practice_tensor = torch.from_numpy(practice_data)
-
-temperature_alarm = practice_tensor[:, 0] &gt;= 35.0
-vibration_alarm = practice_tensor[:, 1] &gt;= 0.7
-inspection_required = temperature_alarm &amp; vibration_alarm
-
-print(&quot;센서 데이터:&quot;)
-print(practice_tensor)
-
-print()
-print(&quot;점검 필요 여부:&quot;)
-print(inspection_required)
-
-print()
-print(&quot;점검이 필요한 데이터:&quot;)
-print(practice_tensor[inspection_required])
-</code></pre></div>
-<h3>12. 핵심 정리</h3>
-<ul>
-<li>Python 리스트는 일반적인 데이터 저장에 사용합니다.</li>
-<li>불리언 마스크는 조건에 맞는 데이터를 선택합니다.</li>
-<li>PyTorch Tensor는 <code>dim</code>, <code>shape</code>, <code>dtype</code>, <code>device</code> 속성을 확인할 수 있습니다.</li>
-</ul>
-</section><section class="section" id="s05"><h2><span class="num">05</span>ch01_3 PyTorch Tensor 연산</h2><p>노트북: <code>notebooks/ch01_3_tensor_operations.ipynb</code> · 원본 파일: <code>ch01_3_tensor_operations.ipynb</code> · 상태: 원본에 실행 기록 없음 · 미검증</p>
-<h3>개요</h3>
-<ul>
-<li>일정한 값과 난수로 Tensor(텐서, 다차원 배열)를 생성합니다.</li>
-<li>여러 묶음의 센서 데이터를 하나로 결합합니다.</li>
-</ul>
-<h3>1. 라이브러리 불러오기</h3>
-<p>NumPy는 <code>np</code>, PyTorch(파이토치)는 <code>torch</code>라는 이름으로 사용합니다.</p>
-<p>파일명: <code>ch01_3_tensor_operations.ipynb</code> · 코드 셀 1 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>import numpy as np
-import torch
-</code></pre></div>
-<h3>2. Tensor 생성 함수</h3>
-<p>PyTorch는 자주 사용하는 형태의 Tensor를 간단히 만들 수 있습니다.</p>
-<table>
-<thead>
-<tr>
-  <th>함수</th>
-  <th>역할</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td><code>torch.zeros()</code></td>
-  <td>모든 원소를 0으로 생성</td>
-</tr>
-<tr>
-  <td><code>torch.ones()</code></td>
-  <td>모든 원소를 1로 생성</td>
-</tr>
-<tr>
-  <td><code>torch.arange()</code></td>
-  <td>일정한 간격의 연속 값 생성</td>
-</tr>
-<tr>
-  <td><code>torch.rand()</code></td>
-  <td>0 이상 1 미만의 난수 생성</td>
-</tr>
-<tr>
-  <td><code>torch.randn()</code></td>
-  <td>평균 0, 표준편차 1인 난수 생성</td>
-</tr>
-</tbody>
-</table>
-<p><code>torch.manual_seed()</code>를 사용하면 다시 실행해도 같은 난수가 생성됩니다.</p>
-<p>파일명: <code>ch01_3_tensor_operations.ipynb</code> · 코드 셀 2 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code># 같은 난수 결과를 얻기 위한 기준값
-torch.manual_seed(42)
-
-zeros_tensor = torch.zeros(2, 3)
-ones_tensor = torch.ones(2, 3)
-range_tensor = torch.arange(0, 6).reshape(2, 3)
-random_tensor = torch.rand(2, 3)
-
-print(&quot;zeros:&quot;)
-print(zeros_tensor)
-
-print()
-print(&quot;ones:&quot;)
-print(ones_tensor)
-
-print()
-print(&quot;arange + reshape:&quot;)
-print(range_tensor)
-
-print()
-print(&quot;rand:&quot;)
-print(random_tensor)
-</code></pre></div>
-<h3>3. NumPy 배열과 Tensor의 메모리 공유</h3>
-<p><code>torch.from_numpy()</code>로 만든 Tensor는 원본 NumPy 배열과 메모리를 공유할 수 있습니다.</p>
-<p>따라서 NumPy 배열의 값을 바꾸면 Tensor의 값도 함께 바뀔 수 있습니다.</p>
-<p>독립된 복사본이 필요할 때는 <code>clone()</code>을 사용합니다.</p>
-<p>파일명: <code>ch01_3_tensor_operations.ipynb</code> · 코드 셀 3 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>numpy_data = np.array([[10, 20], [30, 40]], dtype=np.float32)
-
-shared_tensor = torch.from_numpy(numpy_data)
-copied_tensor = shared_tensor.clone()
-
-# NumPy 배열의 첫 번째 값을 변경합니다.
-numpy_data[0, 0] = 99
-
-print(&quot;변경된 NumPy 배열:&quot;)
-print(numpy_data)
-
-print()
-print(&quot;메모리를 공유하는 Tensor:&quot;)
-print(shared_tensor)
-
-print()
-print(&quot;미리 복사한 독립 Tensor:&quot;)
-print(copied_tensor)
-</code></pre></div>
-<h3>4. CPU와 GPU 장치 선택</h3>
-<p><code>device</code>(디바이스, 저장·연산 장치)는 Tensor가 저장되는 위치입니다.</p>
-<ul>
-<li><code>cpu</code>: CPU 메모리</li>
-<li><code>cuda</code>: NVIDIA(엔비디아) GPU 메모리</li>
-</ul>
-<p>다음 코드는 GPU가 있으면 GPU를 선택하고, 없으면 CPU를 선택합니다.</p>
-<p>파일명: <code>ch01_3_tensor_operations.ipynb</code> · 코드 셀 4 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>device = torch.device(&quot;cuda&quot; if torch.cuda.is_available() else &quot;cpu&quot;)
-
-data = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
-data_on_device = data.to(device)
-
-print(&quot;선택된 장치:&quot;, device)
-print(&quot;Tensor의 장치:&quot;, data_on_device.device)
-</code></pre></div>
-<h3>5. Tensor 모양 바꾸기</h3>
-<p><code>reshape()</code>는 원소의 총개수를 유지하면서 Tensor의 모양을 바꿉니다.</p>
-<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>2 \times 3 = 3 \times 2 = 6
-</code></pre></div>
-<p>따라서 원소가 6개인 Tensor는 <code>(2, 3)</code>, <code>(3, 2)</code>, <code>(1, 6)</code> 등의 모양으로 변경할 수 있습니다.</p>
-<p><code>flatten()</code>은 여러 차원의 Tensor를 1차원으로 펼칩니다.</p>
-<p>파일명: <code>ch01_3_tensor_operations.ipynb</code> · 코드 셀 5 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>tensor_a = torch.arange(1, 7).reshape(2, 3)
-
-print(&quot;원래 Tensor:&quot;)
-print(tensor_a)
-print(&quot;shape:&quot;, tensor_a.shape)
-
-print()
-print(&quot;reshape(3, 2):&quot;)
-print(tensor_a.reshape(3, 2))
-
-print()
-print(&quot;flatten():&quot;)
-print(tensor_a.flatten())
-</code></pre></div>
-<h3>6. <code>torch.cat()</code>으로 연결하기</h3>
-<p><code>torch.cat()</code>은 <strong>기존 차원을 따라</strong> Tensor를 연결합니다.</p>
-<p>두 Tensor의 shape가 모두 <code>(2, 3)</code>일 때:</p>
-<ul>
-<li><code>dim=0</code>: 첫 번째 차원의 크기가 증가 → <code>(4, 3)</code></li>
-<li><code>dim=1</code>: 두 번째 차원의 크기가 증가 → <code>(2, 6)</code></li>
+<li><code>QUICK_RUN = True</code>: 적은 데이터와 Epoch(에포크, 전체 데이터 반복 횟수)로 전체 흐름을 빠르게 확인합니다.</li>
+<li><code>QUICK_RUN = False</code>: 전체 데이터로 학습합니다.</li>
+<li>CIFAR-10 원본 이미지는 32×32이지만, 사전학습 ResNet18의 입력 규격에 맞춰 224×224로 확대합니다.</li>
 </ul>
 <blockquote>
-<p><code>dim</code>은 단순히 행·열 이름보다 <strong>어느 차원의 크기를 늘리는가</strong>로 이해하는 것이 좋습니다.</p>
+<p>빠른 실행 결과는 기능 확인용입니다. 최종 성능 비교에는 전체 학습을 사용합니다.</p>
 </blockquote>
-<p>파일명: <code>ch01_3_tensor_operations.ipynb</code> · 코드 셀 6 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>tensor_b = torch.tensor(
-    [[10, 20, 30],
-     [40, 50, 60]]
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 4 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>QUICK_RUN = True
+
+BATCH_SIZE = 64
+
+FEATURE_EPOCHS = 1 if QUICK_RUN else 4
+
+FINE_TUNING_EPOCHS = 1 if QUICK_RUN else 6
+
+FEATURE_LR = 1e-3
+
+BACKBONE_LR = 1e-4
+
+FC_LR = 5e-4
+
+VALIDATION_SIZE = 5_000
+
+NUMBER_OF_WORKERS = 2
+
+print(&quot;Quick Run:&quot;, QUICK_RUN)
+
+print(&quot;Feature Extraction Epoch:&quot;, FEATURE_EPOCHS)
+
+print(&quot;Fine-Tuning Epoch:&quot;, FINE_TUNING_EPOCHS)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 4</span></div><pre>Quick Run: True
+Feature Extraction Epoch: 1
+Fine-Tuning Epoch: 1
+</pre></div>
+<h4>3) 데이터 전처리 설정</h4>
+<p><code>ResNet18_Weights.DEFAULT</code>는 TorchVision(토치비전, 이미지 처리용 PyTorch 라이브러리)의 권장 사전학습 가중치를 선택합니다.</p>
+<p>평가 데이터에는 <code>weights.transforms()</code>를 그대로 사용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>Resize
+→ Center Crop
+→ Tensor 변환
+→ ImageNet 평균·표준편차 정규화
+</code></pre></div>
+<p>훈련 데이터에는 좌우 반전과 무작위 자르기를 추가합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 5 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>weights = ResNet18_Weights.DEFAULT
+
+evaluation_transform = weights.transforms()
+
+IMAGENET_MEAN = (0.485, 0.456, 0.406)
+
+IMAGENET_STD = (0.229, 0.224, 0.225)
+
+train_transform = transforms.Compose([
+    transforms.RandomResizedCrop(
+        224,
+        scale=(0.7, 1.0),
+        interpolation=InterpolationMode.BILINEAR,
+        antialias=True,
+    ),
+    transforms.RandomHorizontalFlip(),
+    transforms.ToTensor(),
+    transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD),
+])
+
+print(&quot;사전학습 가중치:&quot;, weights)
+
+print(&quot;평가 전처리:&quot;)
+
+print(evaluation_transform)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 5</span></div><pre>사전학습 가중치: ResNet18_Weights.IMAGENET1K_V1
+평가 전처리:
+ImageClassification(
+    crop_size=[224]
+    resize_size=[256]
+    mean=[0.485, 0.456, 0.406]
+    std=[0.229, 0.224, 0.225]
+    interpolation=InterpolationMode.BILINEAR
+)
+</pre></div>
+<h4>4) CIFAR-10 데이터 준비</h4>
+<p>공식 훈련 데이터 50,000개를 훈련용과 검증용으로 나눕니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>훈련 데이터 45,000개
+검증 데이터 5,000개
+시험 데이터 10,000개
+</code></pre></div>
+<p>훈련 데이터만 무작위 증강을 적용하고, 검증·시험 데이터에는 평가용 전처리를 적용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 6 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>train_source = datasets.CIFAR10(
+    root=str(DATA_DIR / &quot;torchvision&quot;),
+    train=True,
+    download=True,
+    transform=train_transform,
 )
 
-cat_dim0 = torch.cat([tensor_a, tensor_b], dim=0)
-cat_dim1 = torch.cat([tensor_a, tensor_b], dim=1)
+validation_source = datasets.CIFAR10(
+    root=str(DATA_DIR / &quot;torchvision&quot;),
+    train=True,
+    download=False,
+    transform=evaluation_transform,
+)
 
-print(&quot;cat dim=0:&quot;)
-print(cat_dim0)
-print(&quot;shape:&quot;, cat_dim0.shape)
+test_dataset = datasets.CIFAR10(
+    root=str(DATA_DIR / &quot;torchvision&quot;),
+    train=False,
+    download=True,
+    transform=evaluation_transform,
+)
+
+generator = torch.Generator().manual_seed(SEED)
+
+indices = torch.randperm(len(train_source), generator=generator).tolist()
+
+train_indices = indices[:-VALIDATION_SIZE]
+
+validation_indices = indices[-VALIDATION_SIZE:]
+</code></pre></div>
+<h4>5) 데이터 분리</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 7 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>if QUICK_RUN:
+    train_indices = train_indices[:3_000]
+    validation_indices = validation_indices[:1_000]
+    test_dataset = Subset(test_dataset, range(1_000))
+</code></pre></div>
+<h4>6) 데이터 분리</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 8 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>train_dataset = Subset(train_source, train_indices)
+
+validation_dataset = Subset(validation_source, validation_indices)
+</code></pre></div>
+<h4>7) 실행 장치 확인</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 9 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def make_loader(dataset, shuffle):
+    return DataLoader(
+        dataset,
+        batch_size=BATCH_SIZE,
+        shuffle=shuffle,
+        num_workers=NUMBER_OF_WORKERS,
+        pin_memory=torch.cuda.is_available(),
+    )
+</code></pre></div>
+<h4>8) DataLoader 준비</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 10 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>train_loader = make_loader(train_dataset, shuffle=True)
+
+validation_loader = make_loader(validation_dataset, shuffle=False)
+
+test_loader = make_loader(test_dataset, shuffle=False)
+
+class_names = [
+    &quot;airplane&quot;, &quot;automobile&quot;, &quot;bird&quot;, &quot;cat&quot;, &quot;deer&quot;,
+    &quot;dog&quot;, &quot;frog&quot;, &quot;horse&quot;, &quot;ship&quot;, &quot;truck&quot;,
+]
+
+class_names_ko = [
+    &quot;비행기&quot;, &quot;자동차&quot;, &quot;새&quot;, &quot;고양이&quot;, &quot;사슴&quot;,
+    &quot;개&quot;, &quot;개구리&quot;, &quot;말&quot;, &quot;배&quot;, &quot;트럭&quot;,
+]
+
+print(&quot;훈련 데이터:&quot;, len(train_dataset))
+
+print(&quot;검증 데이터:&quot;, len(validation_dataset))
+
+print(&quot;시험 데이터:&quot;, len(test_dataset))
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 10</span></div><pre>훈련 데이터: 3000
+검증 데이터: 1000
+시험 데이터: 1000
+</pre></div>
+<h4>9) 배치 데이터 확인</h4>
+<p>정규화된 이미지를 화면에 표시하려면 다음 순서로 원래 범위에 가깝게 되돌립니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathbf{x}_{\mathrm{display}}
+=
+\mathbf{x}_{\mathrm{normalized}}\boldsymbol{\sigma}
++
+\boldsymbol{\mu}
+</code></pre></div>
+<ul>
+<li><code>\boldsymbol{\mu}</code>: ImageNet 평균</li>
+<li><code>\boldsymbol{\sigma}</code>: ImageNet 표준편차</li>
+</ul>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 11 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def denormalize(image):
+    mean = torch.tensor(IMAGENET_MEAN).view(3, 1, 1)
+    std = torch.tensor(IMAGENET_STD).view(3, 1, 1)
+    return (image.cpu() * std + mean).clamp(0, 1)
+
+sample_images, sample_labels = next(iter(train_loader))
+
+print(&quot;미니배치 Shape:&quot;, sample_images.shape)
+
+plt.figure(figsize=(12, 6))
+
+for index in range(8):
+    image = denormalize(sample_images[index]).permute(1, 2, 0)
+    label = sample_labels[index].item()
+
+    plt.subplot(2, 4, index + 1)
+    plt.imshow(image)
+    plt.title(f&quot;{class_names_ko[label]}\n({class_names[label]})&quot;)
+    plt.axis(&quot;off&quot;)
+
+plt.tight_layout()
+
+plt.show()
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 11</span></div><pre>미니배치 Shape: torch.Size([64, 3, 224, 224])
+</pre></div>
+<p>출력 그림 — 원본 노트북 기록 · 코드 셀 11:</p>
+<p><img src="img/ch05_2_c11_0.png" alt="ch05_2 ResNet18 전이학습 — 코드 셀 11 출력 그림" /></p>
+<h4>10) 모델 구성</h4>
+<p>기존 ResNet18은 ImageNet 1,000개 클래스를 출력합니다. 마지막 <code>fc</code>를 CIFAR-10의 10개 클래스로 교체합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>기존 fc: 512 → 1,000
+새로운 fc: 512 → 10
+</code></pre></div>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 12 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def create_resnet18(number_of_classes=10, pretrained=True):
+    selected_weights = weights if pretrained else None
+    model = resnet18(weights=selected_weights)
+
+    input_features = model.fc.in_features
+    model.fc = nn.Linear(input_features, number_of_classes)
+
+    return model
+
+def count_trainable_parameters(model):
+    return sum(
+        parameter.numel()
+        for parameter in model.parameters()
+        if parameter.requires_grad
+    )
+
+model = create_resnet18().to(device)
+
+dummy_input = torch.randn(2, 3, 224, 224, device=device)
+
+model.eval()
+
+with torch.inference_mode():
+    dummy_output = model(dummy_input)
+
+print(&quot;입력 Shape:&quot;, dummy_input.shape)
+
+print(&quot;출력 Shape:&quot;, dummy_output.shape)
+
+print(&quot;교체된 출력층:&quot;, model.fc)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 12</span></div><pre>입력 Shape: torch.Size([2, 3, 224, 224])
+출력 Shape: torch.Size([2, 10])
+교체된 출력층: Linear(in_features=512, out_features=10, bias=True)
+</pre></div>
+<h4>11) 1단계: Feature Extraction 설정</h4>
+<p>Backbone(백본, 핵심 특징 추출 신경망)은 동결하고 새 <code>fc</code>만 학습합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>conv1 ~ layer4: 동결
+fc: 학습
+</code></pre></div>
+<p><code>requires_grad=False</code>인 파라미터는 역전파에서 갱신되지 않습니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 13 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>model.requires_grad_(False)
+
+model.fc.requires_grad_(True)
+
+feature_parameter_count = count_trainable_parameters(model)
+
+print(&quot;학습 가능한 파라미터:&quot;, f&quot;{feature_parameter_count:,}개&quot;)
+
+print(&quot;학습 대상:&quot;, model.fc)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 13</span></div><pre>학습 가능한 파라미터: 5,130개
+학습 대상: Linear(in_features=512, out_features=10, bias=True)
+</pre></div>
+<h4>12) Loss 함수와 Optimizer 설정</h4>
+<p>다중분류에서는 Cross Entropy Loss(크로스 엔트로피 로스, 다중분류 손실함수)를 사용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>\mathcal{L}
+=
+-\frac{1}{N}
+\sum_{i=1}^{N}
+\log p_{i,y_i}
+</code></pre></div>
+<ul>
+<li><code>N</code>: 미니배치 이미지 수</li>
+<li><code>p_{i,y_i}</code>: <code>i</code>번째 이미지의 정답 클래스 확률</li>
+</ul>
+<p>동결된 Batch Normalization(배치 노멀라이제이션, 미니배치 정규화) 계층은 평가 모드로 유지하여 기존 평균과 분산이 바뀌지 않도록 합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 14 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>loss_function = nn.CrossEntropyLoss()
+</code></pre></div>
+<h4>13) BatchNorm 학습 모드 설정</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 15 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def set_training_mode(model):
+    model.train()
+
+    # 동결된 BatchNorm의 평균과 분산은 변경하지 않습니다.
+    for module in model.modules():
+        if isinstance(module, nn.BatchNorm2d):
+            if not module.weight.requires_grad:
+                module.eval()
+</code></pre></div>
+<h4>14) 학습 함수 정의</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 16 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def run_one_epoch(model, data_loader, optimizer=None):
+    is_training = optimizer is not None
+
+    if is_training:
+        set_training_mode(model)
+    else:
+        model.eval()
+
+    total_loss = 0.0
+    total_correct = 0
+    total_samples = 0
+
+    context = torch.enable_grad() if is_training else torch.inference_mode()
+
+    with context:
+        for images, labels in data_loader:
+            images = images.to(device)
+            labels = labels.to(device)
+
+            if is_training:
+                optimizer.zero_grad()
+
+            logits = model(images)
+            loss = loss_function(logits, labels)
+
+            if is_training:
+                loss.backward()
+                optimizer.step()
+
+            predictions = logits.argmax(dim=1)
+            batch_size = labels.size(0)
+
+            total_loss += loss.item() * batch_size
+            total_correct += (predictions == labels).sum().item()
+            total_samples += batch_size
+
+    average_loss = total_loss / total_samples
+    accuracy = total_correct / total_samples
+
+    return average_loss, accuracy
+</code></pre></div>
+<h4>15) 모델 학습</h4>
+<p>같은 학습 함수를 Feature Extraction과 Fine-Tuning에 재사용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>훈련 1 Epoch
+→ 검증
+→ 최고 검증 정확도 확인
+→ 최고 모델 상태 보관
+</code></pre></div>
+<p>복잡한 Scheduler(스케줄러, 학습률 자동 변경)와 Early Stopping(얼리 스토핑, 조기 종료)은 제외하고 전이학습의 핵심 흐름에 집중합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 17 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def fit(model, train_loader, validation_loader, optimizer, epochs, phase_name):
+    history = {
+        &quot;train_loss&quot;: [],
+        &quot;train_accuracy&quot;: [],
+        &quot;validation_loss&quot;: [],
+        &quot;validation_accuracy&quot;: [],
+    }
+
+    best_accuracy = 0.0
+    best_state = copy.deepcopy(model.state_dict())
+    start_time = time.time()
+
+    for epoch in range(1, epochs + 1):
+        train_loss, train_accuracy = run_one_epoch(
+            model,
+            train_loader,
+            optimizer,
+        )
+
+        validation_loss, validation_accuracy = run_one_epoch(
+            model,
+            validation_loader,
+        )
+
+        history[&quot;train_loss&quot;].append(train_loss)
+        history[&quot;train_accuracy&quot;].append(train_accuracy)
+        history[&quot;validation_loss&quot;].append(validation_loss)
+        history[&quot;validation_accuracy&quot;].append(validation_accuracy)
+
+        if validation_accuracy &gt; best_accuracy:
+            best_accuracy = validation_accuracy
+            best_state = copy.deepcopy(model.state_dict())
+
+        print(
+            f&quot;[{phase_name}] Epoch {epoch}/{epochs} | &quot;
+            f&quot;Train Acc {train_accuracy * 100:.2f}% | &quot;
+            f&quot;Val Acc {validation_accuracy * 100:.2f}%&quot;
+        )
+
+    elapsed_time = time.time() - start_time
+
+    return history, best_state, best_accuracy, elapsed_time
+</code></pre></div>
+<h4>16) Optimizer 준비</h4>
+<p>새 <code>fc</code>만 Optimizer(옵티마이저, 가중치 갱신 알고리즘)에 전달합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>학습 대상
+model.fc.parameters()
+</code></pre></div>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 18 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>feature_optimizer = torch.optim.Adam(
+    model.fc.parameters(),
+    lr=FEATURE_LR,
+)
+
+(
+    feature_history,
+    feature_best_state,
+    feature_best_accuracy,
+    feature_time,
+) = fit(
+    model,
+    train_loader,
+    validation_loader,
+    feature_optimizer,
+    FEATURE_EPOCHS,
+    &quot;Feature Extraction&quot;,
+)
 
 print()
-print(&quot;cat dim=1:&quot;)
-print(cat_dim1)
-print(&quot;shape:&quot;, cat_dim1.shape)
+
+print(&quot;최고 검증 정확도:&quot;, f&quot;{feature_best_accuracy * 100:.2f}%&quot;)
+
+print(&quot;학습 시간:&quot;, f&quot;{feature_time / 60:.2f}분&quot;)
 </code></pre></div>
-<h3>7. <code>torch.stack()</code>으로 쌓기</h3>
-<p><code>torch.stack()</code>은 <strong>새로운 차원을 추가하여</strong> Tensor를 쌓습니다.</p>
-<p>두 개의 <code>(2, 3)</code> Tensor를 <code>dim=0</code>으로 쌓으면 결과 shape는 <code>(2, 2, 3)</code>이 됩니다.</p>
-<ul>
-<li>첫 번째 <code>2</code>: Tensor 묶음의 개수</li>
-<li>두 번째 <code>2</code>: 각 Tensor의 행 개수</li>
-<li>마지막 <code>3</code>: 각 Tensor의 열 개수</li>
-</ul>
-<p>파일명: <code>ch01_3_tensor_operations.ipynb</code> · 코드 셀 7 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code>stack_dim0 = torch.stack([tensor_a, tensor_b], dim=0)
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 18</span></div><pre>[Feature Extraction] Epoch 1/1 | Train Acc 49.33% | Val Acc 69.00%
 
-print(&quot;stack dim=0:&quot;)
-print(stack_dim0)
-print(&quot;shape:&quot;, stack_dim0.shape)
+최고 검증 정확도: 69.00%
+학습 시간: 0.06분
+</pre></div>
+<h4>17) 학습 Loss 시각화</h4>
+<p>Loss(로스, 손실값)는 낮아지고 Accuracy(애큐러시, 정확도)는 높아지는지 확인합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 19 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def plot_history(history, title):
+    epochs = range(1, len(history[&quot;train_loss&quot;]) + 1)
+
+    plt.figure(figsize=(7, 4))
+    plt.plot(epochs, history[&quot;train_loss&quot;], label=&quot;Train&quot;)
+    plt.plot(epochs, history[&quot;validation_loss&quot;], label=&quot;Validation&quot;)
+    plt.xlabel(&quot;Epoch&quot;)
+    plt.ylabel(&quot;Loss&quot;)
+    plt.title(f&quot;{title} Loss&quot;)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+    plt.figure(figsize=(7, 4))
+    plt.plot(epochs, history[&quot;train_accuracy&quot;], label=&quot;Train&quot;)
+    plt.plot(epochs, history[&quot;validation_accuracy&quot;], label=&quot;Validation&quot;)
+    plt.xlabel(&quot;Epoch&quot;)
+    plt.ylabel(&quot;Accuracy&quot;)
+    plt.title(f&quot;{title} Accuracy&quot;)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+plot_history(feature_history, &quot;Feature Extraction&quot;)
 </code></pre></div>
-<h3>8. <code>cat</code>과 <code>stack</code> 비교</h3>
-<table>
-<thead>
-<tr>
-  <th>함수</th>
-  <th>핵심 동작</th>
-  <th>예시 결과</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td><code>torch.cat()</code></td>
-  <td>기존 차원을 따라 연결</td>
-  <td><code>(2, 3)</code> 두 개 → <code>(4, 3)</code></td>
-</tr>
-<tr>
-  <td><code>torch.stack()</code></td>
-  <td>새로운 차원을 만들어 쌓기</td>
-  <td><code>(2, 3)</code> 두 개 → <code>(2, 2, 3)</code></td>
-</tr>
-</tbody>
-</table>
-<hr />
-<blockquote>
-<p><strong><code>cat</code>은 Tensor를 연결하고, <code>stack</code>은 새로운 차원으로 묶습니다.</strong></p>
-</blockquote>
-<h3>9. 미니 실습: 센서 데이터 묶음 합치기</h3>
-<p>두 번에 나누어 측정한 온도·진동 데이터를 하나로 결합합니다.</p>
-<p>각 행은 하나의 측정값이며, 각 열은 다음 의미를 가집니다.</p>
+<p>출력 그림 — 원본 노트북 기록 · 코드 셀 19:</p>
+<p><img src="img/ch05_2_c19_0.png" alt="ch05_2 ResNet18 전이학습 — 코드 셀 19 출력 그림" /></p>
+<p><img src="img/ch05_2_c19_1.png" alt="ch05_2 ResNet18 전이학습 — 코드 셀 19 출력 그림" /></p>
+<h4>18) 모델 저장</h4>
+<p>Feature Extraction에서 가장 좋았던 상태를 불러옵니다. 그다음 <code>layer4</code>와 <code>fc</code>만 학습 가능하게 설정합니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>conv1 ~ layer3: 동결 유지
+layer4: 작은 학습률로 미세조정
+fc: 조금 큰 학습률로 학습
+</code></pre></div>
+<p>사전학습 특징이 급격하게 바뀌지 않도록 <code>layer4</code>에는 작은 학습률을 적용합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 20 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>model.load_state_dict(feature_best_state)
+
+model.layer4.requires_grad_(True)
+
+model.fc.requires_grad_(True)
+
+fine_tuning_parameter_count = count_trainable_parameters(model)
+
+print(&quot;Feature Extraction 파라미터:&quot;, f&quot;{feature_parameter_count:,}개&quot;)
+
+print(&quot;Fine-Tuning 파라미터:&quot;, f&quot;{fine_tuning_parameter_count:,}개&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 20</span></div><pre>Feature Extraction 파라미터: 5,130개
+Fine-Tuning 파라미터: 8,398,858개
+</pre></div>
+<h4>19) Optimizer 준비</h4>
+<p>Parameter Group(파라미터 그룹, 서로 다른 학습률을 적용하는 변수 묶음)을 사용합니다.</p>
 <ul>
-<li>첫 번째 열: 온도</li>
-<li>두 번째 열: 진동</li>
+<li><code>layer4</code>: 작은 학습률</li>
+<li><code>fc</code>: 조금 큰 학습률</li>
 </ul>
-<p>파일명: <code>ch01_3_tensor_operations.ipynb</code> · 코드 셀 8 · Python · 원본에 실행 기록 없음 · 미검증</p>
-<div class="codeblock"><div class="codebar"><span>python</span></div><pre><code># 첫 번째 측정 묶음
-batch_1 = torch.tensor(
-    [[22.0, 0.10],
-     [25.0, 0.15]]
+<p>코드는 짧지만, 사전학습 계층과 새 분류층을 서로 다른 속도로 학습한다는 중요한 의미가 있습니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 21 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>fine_tuning_optimizer = torch.optim.Adam([
+    {
+        &quot;params&quot;: model.layer4.parameters(),
+        &quot;lr&quot;: BACKBONE_LR,
+    },
+    {
+        &quot;params&quot;: model.fc.parameters(),
+        &quot;lr&quot;: FC_LR,
+    },
+])
+
+(
+    fine_history,
+    fine_best_state,
+    fine_best_accuracy,
+    fine_time,
+) = fit(
+    model,
+    train_loader,
+    validation_loader,
+    fine_tuning_optimizer,
+    FINE_TUNING_EPOCHS,
+    &quot;Fine-Tuning&quot;,
 )
-
-# 두 번째 측정 묶음
-batch_2 = torch.tensor(
-    [[31.0, 0.45],
-     [36.0, 0.90]]
-)
-
-# 모든 측정값을 하나의 표로 연결합니다.
-all_sensor_data = torch.cat([batch_1, batch_2], dim=0)
-
-# 두 측정 묶음을 구분한 상태로 쌓습니다.
-grouped_sensor_data = torch.stack([batch_1, batch_2], dim=0)
-
-print(&quot;하나로 연결한 센서 데이터:&quot;)
-print(all_sensor_data)
-print(&quot;shape:&quot;, all_sensor_data.shape)
 
 print()
-print(&quot;측정 묶음별로 쌓은 센서 데이터:&quot;)
-print(grouped_sensor_data)
-print(&quot;shape:&quot;, grouped_sensor_data.shape)
+
+print(&quot;최고 검증 정확도:&quot;, f&quot;{fine_best_accuracy * 100:.2f}%&quot;)
+
+print(&quot;학습 시간:&quot;, f&quot;{fine_time / 60:.2f}분&quot;)
+
+plot_history(fine_history, &quot;Fine-Tuning&quot;)
 </code></pre></div>
-<h3>11. 핵심 정리</h3>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 21</span></div><pre>[Fine-Tuning] Epoch 1/1 | Train Acc 79.83% | Val Acc 84.00%
+
+최고 검증 정확도: 84.00%
+학습 시간: 0.06분
+</pre></div>
+<p>출력 그림 — 원본 노트북 기록 · 코드 셀 21:</p>
+<p><img src="img/ch05_2_c21_0.png" alt="ch05_2 ResNet18 전이학습 — 코드 셀 21 출력 그림" /></p>
+<p><img src="img/ch05_2_c21_1.png" alt="ch05_2 ResNet18 전이학습 — 코드 셀 21 출력 그림" /></p>
+<h4>20) 테스트 성능 확인</h4>
+<p>검증 정확도가 가장 높았던 Feature Extraction 모델과 Fine-Tuning 모델을 같은 시험 데이터로 평가합니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 22 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>model.load_state_dict(feature_best_state)
+
+feature_test_loss, feature_test_accuracy = run_one_epoch(
+    model,
+    test_loader,
+)
+
+model.load_state_dict(fine_best_state)
+
+fine_test_loss, fine_test_accuracy = run_one_epoch(
+    model,
+    test_loader,
+)
+
+print(f&quot;{'방법':&lt;22} {'학습 파라미터':&gt;14} {'시험 정확도':&gt;12} {'학습 시간':&gt;12}&quot;)
+
+print(&quot;-&quot; * 66)
+
+print(
+    f&quot;{'Feature Extraction':&lt;22} &quot;
+    f&quot;{feature_parameter_count:&gt;14,} &quot;
+    f&quot;{feature_test_accuracy * 100:&gt;11.2f}% &quot;
+    f&quot;{feature_time / 60:&gt;10.2f}분&quot;
+)
+
+print(
+    f&quot;{'Fine-Tuning':&lt;22} &quot;
+    f&quot;{fine_tuning_parameter_count:&gt;14,} &quot;
+    f&quot;{fine_test_accuracy * 100:&gt;11.2f}% &quot;
+    f&quot;{fine_time / 60:&gt;10.2f}분&quot;
+)
+
+methods = [&quot;Feature Extraction&quot;, &quot;Fine-Tuning&quot;]
+
+accuracies = [feature_test_accuracy * 100, fine_test_accuracy * 100]
+
+plt.figure(figsize=(7, 4))
+
+plt.bar(methods, accuracies)
+
+plt.ylabel(&quot;Test Accuracy (%)&quot;)
+
+plt.title(&quot;Transfer Learning Accuracy Comparison&quot;)
+
+plt.tight_layout()
+
+plt.show()
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 22</span></div><pre>방법                            학습 파라미터       시험 정확도        학습 시간
+------------------------------------------------------------------
+Feature Extraction              5,130       68.20%       0.06분
+Fine-Tuning                 8,398,858       84.20%       0.06분
+</pre></div>
+<p>출력 그림 — 원본 노트북 기록 · 코드 셀 22:</p>
+<p><img src="img/ch05_2_c22_0.png" alt="ch05_2 ResNet18 전이학습 — 코드 셀 22 출력 그림" /></p>
+<h4>21) 예측 결과 수집 함수</h4>
+<p>Fine-Tuning 최고 모델을 사용하여 다음 정보를 수집합니다.</p>
 <ul>
-<li><code>zeros</code>, <code>ones</code>, <code>arange</code>, <code>rand</code>로 Tensor를 쉽게 생성할 수 있습니다.</li>
-<li><code>.to(device)</code>는 Tensor를 CPU 또는 GPU로 이동합니다.</li>
-<li><code>torch.stack()</code>은 새로운 차원을 추가하여 쌓습니다.</li>
+<li>실제 클래스</li>
+<li>예측 클래스</li>
+<li>예측 확률</li>
 </ul>
-</section><section class="section" id="s06"><h2><span class="num">06</span>검증</h2><table>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 23 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>model.load_state_dict(fine_best_state)
+
+model.eval()
+
+def collect_predictions(model, data_loader):
+    all_labels = []
+    all_predictions = []
+    all_confidences = []
+
+    with torch.inference_mode():
+        for images, labels in data_loader:
+            logits = model(images.to(device))
+            probabilities = torch.softmax(logits, dim=1)
+
+            confidences, predictions = probabilities.max(dim=1)
+
+            all_labels.append(labels)
+            all_predictions.append(predictions.cpu())
+            all_confidences.append(confidences.cpu())
+
+    return (
+        torch.cat(all_labels),
+        torch.cat(all_predictions),
+        torch.cat(all_confidences),
+    )
+
+test_labels, test_predictions, test_confidences = collect_predictions(
+    model,
+    test_loader,
+)
+
+print(&quot;수집한 예측 수:&quot;, len(test_predictions))
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 23</span></div><pre>수집한 예측 수: 1000
+</pre></div>
+<h4>22) Confusion Matrix 준비</h4>
+<p>Confusion Matrix(컨퓨전 매트릭스, 혼동행렬)는 실제 클래스와 예측 클래스의 관계를 보여줍니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>대각선: 올바른 예측
+대각선 밖: 서로 혼동한 예측
+</code></pre></div>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 24 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>def make_confusion_matrix(labels, predictions, number_of_classes=10):
+    matrix = torch.zeros(
+        number_of_classes,
+        number_of_classes,
+        dtype=torch.int64,
+    )
+
+    for true_label, predicted_label in zip(labels, predictions):
+        matrix[true_label, predicted_label] += 1
+
+    return matrix
+</code></pre></div>
+<h4>23) 모델 구성</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 25 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>confusion_matrix = make_confusion_matrix(
+    test_labels,
+    test_predictions,
+)
+
+plt.figure(figsize=(9, 8))
+
+plt.imshow(confusion_matrix.numpy())
+
+plt.colorbar()
+
+plt.xticks(range(10), class_names, rotation=45, ha=&quot;right&quot;)
+
+plt.yticks(range(10), class_names)
+
+plt.xlabel(&quot;Predicted Class&quot;)
+
+plt.ylabel(&quot;True Class&quot;)
+
+plt.title(&quot;Fine-Tuned ResNet18 Confusion Matrix&quot;)
+
+for row in range(10):
+    for column in range(10):
+        plt.text(
+            column,
+            row,
+            confusion_matrix[row, column].item(),
+            ha=&quot;center&quot;,
+            va=&quot;center&quot;,
+            fontsize=7,
+        )
+
+plt.tight_layout()
+
+plt.show()
+
+print(&quot;클래스별 정확도&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 25</span></div><pre>클래스별 정확도
+</pre></div>
+<p>출력 그림 — 원본 노트북 기록 · 코드 셀 25:</p>
+<p><img src="img/ch05_2_c25_0.png" alt="ch05_2 ResNet18 전이학습 — 코드 셀 25 출력 그림" /></p>
+<h4>24) 클래스별 정확도 확인</h4>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 26 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>for class_index, class_name in enumerate(class_names):
+    total = confusion_matrix[class_index].sum().item()
+    correct = confusion_matrix[class_index, class_index].item()
+    accuracy = correct / total if total &gt; 0 else 0
+
+    print(f&quot;{class_name:10s}: {accuracy * 100:6.2f}%&quot;)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 26</span></div><pre>airplane  :  73.79%
+automobile:  92.13%
+bird      :  79.00%
+cat       :  68.93%
+deer      :  76.67%
+dog       :  83.72%
+frog      :  96.43%
+horse     :  87.25%
+ship      :  96.23%
+truck     :  86.24%
+</pre></div>
+<h4>25) 오분류 데이터 확인</h4>
+<p>모델이 높은 확률로 틀린 이미지를 확인하면 어떤 특징을 잘못 사용했는지 추정할 수 있습니다.</p>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 27 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>wrong_indices = torch.where(
+    test_predictions != test_labels
+)[0]
+
+if len(wrong_indices) == 0:
+    print(&quot;오답이 없습니다.&quot;)
+else:
+    # 높은 확률의 오답부터 확인합니다.
+    wrong_confidences = test_confidences[wrong_indices]
+    order = torch.argsort(wrong_confidences, descending=True)
+    selected_indices = wrong_indices[order][:12]
+
+    plt.figure(figsize=(12, 9))
+
+    for plot_index, dataset_index in enumerate(selected_indices):
+        image, true_label = test_dataset[dataset_index.item()]
+        predicted_label = test_predictions[dataset_index].item()
+        confidence = test_confidences[dataset_index].item()
+
+        plt.subplot(3, 4, plot_index + 1)
+        plt.imshow(denormalize(image).permute(1, 2, 0))
+        plt.title(
+            f&quot;True: {class_names[true_label]}\n&quot;
+            f&quot;Pred: {class_names[predicted_label]}\n&quot;
+            f&quot;{confidence * 100:.1f}%&quot;
+        )
+        plt.axis(&quot;off&quot;)
+
+    plt.tight_layout()
+    plt.show()
+</code></pre></div>
+<p>출력 그림 — 원본 노트북 기록 · 코드 셀 27:</p>
+<p><img src="img/ch05_2_c27_0.png" alt="ch05_2 ResNet18 전이학습 — 코드 셀 27 출력 그림" /></p>
+<h4>26) 모델 구성</h4>
+<p>가중치만 저장하면 구조와 데이터가 분리되어 관리가 쉽습니다.</p>
+<div class="codeblock"><div class="codebar"><span>text</span></div><pre><code>모델 구조 생성
+→ 저장된 state_dict 불러오기
+→ 평가 모드 설정
+</code></pre></div>
+<div class="codeblock"><div class="codebar"><span>PYTHON · ch05_2_resnet18_transfer_learning.ipynb · 코드 셀 28 · 원본 · 실행 기록 있음 · 재실행 미검증</span></div><pre class="src"><code>MODEL_PATH = MODEL_DIR / &quot;ch05_2_best_resnet18_transfer_learning.pt&quot;
+
+checkpoint = {
+    &quot;model_name&quot;: &quot;resnet18_transfer_learning&quot;,
+    &quot;number_of_classes&quot;: 10,
+    &quot;class_names&quot;: class_names,
+    &quot;model_state_dict&quot;: fine_best_state,
+    &quot;validation_accuracy&quot;: fine_best_accuracy,
+    &quot;test_accuracy&quot;: fine_test_accuracy,
+}
+
+torch.save(checkpoint, MODEL_PATH)
+
+restored_model = create_resnet18(
+    number_of_classes=10,
+    pretrained=False,
+).to(device)
+
+saved_checkpoint = torch.load(
+    MODEL_PATH,
+    map_location=device,
+    weights_only=True,
+)
+
+restored_model.load_state_dict(
+    saved_checkpoint[&quot;model_state_dict&quot;]
+)
+
+restored_model.eval()
+
+with torch.inference_mode():
+    restored_output = restored_model(dummy_input)
+
+print(&quot;저장 경로:&quot;, MODEL_PATH)
+print(&quot;저장 클래스 수:&quot;, saved_checkpoint[&quot;number_of_classes&quot;])
+print(&quot;복원 모델 출력 Shape:&quot;, restored_output.shape)
+</code></pre></div>
+<div class="outputblock"><div class="codebar"><span>OUTPUT · 원본 노트북 기록 · 코드 셀 28</span></div><pre>저장 경로: models/ch05_6_best_resnet18_transfer_learning.pt
+저장 클래스 수: 10
+복원 모델 출력 Shape: torch.Size([2, 10])
+</pre></div>
+<h3>핵심 정리</h3>
+<ul>
+<li>Feature Extraction은 Backbone을 동결하고 새 <code>fc</code>만 학습합니다.</li>
+<li>Fine-Tuning은 <code>layer4</code>와 <code>fc</code>를 함께 학습해 특징을 데이터에 맞춥니다.</li>
+<li>Fine-Tuning은 작은 학습률로 필요한 경우에 적용합니다.</li>
+</ul>
+</section><section class="section" id="s05"><h2><span class="num">05</span>검증</h2><table>
 <thead>
 <tr>
   <th>노트북</th>
-  <th>원본 실행 결과</th>
+  <th>원본 실행 기록</th>
   <th>이번 정리에서 재실행</th>
-  <th>순번·파일명 일치</th>
+  <th>모델 파일 이름 대응</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-  <td>ch01_1</td>
-  <td>미검증 (원본에 실행 결과 없음)</td>
+  <td>ch05_1</td>
+  <td>있음</td>
   <td>미검증</td>
   <td>통과</td>
 </tr>
 <tr>
-  <td>ch01_2</td>
-  <td>미검증 (원본에 실행 결과 없음)</td>
-  <td>미검증</td>
-  <td>통과</td>
-</tr>
-<tr>
-  <td>ch01_3</td>
-  <td>미검증 (원본에 실행 결과 없음)</td>
+  <td>ch05_2</td>
+  <td>있음</td>
   <td>미검증</td>
   <td>통과</td>
 </tr>
@@ -1352,12 +2640,14 @@ print(&quot;shape:&quot;, grouped_sensor_data.shape)
 </table>
 <ul>
 <li>이 페이지의 실행 결과와 그림은 <strong>원본 노트북에 저장된 기록</strong>이며, 이번 정리 과정에서 다시 실행하지 않았습니다(재실행 미검증).</li>
-<li>순번·파일명 일치: 노트북 제목, 모델 저장·불러오기 파일 이름의 장 번호를 새 순번으로 함께 바꾸고 변환 스크립트로 대응을 확인했습니다.</li>
+<li>모델 파일 이름 대응: 모델을 저장·불러오는 노트북은 파일 이름의 장 번호를 새 순번으로 함께 바꾸고, 저장하는 노트북과 불러오는 노트북의 이름이 같은지 스크립트로 확인했습니다(통과). 모델 파일을 쓰지 않는 노트북은 해당 없음입니다.</li>
+<li>노트북 안의 설명·코드·출력 순서는 원본을 그대로 따릅니다(STANDARD 8절: 코드·이미지·절 순서 임의 변경 금지).</li>
+<li>실행 결과 안에 찍힌 모델 저장 경로(예: <code>models/ch04_5_best_...</code>)는 원본 실행 당시의 옛 순번입니다. 코드는 새 순번으로 바꿨으므로 다시 실행하면 새 이름으로 저장됩니다.</li>
 </ul>
 <p><strong>완료 기준:</strong> 노트북을 순서대로 실행해 오류 없이 끝나고, 손실 감소와 평가 지표가 원본 기록과 비슷한 범위로 나오는지 확인합니다.</p>
 </section><div class="chapter-links" id="chapter-links"></div></main></div>
-<footer class="footer">PyTorch 머신러닝 기초 · v01  · 실습 결과는 실제 환경에서 검증</footer>
-<script>window.COURSE={"title": "PyTorch 머신러닝 기초", "short_title": "MACHINE LEARNING", "home_label": "전체 학습 안내서", "chapters": [{"id": "ch01", "number": 1, "title": "Tensor 기초", "file": "ch01_tensor_basics_v01.html"}, {"id": "ch02", "number": 2, "title": "선형회귀", "file": "ch02_linear_regression_v01.html"}, {"id": "ch03", "number": 3, "title": "로지스틱·Softmax 분류", "file": "ch03_classification_v01.html"}, {"id": "ch04", "number": 4, "title": "학습 설정 선택 기준", "file": "ch04_training_setup_guide_v01.html"}]};</script><script>/*
+<footer class="footer">PyTorch 딥러닝 실습 · v02  · 실습 결과는 실제 환경에서 검증</footer>
+<script>window.COURSE={"title": "PyTorch 딥러닝 실습", "short_title": "DEEP LEARNING", "home_label": "전체 학습 안내서", "chapters": [{"id": "ch01", "number": 1, "title": "심층 신경망 이진분류", "file": "ch01_dnn_binary_classification_v02.html"}, {"id": "ch02", "number": 2, "title": "MNIST MLP", "file": "ch02_mnist_mlp_v02.html"}, {"id": "ch03", "number": 3, "title": "Fashion-MNIST MLP", "file": "ch03_fashion_mnist_mlp_v02.html"}, {"id": "ch04", "number": 4, "title": "CNN", "file": "ch04_cnn_v02.html"}, {"id": "ch05", "number": 5, "title": "ResNet18·전이학습", "file": "ch05_resnet_transfer_learning_v02.html"}, {"id": "ch06", "number": 6, "title": "모델 저장·ONNX", "file": "ch06_model_deployment_v02.html"}, {"id": "ch07", "number": 7, "title": "CNN→YOLO 위치 추정", "file": "ch07_single_object_localization_v02.html"}]};</script><script>/*
  * 교육용 HTML 공통 동작 — 유지보수용 원본 (STANDARD 4·10.3·10.4)
  * 페이지 본문은 바꾸지 않고 탐색·이전/다음·모바일 메뉴·코드 복사만 덧붙인다.
  * 입력: 페이지의 window.COURSE (tools/guide/build_guides.py가 실제 존재하는 장만 넣음),
@@ -1393,7 +2683,11 @@ print(&quot;shape:&quot;, grouped_sensor_data.shape)
   box.append(el("summary", "", "전체 장 바로가기"));
   const chLinks = el("div", "course-ch-links");
   let currentChapter = null;
+  // 보조 장(07.1·12.3 등)은 같은 본 장을 보고 있을 때만 펼쳐 목록을 짧게 유지
+  const baseOf = (n) => String(n).split(".")[0];
+  const curBase = baseOf(pageNames.find((ch) => ch.id === current)?.number ?? "");
   pageNames.forEach((ch) => {
+    if (String(ch.number).includes(".") && baseOf(ch.number) !== curBase) return;
     const a = el("a", "course-ch-link");
     a.href = ch.file;
     a.append(el("span", "course-ch-num", numText(ch.number)), el("span", "", ch.title));

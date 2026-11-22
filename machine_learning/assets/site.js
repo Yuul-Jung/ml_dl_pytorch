@@ -34,7 +34,11 @@
   box.append(el("summary", "", "전체 장 바로가기"));
   const chLinks = el("div", "course-ch-links");
   let currentChapter = null;
+  // 보조 장(07.1·12.3 등)은 같은 본 장을 보고 있을 때만 펼쳐 목록을 짧게 유지
+  const baseOf = (n) => String(n).split(".")[0];
+  const curBase = baseOf(pageNames.find((ch) => ch.id === current)?.number ?? "");
   pageNames.forEach((ch) => {
+    if (String(ch.number).includes(".") && baseOf(ch.number) !== curBase) return;
     const a = el("a", "course-ch-link");
     a.href = ch.file;
     a.append(el("span", "course-ch-num", numText(ch.number)), el("span", "", ch.title));

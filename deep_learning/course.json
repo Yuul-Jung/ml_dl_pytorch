@@ -3,7 +3,7 @@
   "site_subtitle": "MLP · CNN · ResNet · ONNX · YOLO 연결",
   "site_description": "은닉층이 있는 심층 신경망(MLP)에서 출발해 MNIST·Fashion-MNIST, CNN, ResNet18 전이학습, 모델 저장·ONNX 배포, 단일 객체 위치 추정까지 단계별 노트북 실습으로 정리한 딥러닝 교재입니다.",
   "course_code": "DEEP LEARNING",
-  "version": "v01",
+  "version": "v02",
   "chapters": [
     {
       "id": "ch01",
@@ -11,7 +11,7 @@
       "title": "심층 신경망 이진분류",
       "subtitle": "단일 선형층 로지스틱 분류 → 은닉층·ReLU가 있는 MLP",
       "slug": "ch01_dnn_binary_classification",
-      "version": "v01",
+      "version": "v02",
       "source": "content/ch01.md",
       "tags": [
         "MLP",
@@ -25,7 +25,7 @@
       "title": "MNIST MLP",
       "subtitle": "손글씨 숫자 분류 → Optimizer 비교 → 과적합·Dropout → 오류 분석",
       "slug": "ch02_mnist_mlp",
-      "version": "v01",
+      "version": "v02",
       "source": "content/ch02.md",
       "tags": [
         "MNIST",
@@ -40,7 +40,7 @@
       "title": "Fashion-MNIST MLP",
       "subtitle": "의류 이미지 학습·평가 → 저장 모델로 단일 이미지 예측",
       "slug": "ch03_fashion_mnist_mlp",
-      "version": "v01",
+      "version": "v02",
       "source": "content/ch03.md",
       "tags": [
         "Fashion-MNIST",
@@ -54,7 +54,7 @@
       "title": "CNN",
       "subtitle": "Fashion-MNIST CNN → 필터·특징맵 → CIFAR-10 기본·심층 CNN",
       "slug": "ch04_cnn",
-      "version": "v01",
+      "version": "v02",
       "source": "content/ch04.md",
       "tags": [
         "CNN",
@@ -69,7 +69,7 @@
       "title": "ResNet18·전이학습",
       "subtitle": "CIFAR-10 ResNet18 학습 → 사전학습 가중치 전이학습",
       "slug": "ch05_resnet_transfer_learning",
-      "version": "v01",
+      "version": "v02",
       "source": "content/ch05.md",
       "tags": [
         "ResNet18",
@@ -83,7 +83,7 @@
       "title": "모델 저장·ONNX",
       "subtitle": "state_dict 저장·복원 → 추론 함수 → ONNX 내보내기·Runtime 추론",
       "slug": "ch06_model_deployment",
-      "version": "v01",
+      "version": "v02",
       "source": "content/ch06.md",
       "tags": [
         "state_dict",
@@ -98,7 +98,7 @@
       "title": "CNN→YOLO 위치 추정",
       "subtitle": "분류 CNN → Bounding Box 회귀 → IoU → 함수·main() 구조",
       "slug": "ch07_single_object_localization",
-      "version": "v01",
+      "version": "v02",
       "source": "content/ch07.md",
       "tags": [
         "Localization",

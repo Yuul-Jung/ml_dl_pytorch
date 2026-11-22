@@ -593,3 +593,22 @@ pre code {
   max-width: 100%;
   overflow-x: auto;
 }
+
+/* (추가) 실행 결과 상자: 코드 박스와 구분하고 복사 버튼은 두지 않습니다. */
+.outputblock {
+  border: 1px solid var(--line);
+  border-left: 3px solid #8a8f98;
+  margin: -6px 0 18px;
+  background: #ffffff;
+}
+.outputblock pre {
+  margin: 0;
+  padding: 13px 15px;
+  overflow: auto;
+  line-height: 1.6;
+  font-size: 0.78rem;
+  color: var(--ink-2);
+}
+.codebar span {
+  overflow-wrap: anywhere;
+}

@@ -26,7 +26,7 @@ ML_DL_pytorch/
 │   ├── course.json            ← 과정 제목·장 목록·버전
 │   ├── content/chNN.md        ← 장별 학습 안내서 원고
 │   ├── assets/ · build.py     ← rule_md 공통 디자인·생성기 사본
-│   └── dist/                  ← 생성된 HTML (index.html, chNN_주제_v01.html, img/)
+│   └── dist/                  ← 생성된 HTML (index.html, chNN_주제_v02.html, img/)
 └── deep_learning/
     ├── README.md
     ├── notebooks/             ← chNN_K_주제.ipynb, heart.csv, png/dog.jpg
@@ -37,7 +37,7 @@ ML_DL_pytorch/
 ## 순번 규칙
 
 - 노트북: `chNN_K_주제.ipynb` — `NN`은 과정 안의 장 번호, `K`는 장 안의 실습 순번입니다. 두 과정은 각각 01장부터 시작합니다.
-- 학습 안내서: `chNN_주제_vNN.html` — 장 하나가 HTML 한 페이지이며, 장 안의 노트북은 `chNN_K` 절로 들어갑니다.
+- 학습 안내서: `chNN_주제_vNN.html` (현재 v02, 내용을 고치면 STANDARD 6절에 따라 버전을 올림) — 장 하나가 HTML 한 페이지이며, 장 안의 노트북은 `chNN_K` 절로 들어갑니다.
 - 딥러닝 노트북은 원본 번호(`ch03_2_..._DNN`, `ch04_1` ~ `ch07_2`)에서 새 번호로 바뀌었습니다. 노트북 제목과 **모델 저장·불러오기 파일 이름**(예: `ch04_5_best_fashion_mnist_mlp` → `ch03_1_best_fashion_mnist_mlp`)도 같은 번호로 함께 바꿔, 앞 노트북이 저장한 모델을 뒤 노트북이 그대로 찾을 수 있습니다. 전체 대응표는 각 과정 README에 있습니다.
 
 ## 실행 방법
@@ -66,10 +66,13 @@ jupyter notebook
 # 원고(content/*.md)나 course.json을 고친 뒤 과정 폴더에서 생성
 python -m pip install mistune
 cd machine_learning
-python build.py        # dist/index.html, dist/chNN_*_v01.html 생성
+python build.py        # dist/index.html, dist/chNN_*_v02.html 생성
 ```
 
-GitHub Pages를 **main 브랜치 루트**로 게시하면 `/<과정>/dist/index.html` 주소로 열 수 있습니다.
+GitHub Pages는 **main 브랜치 루트**로 게시합니다.
+
+- 머신러닝: https://yuul-jung.github.io/ml_dl_pytorch/machine_learning/dist/index.html
+- 딥러닝: https://yuul-jung.github.io/ml_dl_pytorch/deep_learning/dist/index.html
 
 ## 📘 교육용 HTML 공통 제작 규칙
 
@@ -79,7 +82,14 @@ GitHub Pages를 **main 브랜치 루트**로 게시하면 `/<과정>/dist/index.
 - [다른 저장소 적용 안내](https://github.com/Yuul-Jung/rule_md/blob/main/web/education-html/INTEGRATION.md)
 - [기준 디자인 사례](https://github.com/Yuul-Jung/ai-agent-engineering)
 
-공통 책장 이미지, 컴팩트한 상단 배너, 좌측 전체 장/절 탐색, 모바일 메뉴, 파일 버전 및 검증 기준을 따릅니다. 적용 기준 커밋: [`rule_md@95a42e4`](https://github.com/Yuul-Jung/rule_md/commit/95a42e4a5cb8e67d5383820b1fec525b601e0558) (2026-11-22, 좌측 탐색 구성 4.1 추가).
+공통 책장 이미지, 컴팩트한 상단 배너, 좌측 전체 장/절 탐색, 모바일 메뉴, 파일 버전 및 검증 기준을 따릅니다. 적용 기준 커밋: [`rule_md@028248a`](https://github.com/Yuul-Jung/rule_md/commit/028248a19afc66e9aafdab393fbe0de10a3930ca) (2026-11-23, 좌측 탐색 4.1·보조 장 규칙).
+
+이 저장소에서 공통 템플릿에 더한 부분(각 과정의 `build.py`·`assets/site.css`에 `(추가)` 주석으로 표시):
+
+- 코드 박스 제목 줄에 **언어 · 파일명 · 코드 셀 번호 · 검증 상태** 표시 ([공통 코드 규칙](https://github.com/Yuul-Jung/rule_md/blob/main/common/code-style-rules.md) 10절)
+- 실행 결과는 코드 박스와 구분되는 `OUTPUT` 상자로 표시하고 복사 버튼을 두지 않음
+- 장마다 `전체 실습 흐름`에 개념 흐름도(단계 상자 + ↓)를 두고, 단계 이름은 실제 코드의 함수·클래스 이름을 사용
+- 노트북 그림 폭 제한, 좁은 화면에서 긴 파일명 줄바꿈·넓은 표 가로 스크롤
 
 ## 검증 상태
 
@@ -92,4 +102,4 @@ GitHub Pages를 **main 브랜치 루트**로 게시하면 `/<과정>/dist/index.
 | HTML 생성 | 통과 | 두 과정 `build.py` 실행, HTML 13개 생성 |
 | 화면 폭 1366·390px 가로 넘침, 이미지 깨짐 | 통과 | Chromium(Playwright)로 전체 페이지 점검. 넓은 표는 표 안에서 가로 스크롤 |
 | 개인정보·로컬 경로 노출 | 통과 | 실행 결과의 로컬 사용자 경로를 `~`로 가림, 이메일·토큰 검색 결과 없음 |
-| GitHub Pages 실제 배포 | 미검증 | Pages 설정 후 확인 필요 |
+| GitHub Pages 실제 배포 | 통과 | [머신러닝](https://yuul-jung.github.io/ml_dl_pytorch/machine_learning/dist/index.html) · [딥러닝](https://yuul-jung.github.io/ml_dl_pytorch/deep_learning/dist/index.html) 접속 확인 |

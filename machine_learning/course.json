@@ -3,7 +3,7 @@
   "site_subtitle": "Tensor · 선형회귀 · 분류 · 학습 설정",
   "site_description": "NumPy와 PyTorch Tensor에서 출발해 선형회귀, 로지스틱·Softmax 분류, 학습 설정 선택 기준까지 단계별 노트북 실습으로 정리한 머신러닝 교재입니다.",
   "course_code": "MACHINE LEARNING",
-  "version": "v01",
+  "version": "v02",
   "chapters": [
     {
       "id": "ch01",
@@ -11,7 +11,7 @@
       "title": "Tensor 기초",
       "subtitle": "NumPy 배열 → PyTorch Tensor → 연산 → 자동 미분",
       "slug": "ch01_tensor_basics",
-      "version": "v01",
+      "version": "v02",
       "source": "content/ch01.md",
       "tags": [
         "NumPy",
@@ -25,7 +25,7 @@
       "title": "선형회귀",
       "subtitle": "순전파·손실 → 비용 최소화 → 실제 데이터 → 주택가격 예측",
       "slug": "ch02_linear_regression",
-      "version": "v01",
+      "version": "v02",
       "source": "content/ch02.md",
       "tags": [
         "Linear Regression",
@@ -39,7 +39,7 @@
       "title": "로지스틱·Softmax 분류",
       "subtitle": "이진분류 → 실제 CSV → 다중분류 → 학습 최적화",
       "slug": "ch03_classification",
-      "version": "v01",
+      "version": "v02",
       "source": "content/ch03.md",
       "tags": [
         "Logistic",
@@ -54,7 +54,7 @@
       "title": "학습 설정 선택 기준",
       "subtitle": "Target 형태 → 출력층 → Loss → Optimizer → Metric",
       "slug": "ch04_training_setup_guide",
-      "version": "v01",
+      "version": "v02",
       "source": "content/ch04.md",
       "tags": [
         "Loss",
