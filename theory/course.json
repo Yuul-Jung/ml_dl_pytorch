@@ -1,0 +1,162 @@
+{
+  "site_title": "PyTorch 머신러닝·딥러닝 이론",
+  "site_subtitle": "선형회귀 · 분류 · MLP · CNN · 학습 설정",
+  "site_description": "강의 슬라이드와 기존 실습을 하나로 엮어, 선형회귀에서 CNN까지 학습이 왜 그렇게 동작하는지를 수식·그림·검증 코드로 설명하는 이론 교재입니다. 각 장은 실습 과정의 해당 장으로 이어집니다.",
+  "course_code": "PYTORCH THEORY",
+  "version": "v01",
+  "goal": "가설 → 손실함수 → 경사하강법이라는 하나의 뼈대가 선형회귀·분류·MLP·CNN에서 어떻게 반복되는지 이해하고, 새 문제를 만났을 때 **Target 형태에서 출발해 출력층·Loss·Optimizer·Metric을 근거를 들어 고르는 것**이 이 과정의 목표입니다.",
+  "lanes": [
+    {
+      "label": "선형 모델",
+      "chapters": [
+        1,
+        2
+      ],
+      "caption": "가설·손실·경사하강법의 뼈대와 분류 손실"
+    },
+    {
+      "label": "딥러닝",
+      "chapters": [
+        3,
+        4
+      ],
+      "caption": "은닉층·역전파와 이미지 구조를 살리는 합성곱"
+    },
+    {
+      "label": "종합 판단",
+      "chapters": [
+        5
+      ],
+      "caption": "문제 유형별 학습 설정 선택"
+    }
+  ],
+  "count_key": "slides",
+  "count_label": "강의 슬라이드 그림",
+  "count_unit": "슬라이드 그림",
+  "outcome_label": "핵심 결과",
+  "guide_rows": [
+    [
+      "읽는 순서",
+      "이 장의 목표 → 개념과 슬라이드 → 수식 유도 → 코드로 확인 → PyTorch로 옮기기 → 바로잡기 → 스스로 점검"
+    ],
+    [
+      "슬라이드 그림",
+      "강의 PDF를 2560×1440으로 다시 렌더링한 원본 그대로이며, 수식은 그림 대신 실제 수식으로 조판"
+    ],
+    [
+      "검증 코드",
+      "<code>theory/code/chNN_*.py</code> (Python 3 + NumPy). 본문의 NumPy 코드와 결과는 이번 정리에서 실행해 일치를 확인"
+    ],
+    [
+      "PyTorch 예시",
+      "구조를 보여 주는 예시이며, 이 정리 환경에서 실행하지 않아 미검증으로 표시"
+    ],
+    [
+      "바로잡기",
+      "강의 슬라이드를 적대적으로 검증해 고친 오류를 장마다 표로 정리, 본문은 고친 내용 기준"
+    ],
+    [
+      "실습 과정",
+      "<a href=\"../../machine_learning/dist/index.html\">PyTorch 머신러닝 기초</a> · <a href=\"../../deep_learning/dist/index.html\">PyTorch 딥러닝 실습</a>"
+    ]
+  ],
+  "principle": "개념 → 슬라이드 → 수식 유도 → 검증 코드 → 실행 결과 → 풀이 순서로 진행합니다. 이번 정리에서 직접 실행한 결과와 실습 노트북에 기록된 결과를 구분하고, 실행하지 않은 코드는 **미검증**으로 표시합니다. 판정은 통과·실패·미검증·해당 없음으로 나눕니다.",
+  "chapters": [
+    {
+      "id": "ch01",
+      "number": 1,
+      "title": "선형회귀",
+      "subtitle": "가설·손실함수 → 경사하강법 → 여러 입력과 행렬 표현",
+      "slug": "ch01_linear_regression",
+      "version": "v01",
+      "source": "content/ch01.md",
+      "tags": [
+        "Hypothesis",
+        "MSE",
+        "Gradient Descent",
+        "Matrix"
+      ],
+      "level": "기초",
+      "outcome": "선형회귀 갱신식 유도와 학습률 안전 범위",
+      "slides": 20,
+      "nav_title": "선형회귀"
+    },
+    {
+      "id": "ch02",
+      "number": 2,
+      "title": "분류",
+      "subtitle": "시그모이드·BCE → 소프트맥스·크로스엔트로피 → 다중분류",
+      "slug": "ch02_classification",
+      "version": "v01",
+      "source": "content/ch02.md",
+      "tags": [
+        "Sigmoid",
+        "BCE",
+        "Softmax",
+        "Cross-Entropy"
+      ],
+      "level": "기초",
+      "outcome": "분류 손실의 유도와 (예측 − 정답) 기울기",
+      "slides": 22,
+      "nav_title": "분류"
+    },
+    {
+      "id": "ch03",
+      "number": 3,
+      "title": "다층 퍼셉트론(MLP)",
+      "subtitle": "은닉층·활성화 → 데이터 분리·배치 → 학습 루프·역전파 → 평가",
+      "slug": "ch03_mlp",
+      "version": "v01",
+      "source": "content/ch03.md",
+      "tags": [
+        "MLP",
+        "ReLU",
+        "DataLoader",
+        "Backpropagation"
+      ],
+      "level": "핵심",
+      "outcome": "MNIST MLP의 구조·파라미터 수·학습 곡선 해석",
+      "slides": 22,
+      "nav_title": "MLP"
+    },
+    {
+      "id": "ch04",
+      "number": 4,
+      "title": "합성곱 신경망(CNN)",
+      "subtitle": "합성곱·패딩·스트라이드·풀링 → 채널 → 2단 CNN Shape 추적",
+      "slug": "ch04_cnn",
+      "version": "v01",
+      "source": "content/ch04.md",
+      "tags": [
+        "Conv2d",
+        "Padding",
+        "Stride",
+        "Pooling"
+      ],
+      "level": "핵심",
+      "outcome": "CNN 출력 크기·파라미터 수 계산과 특징 추출 해석",
+      "slides": 22,
+      "nav_title": "CNN"
+    },
+    {
+      "id": "ch05",
+      "number": 5,
+      "title": "학습 설정 선택 기준",
+      "subtitle": "Target 형태 → 출력층 → Loss → Optimizer → Validation → Metric",
+      "slug": "ch05_training_setup",
+      "version": "v01",
+      "source": "content/ch05.md",
+      "tags": [
+        "Loss",
+        "Optimizer",
+        "Validation",
+        "Metric"
+      ],
+      "level": "종합",
+      "outcome": "문제 유형별 출력층·Loss·Optimizer·Metric 판단 공식",
+      "slides": 16,
+      "nav_title": "학습 설정 선택 기준"
+    }
+  ],
+  "tool_chip": "PyTorch · NumPy"
+}

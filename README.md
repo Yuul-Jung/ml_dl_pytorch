@@ -8,10 +8,11 @@ PyTorch(파이토치, 딥러닝 프레임워크) 실습 노트북을 **머신러
 |---|---|---|---|
 | 머신러닝 기초 | [`machine_learning/`](machine_learning/) | 01 Tensor 기초 → 02 선형회귀 → 03 로지스틱·Softmax 분류 → 04 학습 설정 선택 기준 | [`machine_learning/dist/index.html`](machine_learning/dist/index.html) |
 | 딥러닝 실습 | [`deep_learning/`](deep_learning/) | 01 심층 신경망 이진분류 → 02 MNIST MLP → 03 Fashion-MNIST MLP → 04 CNN → 05 ResNet18·전이학습 → 06 모델 저장·ONNX → 07 CNN→YOLO 위치 추정 | [`deep_learning/dist/index.html`](deep_learning/dist/index.html) |
+| 머신러닝·딥러닝 이론 | [`theory/`](theory/) | 01 선형회귀 → 02 분류 → 03 MLP → 04 CNN → 05 학습 설정 선택 기준 (강의 2~5강·테크트리 기반) | [`theory/dist/index.html`](theory/dist/index.html) |
 
 **나누는 기준:** 은닉층 없이 선형 모델 하나로 푸는 회귀·분류(로지스틱·Softmax)와 그 기초(Tensor)는 머신러닝 과정에, 은닉층과 비선형 활성화 함수를 쌓는 MLP·CNN·ResNet과 그 배포·응용은 딥러닝 과정에 둡니다. 같은 심장질환 데이터도 단일 선형층 모델은 머신러닝 3장, MLP 모델은 딥러닝 1장으로 나뉩니다. 두 과정에 공통으로 쓰는 **학습 설정 선택 기준**(Target 형태 → 출력층 → Loss → Optimizer → Metric)은 머신러닝 4장에 두고 딥러닝 과정에서 참조합니다.
 
-권장 학습 순서는 머신러닝 01 → 04, 이어서 딥러닝 01 → 07입니다.
+권장 학습 순서는 머신러닝 01 → 04, 이어서 딥러닝 01 → 07입니다. **이론 과정**은 실습과 나란히 읽는 교재로, 각 장 끝에서 해당 실습 장으로 이어집니다(이론 01·02 → 머신러닝 02·03, 이론 03·04 → 딥러닝 02~05, 이론 05 → 머신러닝 04).
 
 ## 폴더 구조
 
@@ -27,11 +28,15 @@ ML_DL_pytorch/
 │   ├── content/chNN.md        ← 장별 학습 안내서 원고
 │   ├── assets/ · build.py     ← rule_md 공통 디자인·생성기 사본
 │   └── dist/                  ← 생성된 HTML (index.html, chNN_주제_v03.html, img/)
-└── deep_learning/
-    ├── README.md
-    ├── notebooks/             ← chNN_K_주제.ipynb, heart.csv, png/dog.jpg
-    ├── course.json · content/ · assets/ · build.py
-    └── dist/
+├── deep_learning/
+│   ├── README.md
+│   ├── notebooks/             ← chNN_K_주제.ipynb, heart.csv, png/dog.jpg
+│   ├── course.json · content/ · assets/ · build.py
+│   └── dist/
+└── theory/                    ← 이론 교재 (노트북 대신 code/에 NumPy 검증 코드)
+    ├── README.md · course.json · content/ · assets/ · build.py
+    ├── code/                  ← chNN_*.py 장별 검증 코드
+    └── dist/                  ← index.html, chNN_주제_v01.html, img/ 슬라이드 그림
 ```
 
 ## 순번 규칙
@@ -73,6 +78,7 @@ GitHub Pages는 **main 브랜치 루트**로 게시합니다.
 
 - 머신러닝: https://yuul-jung.github.io/ml_dl_pytorch/machine_learning/dist/index.html
 - 딥러닝: https://yuul-jung.github.io/ml_dl_pytorch/deep_learning/dist/index.html
+- 이론: https://yuul-jung.github.io/ml_dl_pytorch/theory/dist/index.html
 
 ## 📘 교육용 HTML 공통 제작 규칙
 
@@ -109,3 +115,4 @@ GitHub Pages는 **main 브랜치 루트**로 게시합니다.
 | 화면 폭 1366·390px 가로 넘침, 이미지 깨짐 | 통과 | Chromium(Playwright)로 전체 페이지 점검. 넓은 표는 표 안에서 가로 스크롤 |
 | 개인정보·로컬 경로 노출 | 통과 | 실행 결과의 로컬 사용자 경로를 `~`로 가림, 이메일·토큰 검색 결과 없음 |
 | GitHub Pages 실제 배포 | 통과 | [머신러닝](https://yuul-jung.github.io/ml_dl_pytorch/machine_learning/dist/index.html) · [딥러닝](https://yuul-jung.github.io/ml_dl_pytorch/deep_learning/dist/index.html) 접속 확인 |
+| 이론 과정 검증 | 통과(PyTorch 예시는 미검증) | 본문 NumPy 코드 6개의 실행 결과 일치, HTML 6개 생성·수식 변환 실패 0개. 상세는 [`theory/README.md`](theory/README.md#검증-상태) |

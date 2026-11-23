@@ -17,5 +17,6 @@
 
 이 저장소 전용 사항:
 - 과정은 `machine_learning/`(선형 모델·기초)과 `deep_learning/`(은닉층 신경망과 응용) 두 폴더로 나눈다.
+- 이론 교재는 `theory/`에 둔다. 노트북 대신 `theory/code/chNN_*.py` 검증 코드를 두고, 본문의 실행 결과는 그 코드를 실제로 실행한 값과 같아야 한다. 슬라이드 그림은 `theory/dist/img/chNN_slideMM.jpg`(MM = 원본 PDF 쪽 번호)로 둔다.
 - 노트북 이름은 `chNN_K_주제.ipynb`, 과정마다 01장부터 번호를 매긴다. 번호를 바꾸면 노트북 제목과 모델 저장·불러오기 파일 이름의 번호도 함께 바꾼다.
 - HTML은 각 과정 폴더의 `course.json` + `content/chNN.md`를 고친 뒤 `python build.py`로 `dist/`에 생성한다.
