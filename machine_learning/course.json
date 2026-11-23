@@ -3,7 +3,7 @@
   "site_subtitle": "Tensor · 선형회귀 · 분류 · 학습 설정",
   "site_description": "NumPy와 PyTorch Tensor에서 출발해 선형회귀, 로지스틱·Softmax 분류, 학습 설정 선택 기준까지 단계별 노트북 실습으로 정리한 머신러닝 교재입니다.",
   "course_code": "MACHINE LEARNING",
-  "version": "v03",
+  "version": "v04",
   "goal": "정답 Target(타깃)의 형태를 보고 출력층·Loss Function(손실함수)·Optimizer(최적화 알고리즘)·Metric(평가 지표)을 스스로 고르고, **데이터 준비 → 순전파 → 손실 → 기울기 → 갱신 → 평가** 과정을 PyTorch 코드로 구현하는 것이 이 과정의 목표입니다.",
   "lanes": [
     {
@@ -99,7 +99,7 @@
       "title": "학습 설정 선택 기준",
       "subtitle": "Target 형태 → 출력층 → Loss → Optimizer → Metric",
       "slug": "ch04_training_setup_guide",
-      "version": "v03",
+      "version": "v04",
       "source": "content/ch04.md",
       "tags": [
         "Loss",
