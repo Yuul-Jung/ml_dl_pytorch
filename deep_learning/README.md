@@ -1,6 +1,6 @@
 # 딥러닝 실습 (deep_learning)
 
-은닉층과 ReLU를 쌓은 심층 신경망(MLP)에서 출발해 MNIST·Fashion-MNIST, CNN, ResNet18 전이학습, 모델 저장·ONNX 배포, 단일 객체 위치 추정(YOLO 연결 1단계)까지 다루는 과정입니다. 학습 설정(출력층·Loss·Optimizer) 선택 원리는 [머신러닝 4장](../machine_learning/dist/ch04_training_setup_guide_v03.html)을 먼저 보면 좋습니다.
+은닉층과 ReLU를 쌓은 심층 신경망(MLP)에서 출발해 MNIST·Fashion-MNIST, CNN, ResNet18 전이학습, 모델 저장·ONNX 배포, 단일 객체 위치 추정(YOLO 연결 1단계)까지 다루는 과정입니다. 학습 설정(출력층·Loss·Optimizer) 선택 원리는 [머신러닝 4장](../machine_learning/dist/ch04_training_setup_guide_v04.html)을 먼저 보면 좋습니다.
 
 - 학습 안내서: [`dist/index.html`](dist/index.html)
 - 이전 과정: [머신러닝 기초](../machine_learning/)
